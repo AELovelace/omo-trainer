@@ -8,6 +8,12 @@ node --test tests/*.test.mjs
 
 These cover all 101 probability settings, rejection sampling, cumulative snapshots, calendar boundaries, schema/import validation, CSV fields, SQLite persistence and backups, participant isolation, idempotent retries, transaction rollback, version conflicts, deletion tombstones, app sessions, password hashing/reset/disable, OIDC adapter persistence, and login throttling. HTTP checks verify public assets, redirects, headers, and rejection of unauthenticated or cross-origin data access. Databases use isolated directories under ignored `artifacts/`.
 
+## Deployment regression checks
+
+`node --test tests/deploy.test.mjs` exercises activation sequencing, rollback, backup failures, first-deploy failures, environment validation, firewall source restrictions, and systemd isolation without touching host services. A real temporary Git repository also verifies fetch, detached staging, unchanged-commit detection, and preservation of the previous release. Git must be installed for this test. Run `bash -n deploy/fedora-deploy.sh` and `bash -n deploy/fedora-update.sh`, plus `node --check deploy/fedora.mjs`, for script syntax. The Fedora installer runs the complete `.test.mjs` suite before stopping the live services; it does not launch browser tests.
+
+Actual dnf/systemd/SELinux/firewalld integration must be verified on Fedora. Follow [FEDORA_DEPLOYMENT.md](FEDORA_DEPLOYMENT.md), including a public-domain sign-in check after configuring the reverse proxy.
+
 ## Browser workflows
 
 Start `node scripts/serve.mjs` in another terminal. The optional browser runner uses Puppeteer with an installed Chrome/Chromium. Install the testing dependency with `npm install --no-save --package-lock=false puppeteer-core`, or set `PUPPETEER_MODULE` to an existing Puppeteer module file. Set `CHROME_PATH` to the browser executable and run:

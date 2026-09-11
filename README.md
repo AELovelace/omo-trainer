@@ -27,6 +27,8 @@ Open **http://127.0.0.1:4173/tracker/** and choose **Settings & data → Sign in
 
 ## Your two-server deployment
 
+For your Fedora service server, use the [Fedora deployment and GitHub update scripts](FEDORA_DEPLOYMENT.md): `sudo bash deploy/fedora-deploy.sh` installs the services, and `sudo bash /opt/lidoll/current/deploy/fedora-update.sh` fetches and deploys later updates. The installer preserves configuration and data, tests staged releases, and backs up both stopped databases before switching code.
+
 Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](deploy/auth.env.example). Put persistent data directories outside the public web directory. See [AUTH_GUIDE.md](AUTH_GUIDE.md) for production commands, account setup, and adding future apps.
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
@@ -78,9 +80,12 @@ Visit over HTTPS (localhost works for development) and wait until Settings repor
 
 For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current cache is version 2. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
+The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
+
 ## Guides
 
 - [Shared authentication and future apps](AUTH_GUIDE.md)
+- [Fedora installation and GitHub updates](FEDORA_DEPLOYMENT.md)
 - [Contributor guide](CONTRIBUTOR_GUIDE.md)
 - [Probability and defaults](GENERATION_TUNING_GUIDE.md)
 - [User checklist](PLAYER_CHECKLIST.md)

@@ -14,12 +14,16 @@ This repository currently contains a standalone browser tracker, not the origina
 - `scripts/admin.mjs` and `scripts/auth-admin.mjs`: server-local data exports/backups and shared account/client management.
 - `scripts/icons.mjs`: dependency-free rasterization of the native flower artwork.
 - `tests/`: model, SQLite, auth, sync, HTTP, offline-browser, and connected multi-device/OIDC workflow tests.
+- `deploy/fedora-deploy.sh`, `deploy/fedora-update.sh`, and `deploy/fedora.mjs`: Fedora/systemd installation and staged GitHub updates; operational instructions are in `FEDORA_DEPLOYMENT.md`.
+- `deploy/release.mjs`: configuration checks, systemd units, firewall rules, and the tested activation/rollback sequence.
 
 Keep free-form data out of HTML interpolation. Current template inputs are strictly validated enums, numbers, IDs, and timestamps. Any new user-defined text must use `textContent` or equivalent escaping. Validate imports completely before committing them, and write storage successfully before showing a save confirmation.
 
 Save local entries and their sync queue in one envelope. Retain mutation IDs on retries and base versions on edits; never replay a conflicting later edit as a new write automatically. Keep API ownership tied to the authenticated OIDC subject, not a participant ID supplied in a request. Auth secrets, credentials, database files, and analysis exports must stay outside the public-file allowlist. Do not log request bodies or cookies.
 
 Shared auth follows [AUTH_GUIDE.md](AUTH_GUIDE.md): new apps register distinct client IDs and exact callback URLs, validate code/PKCE/state/nonce and ID-token signatures, and issue their own app sessions. Keep issuer/account identities stable through backup/restore. Dependency versions and lockfile changes belong together; run `npm ci` to reproduce the installed protocol libraries.
+
+Keep shell files LF-terminated through `.gitattributes`. Fedora deployment uses `/usr/bin/node-24`, runs dependency installation/tests without production credentials, and stamps the service-worker cache with the fetched commit. Never put mutable database files in a release directory or automatically restore old data after a failed activation. Changes to the deployment policy require its regression tests and deployment guide to stay in sync.
 
 Use brief comments to explain each function's purpose and non-obvious decisions. Keep PowerShell scripts in `ps/` and Python scripts in `python/` if either is introduced. Update this guide, the probability guide, user checklist, and testing guide when behavior changes. Keep quest/dialogue integration status accurate when game assets arrive.
 

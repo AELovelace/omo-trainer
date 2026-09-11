@@ -17,3 +17,5 @@
 Daily defaults reset when the selected local date changes. Today's liquid summary shows the highest cumulative snapshot, not the sum of all entries. Historical timestamps retain their recorded local day and timezone offset.
 
 Defaults are device-specific; entry records sync. Accounts are currently created and password resets handled by the lidoll.dev administrator.
+
+During a server update, offline check-ins remain on the device and retry afterward. After a frontend update, close old Little Log tabs and reopen to let the new app version activate.

@@ -20,6 +20,8 @@ Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Def
 
 ## Production configuration
 
+For the Fedora service host, [FEDORA_DEPLOYMENT.md](FEDORA_DEPLOYMENT.md) provides the dnf installer, systemd setup, GitHub updater, and backup/rollback workflow. It creates separate `lidoll-auth` and `lidoll-tracker` Unix users; run admin commands as the matching service user to preserve database file ownership. Auth keys and accounts stay outside release checkouts across updates.
+
 Use separate environment files based on [auth.env.example](deploy/auth.env.example) and [tracker.env.example](deploy/tracker.env.example). Provision the two persistent directories with access restricted to the service user. Run under your process manager:
 
 ```sh

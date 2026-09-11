@@ -8,3 +8,4 @@ backups/
 *.sqlite-wal
 *.sqlite-shm
 .env
+.release.json
