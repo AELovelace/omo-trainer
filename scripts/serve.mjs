@@ -1,0 +1,54 @@
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { openDatabase } from '../server/database.mjs';
+import { createApi } from '../server/api.mjs';
+import { createLogin } from '../server/login.mjs';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const host = process.env.HOST ?? '127.0.0.1';
+const port = Number(process.env.PORT ?? 4173);
+const base = process.env.BASE_PATH ?? '/tracker/';
+if (!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(base)) throw new Error('BASE_PATH must start and end with / and contain only simple path segments.');
+const database = openDatabase();
+const login = createLogin(database, base);
+const api = createApi(database, login);
+const files = new Map([
+  ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
+  ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
+  ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
+  ['icons/icon.svg', 'image/svg+xml'], ['icons/icon-192.png', 'image/png'],
+  ['icons/icon-512.png', 'image/png'], ['icons/maskable-512.png', 'image/png'], ['icons/apple-touch-icon.png', 'image/png'],
+]);
+
+export const server = http.createServer(async (request, response) => { // Serves only the public allowlist, never source tools, backups, or project documentation.
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Referrer-Policy', 'no-referrer');
+  response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'");
+  response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  const pathname = new URL(request.url, 'http://localhost').pathname;
+  if (pathname.startsWith(`${base}auth/`)) return login.route(request, response, pathname.slice(`${base}auth/`.length));
+  if (pathname.startsWith(`${base}api/`)) return api(request, response, pathname.slice(`${base}api/`.length));
+  if (!['GET', 'HEAD'].includes(request.method)) { response.writeHead(405, { Allow: 'GET, HEAD' }); return response.end(); }
+  if ((base !== '/' && pathname === base.slice(0, -1)) || (base !== '/' && pathname === '/')) {
+    response.writeHead(308, { Location: base });
+    return response.end();
+  }
+  if (!pathname.startsWith(base)) { response.writeHead(404); return response.end('Not found'); }
+  const filename = pathname.slice(base.length) || 'index.html';
+  if (!files.has(filename)) { response.writeHead(404); return response.end('Not found'); }
+  try {
+    const content = await readFile(path.join(root, filename));
+    response.writeHead(200, { 'Content-Type': files.get(filename), 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
+    response.end(request.method === 'HEAD' ? undefined : content);
+  } catch { response.writeHead(503); response.end('App asset unavailable'); }
+});
+
+server.on('close', () => database.close()); // Flushes and closes the persistent connection during controlled shutdowns and tests.
+server.requestTimeout = 15000;
+server.headersTimeout = 10000;
+
+server.listen(port, host, () => { // Binds locally by default; set HOST to a private interface when the reverse proxy runs on another server.
+  console.log(`Little Log is running at http://${host}:${server.address().port}${base}`);
+});

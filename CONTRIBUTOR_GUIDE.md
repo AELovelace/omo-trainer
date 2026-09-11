@@ -1,0 +1,26 @@
+# Contributor guide
+
+This repository currently contains a standalone browser tracker, not the original game.
+
+- `index.html` and `styles.css`: accessible forms and responsive dashboard.
+- `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
+- `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection.
+- `lib/sync.js`: local queue, remote reconciliation, tombstones, and explicit conflict resolution.
+- `server/database.mjs`: participant-scoped SQLite records, mutation receipts, app sessions, and administrator exports.
+- `server/login.mjs` and `server/api.mjs`: OIDC integration, HttpOnly sessions, CSRF enforcement, and authenticated sync.
+- `auth/` and `scripts/auth-server.mjs`: shared identity storage, password verification, and the reusable OIDC service.
+- `sw.js`: scoped public-shell caching. Bump the cache version on every public-file release.
+- `scripts/serve.mjs`: required Node API service, with an explicit public-file allowlist for frontend hosting.
+- `scripts/admin.mjs` and `scripts/auth-admin.mjs`: server-local data exports/backups and shared account/client management.
+- `scripts/icons.mjs`: dependency-free rasterization of the native flower artwork.
+- `tests/`: model, SQLite, auth, sync, HTTP, offline-browser, and connected multi-device/OIDC workflow tests.
+
+Keep free-form data out of HTML interpolation. Current template inputs are strictly validated enums, numbers, IDs, and timestamps. Any new user-defined text must use `textContent` or equivalent escaping. Validate imports completely before committing them, and write storage successfully before showing a save confirmation.
+
+Save local entries and their sync queue in one envelope. Retain mutation IDs on retries and base versions on edits; never replay a conflicting later edit as a new write automatically. Keep API ownership tied to the authenticated OIDC subject, not a participant ID supplied in a request. Auth secrets, credentials, database files, and analysis exports must stay outside the public-file allowlist. Do not log request bodies or cookies.
+
+Shared auth follows [AUTH_GUIDE.md](AUTH_GUIDE.md): new apps register distinct client IDs and exact callback URLs, validate code/PKCE/state/nonce and ID-token signatures, and issue their own app sessions. Keep issuer/account identities stable through backup/restore. Dependency versions and lockfile changes belong together; run `npm ci` to reproduce the installed protocol libraries.
+
+Use brief comments to explain each function's purpose and non-obvious decisions. Keep PowerShell scripts in `ps/` and Python scripts in `python/` if either is introduced. Update this guide, the probability guide, user checklist, and testing guide when behavior changes. Keep quest/dialogue integration status accurate when game assets arrive.
+
+There is no supplied `game_editor_gui.py` to update. When integrating the original game, first inspect its editor schema and ensure new fields round-trip through both the editor and runtime. Do not invent a parallel game editor in the tracker repository.

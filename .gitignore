@@ -1,0 +1,10 @@
+node_modules/
+artifacts/
+.DS_Store
+*.log
+data/
+backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.env

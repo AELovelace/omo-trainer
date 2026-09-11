@@ -1,0 +1,19 @@
+# Little Log user checklist
+
+- Open `/tracker/` in your browser. Optional: install it from your browser menu, or Safari's Share → Add to Home Screen.
+- In Settings, sign in with your shared lidoll.dev account to connect this device. Connecting uploads existing entries and future changes; the organizer can use synced records for analysis.
+- Check the time and enter total liquids consumed so far that day in mL.
+- Choose your position, diaper number for that day, and wettings in that diaper.
+- **New diaper** increases the selected number and resets its wettings to zero; save a check-in to record the change.
+- Set a whole-number pee probability. **Roll & save check-in** generates and saves a random prompt. **Save without rolling** records your selected pee/hold result.
+- Use the bathroom whenever needed. The random result is optional and does not record a wetting automatically.
+- Review Charts or History. Edit mistakes or delete individual records in History.
+- Download JSON backups in Settings. Import restores new records without duplicating identical entries. CSV exports the current history selection for spreadsheets.
+- Check the save status: offline changes wait on this device until it reconnects. Reopen the app and sign in again if the session expires. Use the same account on another device to retrieve your central history.
+- If Settings reports a conflict, compare the device and server copies and explicitly choose which one to keep.
+- Sign out & clear device removes this device's copy after ending Little Log's session. It preserves server records; export pending changes first. Shared sign-in can remain active for other lidoll.dev apps.
+- Deleting entries while connected queues deletion from the central database and other devices. Older downloaded files or server backups may retain previous copies.
+
+Daily defaults reset when the selected local date changes. Today's liquid summary shows the highest cumulative snapshot, not the sum of all entries. Historical timestamps retain their recorded local day and timezone offset.
+
+Defaults are device-specific; entry records sync. Accounts are currently created and password resets handled by the lidoll.dev administrator.
