@@ -50,6 +50,8 @@ Run the installer with no replacement flags to retry an incomplete setup. After 
 
 ## Connect the other server
 
+If `auth.lidoll.dev` has no server block yet, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md). It provides a complete HTTP/HTTPS configuration and first-certificate setup on the reverse proxy.
+
 Use the existing [tracker proxy snippet](deploy/nginx-proxy.conf) inside lidoll.dev's HTTPS server block, and the [auth proxy snippet](deploy/nginx-auth.conf) inside auth.lidoll.dev's HTTPS block. Update their upstream address if you changed --bind-address. Configure DNS and the actual TLS certificate on that web server.
 
 If the **reverse-proxy server is also Fedora**, Nginx may need SELinux permission for upstream network connections. Keep SELinux enforcing; grant the relevant network permission rather than disabling SELinux:

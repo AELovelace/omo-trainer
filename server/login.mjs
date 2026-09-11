@@ -56,7 +56,9 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
           return redirect(response, `${base}#settings`, [setCookie(sessionName, database.createSession(account.id), 3600), setCookie(loginName, '', 0)]);
         }
         response.writeHead(404); response.end();
-      } catch {
+      } catch (error) {
+        console.error(`Sign-in ${route} failed:`, error.cause?.code ?? error.code ?? error.name, error.message); // Records the cause in the service journal; session cookies and tokens never appear in these fields.
+        if (response.headersSent) return response.end();
         response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
         response.end('Sign-in could not be completed. Return to Little Log and try again. Your locally saved entries are unchanged.');
       }

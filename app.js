@@ -19,6 +19,28 @@ let syncRunning = false;
 let syncMessage = '';
 let renderedConflicts = '';
 
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let crtPreference = null;
+try { crtPreference = localStorage.getItem('ldq-crt-effect'); } catch { /* The display still works when browser storage is unavailable. */ }
+
+function renderCrt() { // Matches the main site's saved display preference and always respects reduced motion.
+  const enabled = crtPreference !== 'off' && !reducedMotion.matches;
+  document.documentElement.classList.toggle('crt-enabled', enabled);
+  $('#crt-toggle').setAttribute('aria-pressed', String(enabled));
+  $('#crt-toggle').textContent = `CRT FX // ${enabled ? 'ON' : 'OFF'}`;
+  $('#crt-toggle').disabled = reducedMotion.matches;
+  $('#crt-toggle').title = reducedMotion.matches ? 'CRT texture is disabled by your reduced-motion preference.' : 'Toggle the static terminal scanline texture.';
+}
+
+$('#crt-toggle').addEventListener('click', () => { // Saves a cosmetic preference separately from observation records and their sync queue.
+  crtPreference = document.documentElement.classList.contains('crt-enabled') ? 'off' : 'on';
+  renderCrt();
+  try { localStorage.setItem('ldq-crt-effect', crtPreference); }
+  catch { notify('Display changed for this visit. Your browser could not save the preference.'); }
+});
+reducedMotion.addEventListener('change', renderCrt);
+renderCrt();
+
 function notify(message) { // Announces feedback without moving focus away from the user's current control.
   $('#toast').textContent = message;
   $('#toast').hidden = false;
@@ -199,7 +221,7 @@ function renderSummary() { // Renders today's snapshots separately from historic
   const summary = daySummary(state.entries, localDay());
   $('#today-label').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   $('#stat-rolls').textContent = summary.count.toLocaleString();
-  $('#stat-results').textContent = summary.count ? `${summary.pee} pee · ${summary.hold} hold` : 'Ready when you are';
+  $('#stat-results').textContent = summary.count ? `${summary.pee} pee · ${summary.hold} hold` : 'Awaiting first entry';
   $('#stat-liquids').textContent = summary.liquidsMl.toLocaleString();
   $('#stat-diaper').textContent = summary.latest ? `#${summary.latest.diaperNumber}` : '—';
   $('#stat-wettings').textContent = summary.latest ? `${summary.latest.wettingsCount} wettings in this diaper` : 'No check-ins yet';
@@ -217,15 +239,15 @@ function renderChart() { // Draws real daily data and supplies an equivalent tab
   const heightFor = value => value / ceiling * height;
   const grid = Array.from({ length: 5 }, (_, index) => {
     const y = top + height * index / 4;
-    return `<line x1="${left}" x2="${left + width}" y1="${y}" y2="${y}" stroke="#eee8f3" stroke-dasharray="3 5"/><text x="${left - 9}" y="${y + 3}" text-anchor="end">${Math.round(ceiling * (1 - index / 4)).toLocaleString()}</text>`;
+    return `<line x1="${left}" x2="${left + width}" y1="${y}" y2="${y}" stroke="var(--chart-grid)" stroke-dasharray="3 5"/><text x="${left - 9}" y="${y + 3}" text-anchor="end">${Math.round(ceiling * (1 - index / 4)).toLocaleString()}</text>`;
   }).join('');
   const bars = series.map((row, index) => {
     const x = left + slot * (index + .5) - barWidth / 2;
     const peeHeight = heightFor(row.pee), holdHeight = heightFor(row.hold);
     const title = `${row.day}: ${row.pee} pee, ${row.hold} hold, ${row.liquidsMl} mL`;
     const rectangles = isLiquid
-      ? `<rect x="${x}" y="${bottom - heightFor(row.liquidsMl)}" width="${barWidth}" height="${heightFor(row.liquidsMl)}" rx="3" fill="#a5c4d9"/>`
-      : `<rect x="${x}" y="${bottom - peeHeight}" width="${barWidth}" height="${peeHeight}" rx="2" fill="#a48abe"/><rect x="${x}" y="${bottom - peeHeight - holdHeight}" width="${barWidth}" height="${holdHeight}" rx="2" fill="#e6dcef"/>`;
+      ? `<rect x="${x}" y="${bottom - heightFor(row.liquidsMl)}" width="${barWidth}" height="${heightFor(row.liquidsMl)}" rx="3" fill="var(--chart-liquid)"/>`
+      : `<rect x="${x}" y="${bottom - peeHeight}" width="${barWidth}" height="${peeHeight}" rx="2" fill="var(--chart-pee)"/><rect x="${x}" y="${bottom - peeHeight - holdHeight}" width="${barWidth}" height="${holdHeight}" rx="2" fill="var(--chart-hold)"/>`;
     const showLabel = days === 7 || index === 0 || index === days - 1 || index % Math.ceil(days / 5) === 0;
     const label = new Date(`${row.day}T12:00:00`).toLocaleDateString(undefined, days === 7 ? { weekday: 'short' } : { month: 'short', day: 'numeric' });
     return `<g><title>${title}</title>${rectangles}${showLabel ? `<text x="${x + barWidth / 2}" y="${bottom + 23}" text-anchor="middle">${label}</text>` : ''}</g>`;
@@ -234,12 +256,12 @@ function renderChart() { // Draws real daily data and supplies an equivalent tab
   $('#chart-data').innerHTML = series.map(row => `<tr><th scope="row">${row.day}</th><td>${row.pee}</td><td>${row.hold}</td><td>${row.liquidsMl}</td></tr>`).join('');
   $('#chart-legend').hidden = isLiquid;
   const count = series.reduce((sum, row) => sum + row.pee + row.hold, 0);
-  $('#chart-caption').textContent = count ? (isLiquid ? 'Daily totals use the highest logged cumulative amount.' : `${count} check-ins over ${days} days. Each day is its own little chapter.`) : 'Your chart will bloom with your first check-in.';
+  $('#chart-caption').textContent = count ? (isLiquid ? 'Daily totals use the highest logged cumulative amount.' : `${count} check-ins over ${days} days. Pee and hold results shown by day.`) : 'No observations yet. Your first check-in starts the record.';
 }
 
 function renderRecent() { // Displays a compact recent list without inserting free-form user content as HTML.
   const recent = sortedEntries(state.entries).slice(0, 4);
-  $('#recent-list').innerHTML = recent.length ? recent.map(entry => `<div class="recent-entry"><span class="entry-icon ${entry.result}"><svg class="icon"><use href="#i-${entry.result === 'pee' ? 'drop' : 'clock'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${entry.liquidsMl.toLocaleString()} mL · ${positions[entry.position]} · Diaper #${entry.diaperNumber}</p></div><span class="result-pill ${entry.result}">${entry.result === 'pee' ? 'Pee' : 'Hold'}</span></div>`).join('') : '<div class="empty-state"><svg class="empty-flower" aria-hidden="true"><use href="#i-flower"/></svg>A fresh little page.<br>Your check-ins will appear here.</div>';
+  $('#recent-list').innerHTML = recent.length ? recent.map(entry => `<div class="recent-entry"><span class="entry-icon ${entry.result}"><svg class="icon"><use href="#i-${entry.result === 'pee' ? 'drop' : 'clock'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${entry.liquidsMl.toLocaleString()} mL · ${positions[entry.position]} · Diaper #${entry.diaperNumber}</p></div><span class="result-pill ${entry.result}">${entry.result === 'pee' ? 'Pee' : 'Hold'}</span></div>`).join('') : '<div class="empty-state"><svg class="empty-sigil" aria-hidden="true"><use href="#i-sigil"/></svg>NO OBSERVATIONS FILED<br>Your saved check-ins will appear here.</div>';
 }
 
 function filteredEntries() { // Applies inclusive calendar-day filters using each entry's recorded local date.
@@ -277,7 +299,7 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     if (selected) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Your history · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.
@@ -441,7 +463,7 @@ $('#install-button').addEventListener('click', async () => {
   try { await installPrompt.prompt(); await installPrompt.userChoice; }
   finally { installPrompt = null; $('#install-button').hidden = true; }
 });
-window.addEventListener('appinstalled', () => { $('#install-button').hidden = true; notify('Little Log is installed. Make yourself at home.'); });
+window.addEventListener('appinstalled', () => { $('#install-button').hidden = true; notify('Little Log terminal installed. Ready for observations.'); });
 
 function refreshClock() { // Advances untouched live timestamps and resets automatic daily defaults when midnight passes.
   const today = localDay();

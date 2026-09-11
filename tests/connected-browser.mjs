@@ -55,6 +55,7 @@ async function signIn(page, username) { // Exercises a real authorization-code +
   await page.click('[data-page="settings"]');
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#connect-account')]);
   await page.waitForSelector('#username');
+  await page.screenshot({ path: resolve(directory, 'auth-signin.png'), fullPage: true }); // Captures the shared identity theme before any synthetic password is entered.
   await fill(page, '#username', username);
   await fill(page, '#password', password);
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('button[type="submit"]')]);

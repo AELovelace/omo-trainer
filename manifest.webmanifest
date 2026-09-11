@@ -1,17 +1,32 @@
 {
   "id": "./",
-  "name": "Little Log · Daily Tracker",
+  "name": "Little Log · Chrysalis",
   "short_name": "Little Log",
-  "description": "Your private daily check-ins, charts, and optional random prompts.",
+  "description": "A recovered Chrysalis terminal for daily observations, charts, and synced records.",
   "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#faf9fc",
-  "theme_color": "#eee8fa",
+  "background_color": "#1a0611",
+  "theme_color": "#1a0611",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

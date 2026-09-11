@@ -4,6 +4,8 @@ The identity service is a separate Node process intended for **https://auth.lido
 
 All applications use the same issuer and stable account subject. Each application has its own registered client ID, exact callback URLs, session cookies, database, and authorization rules. Logging in to a second registered app reuses the auth server's existing login session. Signing in does not grant an app access to another app's records.
 
+Sign-in and consent screens use the Chrysalis identity-gateway theme. The client name, requested identity access, account instructions, and errors remain explicit; the visual theme does not change issuer URLs, account IDs, or client registrations.
+
 ## Start locally
 
 Install Node 24 or newer, then run `npm ci`. On Windows use `npm.cmd ci` if PowerShell blocks `npm.ps1`.
@@ -32,6 +34,8 @@ node --env-file=/etc/lidoll/tracker.env scripts/serve.mjs
 Run auth administrator commands with the **same auth environment file**. Initialization writes `clients.json` only if it does not exist. Changing `TRACKER_REDIRECT_URI` later does not overwrite existing clients; update the callback in that file and restart auth.
 
 On the reverse-proxy server, configure DNS and HTTPS for `auth.lidoll.dev`, then include [nginx-auth.conf](deploy/nginx-auth.conf) inside that HTTPS server block. Keep the tracker proxy inside the existing `lidoll.dev` HTTPS block. The snippets preserve the configured service address `10.1.1.23`, using ports 4173 and 4180. Only the reverse proxy should reach those service ports. `AUTH_TRUST_PROXY=1` trusts the proxy's scheme/IP headers, so the proxy must replace `X-Real-IP` and the service must not be directly reachable by clients.
+
+If the auth HTTPS server block does not exist yet, use the complete [auth server configuration](deploy/nginx-auth-server.conf) and follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) for certificate issuance, installation, and renewal.
 
 Production startup requires explicit HTTPS issuer/app URLs. Auth metadata is available at `https://auth.lidoll.dev/.well-known/openid-configuration`. Avoid changing the issuer after accounts are in use: the combination of issuer and subject identifies an account to applications.
 

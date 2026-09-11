@@ -1,5 +1,7 @@
 # Probability and defaults
 
+The Chrysalis observation theme changes presentation only. Archive labels, the terminal seal, and the CRT display preference do not affect roll probabilities, recorded values, or aggregation.
+
 The probability is the integer percentage chance of a **pee** result. It accepts all values from 0 through 100 inclusive. Zero always yields hold; 100 always yields pee. The other probabilities use `crypto.getRandomValues` with rejection sampling over 100 equally likely outcomes. Every roll is independent; the app does not increase difficulty, create streak penalties, or learn from records.
 
 Set initial preferences in `DEFAULT_SETTINGS` in `lib/model.js`; each person can override them in Settings. Per-entry controls can override those defaults. Liquids, position, diaper number, and wetting count do not affect probability. A manual result records the selected result and probability without generating randomness.

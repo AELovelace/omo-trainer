@@ -28,6 +28,8 @@ node tests/browser.mjs
 
 The workflow covers random/manual logging, daily carry-forward/reset, independent wetting counts, persistence after reload, charts, filters, editing, JSON/CSV downloads, valid and invalid imports, preferences, offline reload and saving, 390px phone layout, deletion, quota errors, and corrupt-data recovery. Screenshot fixtures are synthetic; the application ships with an empty history.
 
+It also checks that the Chrysalis CRT toggle persists through reload, switches off under reduced motion, and restores the saved preference when that media setting clears. For visual releases, inspect desktop and phone screenshots, chart/legend colors, visible focus rings, dark native date/select controls, and sign-in/consent contrast. Check all three routes at 320, 390, 680, 768, 1024, and 1440 pixels for document overflow. The icon generator and HTTP tests cover all install-icon sizes; visual inspection verifies the sigil itself.
+
 ## Connected browser and shared-auth workflows
 
 With the same Puppeteer and CHROME_PATH configuration, run:
@@ -50,3 +52,5 @@ This runner starts its own isolated tracker and identity services on ports 43173
 8. On the production proxy, verify HTTPS discovery/keys, exact callback configuration, Secure/HttpOnly cookies, and trusted proxy headers. Confirm both databases survive a service restart and both database backups can be restored in an isolated environment.
 
 Nginx snippets are deployment templates; validate them against the real server configuration with `nginx -t`. Live domain deployment, real-device installation, and screen-reader checks require the actual hosting/devices and are not implied by local tests.
+
+For a new auth proxy host, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md): validate the HTTP bootstrap before certificate issuance, then validate the complete HTTPS configuration before reload. Check HTTP redirects to the fixed auth origin, certificate challenge URLs remain local, HTTPS discovery reports the correct issuer, and the real OIDC sign-in succeeds. Verify Certbot renewal with `certbot renew --dry-run` and confirm a renewal schedule and Nginx reload hook exist.

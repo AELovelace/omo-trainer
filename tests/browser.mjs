@@ -33,6 +33,16 @@ try {
   await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   await page.goto(origin, { waitUntil: 'networkidle0' });
   await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.click('#crt-toggle');
+  assert.equal(await page.$eval('#crt-toggle', element => element.getAttribute('aria-pressed')), 'false');
+  await page.reload({ waitUntil: 'networkidle0' });
+  assert.equal(await page.$eval('#crt-toggle', element => element.getAttribute('aria-pressed')), 'false', 'The display preference must survive reload');
+  await page.click('#crt-toggle');
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.waitForFunction(() => document.querySelector('#crt-toggle').disabled);
+  assert.equal(await page.$eval('#crt-toggle', element => element.getAttribute('aria-pressed')), 'false');
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+  await page.waitForFunction(() => document.querySelector('#crt-toggle').getAttribute('aria-pressed') === 'true');
   await page.screenshot({ path: resolve(artifacts, 'desktop-empty.png'), fullPage: true });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '0');
 

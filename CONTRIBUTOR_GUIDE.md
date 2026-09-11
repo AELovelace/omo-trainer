@@ -12,13 +12,18 @@ This repository currently contains a standalone browser tracker, not the origina
 - `sw.js`: scoped public-shell caching. Bump the cache version on every public-file release.
 - `scripts/serve.mjs`: required Node API service, with an explicit public-file allowlist for frontend hosting.
 - `scripts/admin.mjs` and `scripts/auth-admin.mjs`: server-local data exports/backups and shared account/client management.
-- `scripts/icons.mjs`: dependency-free rasterization of the native flower artwork.
+- `scripts/icons.mjs`: dependency-free rasterization of the Chrysalis terminal sigil; regenerate the PNGs with `npm run icons` after artwork changes.
 - `tests/`: model, SQLite, auth, sync, HTTP, offline-browser, and connected multi-device/OIDC workflow tests.
 - `deploy/fedora-deploy.sh`, `deploy/fedora-update.sh`, and `deploy/fedora.mjs`: Fedora/systemd installation and staged GitHub updates; operational instructions are in `FEDORA_DEPLOYMENT.md`.
 - `deploy/release.mjs`: configuration checks, systemd units, firewall rules, and the tested activation/rollback sequence.
 - `deploy/command.mjs`: direct command execution with an accessible default working directory before switching Unix users; stage-specific commands supply their checkout explicitly.
+- `deploy/nginx-auth-server.conf` and `deploy/nginx-auth-bootstrap.conf`: complete auth reverse-proxy configuration and temporary first-certificate host; installation and renewal instructions are in `AUTH_PROXY_SETUP.md`.
 
 Keep free-form data out of HTML interpolation. Current template inputs are strictly validated enums, numbers, IDs, and timestamps. Any new user-defined text must use `textContent` or equivalent escaping. Validate imports completely before committing them, and write storage successfully before showing a save confirmation.
+
+The Chrysalis theme follows the live lidoll.dev palette: page `#1a0611`, panel `#370f2d`, pink `#ff96c8`, pale rail `#fadadd`, and orchid `#a474d6`. `styles.css` holds the local font stacks and chart colors; SVG charts consume those same CSS variables. The archive seal, redactions, and margin note are presentation, not access-control or sync indicators. Keep actual save status, organizer access, errors, and account consent explicit. The shared sign-in/consent view in `scripts/auth-server.mjs` uses the same palette without external styles or fonts.
+
+`CRT FX` controls a static background texture. It shares the main site's `ldq-crt-effect` browser preference, stays separate from observation data, and is disabled by reduced motion. Do not add flashing or obscure form text with overlays. Check desktop, phone, history, settings, editing, and account pages after theme changes. Preserve the storage namespace, OIDC client ID, PWA ID/scope, and export format across visual releases.
 
 Save local entries and their sync queue in one envelope. Retain mutation IDs on retries and base versions on edits; never replay a conflicting later edit as a new write automatically. Keep API ownership tied to the authenticated OIDC subject, not a participant ID supplied in a request. Auth secrets, credentials, database files, and analysis exports must stay outside the public-file allowlist. Do not log request bodies or cookies.
 

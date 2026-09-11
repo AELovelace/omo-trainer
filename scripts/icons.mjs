@@ -1,7 +1,7 @@
 import { deflateSync } from 'node:zlib';
 import { mkdir, writeFile } from 'node:fs/promises';
 
-const colors = { background: [238, 232, 250], petal: [174, 145, 206], center: [255, 248, 234] };
+const colors = { background: [26, 6, 17], sigil: [255, 150, 200], frame: [216, 154, 171] };
 const crcTable = Array.from({ length: 256 }, (_, byte) => { // Precomputes PNG's CRC-32 table using its standard polynomial.
   let crc = byte;
   for (let bit = 0; bit < 8; bit++) crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
@@ -20,16 +20,12 @@ function chunk(type, data) { // Encodes a PNG chunk with its length and integrit
   return output;
 }
 
-function colorAt(x, y) { // Rasterizes the existing vector flower with all important artwork inside the maskable safe zone.
-  const dx = x - .5, dy = y - .5;
-  if (dx * dx + dy * dy < .084 ** 2) return colors.center;
-  const diagonal = Math.SQRT1_2;
-  for (const [cx, cy, direction] of [[.404, .404, -1], [.596, .404, 1], [.404, .596, 1], [.596, .596, -1]]) {
-    const px = x - cx, py = y - cy;
-    const u = (px + direction * py) * diagonal;
-    const v = (-direction * px + py) * diagonal;
-    if ((u / .117) ** 2 + (v / .195) ** 2 <= 1) return colors.petal;
-  }
+function colorAt(x, y) { // Draws the vector terminal sigil inside the maskable safe zone, with a decorative outer frame.
+  const dx = Math.abs(x - .5), dy = Math.abs(y - .5);
+  const outer = Math.max(dx, dy);
+  if (outer >= .405 && outer <= .411) return colors.frame;
+  if (dx + dy < .075) return colors.background;
+  if (outer + 3 * Math.min(dx, dy) <= .32) return colors.sigil;
   return colors.background;
 }
 
@@ -58,4 +54,4 @@ await mkdir(new URL('../icons/', import.meta.url), { recursive: true });
 for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['maskable-512.png', 512], ['apple-touch-icon.png', 180]]) {
   await writeFile(new URL(`../icons/${name}`, import.meta.url), png(size));
 }
-console.log('Generated four install icons from the flower artwork.');
+console.log('Generated four install icons from the Chrysalis terminal sigil.');
