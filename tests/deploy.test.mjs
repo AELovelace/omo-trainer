@@ -1,12 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { activateRelease, validateConfig, validateEnvironment, firewallRules, serviceUnit, DEFAULTS, fetchBranch } from '../deploy/release.mjs';
+import { run } from '../deploy/command.mjs';
 
 const tracker = readFileSync(new URL('../deploy/tracker.env.example', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../deploy/auth.env.example', import.meta.url), 'utf8');
+
+test('deployment commands leave the invoking checkout and retain explicit staging directories', () => {
+  mkdirSync('artifacts', { recursive: true });
+  const stage = mkdtempSync(resolve('artifacts/deploy-cwd-'));
+  const original = process.cwd();
+  try {
+    process.chdir(stage); // Simulates starting the installer inside an operator-owned checkout.
+    const probe = ['--eval', 'process.stdout.write(process.cwd())'];
+    assert.equal(realpathSync(run(process.execPath, probe, { capture: true })), realpathSync('/'));
+    assert.equal(realpathSync(run(process.execPath, probe, { cwd: stage, capture: true })), realpathSync(stage));
+    assert.equal(process.cwd(), stage, 'Only child commands should change working directory');
+  } finally { process.chdir(original); }
+});
 
 function scenario(failAt, hasPrevious = true) { // Simulates deployment side effects so rollback behavior can be tested without touching host services or real databases.
   const calls = [];

@@ -101,6 +101,15 @@ The updater reuses preserved env files. It never rotates signing keys, resets us
 
 ## Failures and recovery
 
+If an older installer reports `fatal: failed to stat '/home/.../omo-trainer': Permission denied`, its build user inherited your private checkout as its working directory. The corrected command runner starts in `/` before switching users and uses explicit staging directories for builds. Keep your home permissions unchanged. After publishing this fix, run `git pull --ff-only` in your bootstrap checkout and retry `sudo bash deploy/fedora-deploy.sh` without replacement flags; existing setup settings are preserved.
+
+To retry the older installer immediately without changing files, start it from an accessible directory (replace the path if your checkout lives elsewhere):
+
+```bash
+cd /
+sudo bash /home/aedith/omo-trainer/deploy/fedora-deploy.sh
+```
+
 - Fetch, package-install, or test failure leaves the currently running services and release alone.
 - Backup failure prevents activation and restarts the previous services.
 - Failed new-release health checks switch code back to the previous release and check it again.

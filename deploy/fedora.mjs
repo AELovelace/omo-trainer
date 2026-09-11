@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { run } from './command.mjs';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, lstatSync, realpathSync, readdirSync, renameSync, symlinkSync, unlinkSync, cpSync, openSync, closeSync, chmodSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
@@ -20,14 +20,6 @@ const lockFile = join(CONFIG, 'deployment.lock');
 const options = {};
 let checkOnly = false;
 const [command, ...args] = process.argv.slice(2);
-
-function run(program, arguments_, { user, cwd, capture = false } = {}) { // Executes argument arrays directly, without interpolating shell commands or secrets.
-  const executable = user ? '/usr/sbin/runuser' : program;
-  const parameters = user ? ['-u', user, '--', program, ...arguments_] : arguments_;
-  return execFileSync(executable, parameters, { cwd, encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-    env: { PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin', LANG: 'C.UTF-8', GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' },
-  })?.trim();
-}
 
 function safeDirectory(path, mode = 0o755) { // Refuses symlinked deployment directories before privileged writes.
   let cursor = resolve(path);
@@ -127,7 +119,7 @@ function stageRelease(commit) { // Installs and tests a fresh checkout as an unp
   run('/usr/bin/chown', [`${BUILDER}:${BUILDER}`, stage]);
   run('/usr/bin/git', ['clone', '--no-hardlinks', '--no-checkout', MIRROR, stage], { user: BUILDER });
   run('/usr/bin/git', ['checkout', '--detach', commit], { user: BUILDER, cwd: stage });
-  for (const name of ['package-lock.json', 'scripts/serve.mjs', 'scripts/auth-server.mjs', 'deploy/fedora.mjs', 'deploy/fedora-update.sh']) {
+  for (const name of ['package-lock.json', 'scripts/serve.mjs', 'scripts/auth-server.mjs', 'deploy/fedora.mjs', 'deploy/command.mjs', 'deploy/fedora-update.sh']) {
     if (!existsSync(join(stage, name))) throw new Error(`Fetched commit is missing ${name}. Push the complete deployment changes to GitHub first.`);
   }
   console.log('Installing pinned packages and testing the staged release…');

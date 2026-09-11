@@ -14,6 +14,8 @@ These cover all 101 probability settings, rejection sampling, cumulative snapsho
 
 Actual dnf/systemd/SELinux/firewalld integration must be verified on Fedora. Follow [FEDORA_DEPLOYMENT.md](FEDORA_DEPLOYMENT.md), including a public-domain sign-in check after configuring the reverse proxy.
 
+The command-runner regression launches real child processes from a temporary operator checkout, verifying they default to `/` while explicit staging directories still work. Unix user switching and private-home permissions require the Fedora host to verify end to end.
+
 ## Browser workflows
 
 Start `node scripts/serve.mjs` in another terminal. The optional browser runner uses Puppeteer with an installed Chrome/Chromium. Install the testing dependency with `npm install --no-save --package-lock=false puppeteer-core`, or set `PUPPETEER_MODULE` to an existing Puppeteer module file. Set `CHROME_PATH` to the browser executable and run:

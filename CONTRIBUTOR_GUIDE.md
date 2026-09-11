@@ -16,6 +16,7 @@ This repository currently contains a standalone browser tracker, not the origina
 - `tests/`: model, SQLite, auth, sync, HTTP, offline-browser, and connected multi-device/OIDC workflow tests.
 - `deploy/fedora-deploy.sh`, `deploy/fedora-update.sh`, and `deploy/fedora.mjs`: Fedora/systemd installation and staged GitHub updates; operational instructions are in `FEDORA_DEPLOYMENT.md`.
 - `deploy/release.mjs`: configuration checks, systemd units, firewall rules, and the tested activation/rollback sequence.
+- `deploy/command.mjs`: direct command execution with an accessible default working directory before switching Unix users; stage-specific commands supply their checkout explicitly.
 
 Keep free-form data out of HTML interpolation. Current template inputs are strictly validated enums, numbers, IDs, and timestamps. Any new user-defined text must use `textContent` or equivalent escaping. Validate imports completely before committing them, and write storage successfully before showing a save confirmation.
 
