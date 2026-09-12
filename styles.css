@@ -1583,8 +1583,9 @@ dialog .primary {
 .desperation-labels { display: flex; justify-content: space-between; color: var(--muted); font: 11px var(--mono); }
 
 /* Collection layouts wrap on phones without changing the five recording shortcuts. */
-.economy-balances { display:flex; flex-wrap:wrap; gap:24px; }
-.economy-balances strong { display:block; font-size:2rem; }
+.economy-balances { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(6px,2vw,24px); } /* Keep all three wallet totals together on every screen size. */
+.economy-balances p { min-width:0; font-size:clamp(11px,2.8vw,14px); white-space:nowrap; }
+.economy-balances strong { display:block; font-size:clamp(1.25rem,5vw,2rem); white-space:normal; overflow-wrap:anywhere; }
 .sticker-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr)); gap:16px; }
 .sticker-item { padding:16px; border:1px solid var(--border, #434047); overflow-wrap:anywhere; }
 .sticker-item img { display:block; width:100%; height:120px; object-fit:contain; margin-bottom:12px; }
