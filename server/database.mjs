@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { validateEntry, MAX_ENTRIES } from '../lib/model.js';
+import { validateGrowthChart } from './growth-chart.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex'); // Stores only a digest of session secrets and retry payloads.
 export const databasePath = () => resolve(process.env.DATA_DIR ?? 'data', 'little-log.sqlite');
@@ -46,6 +47,55 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
       if (db.prepare('PRAGMA user_version').get().user_version < 2) db.exec('ALTER TABLE entries ADD COLUMN payload_json TEXT; PRAGMA user_version = 2;');
       db.exec('COMMIT'); // Rechecks under the write lock if an administrator and service start concurrently.
     } catch (error) { db.exec('ROLLBACK'); db.close(); throw error; }
+  }
+
+  db.exec(`CREATE TABLE IF NOT EXISTS growth_charts (
+    participant_id TEXT PRIMARY KEY REFERENCES participants(id), payload_json TEXT NOT NULL,
+    version INTEGER NOT NULL, updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS growth_chart_mutations (
+    participant_id TEXT NOT NULL REFERENCES participants(id), id TEXT NOT NULL, request_hash TEXT NOT NULL,
+    version INTEGER NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(participant_id, id)
+  );`); // Add charts beside observations without changing participant IDs or existing records.
+
+  function growthChart(participantId) { // Look up the chart through the same account as the Chrysalis observation file.
+    const row = db.prepare('SELECT * FROM growth_charts WHERE participant_id = ?').get(participantId);
+    return row ? { chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at } : { chart: null, version: 0, updatedAt: null };
+  }
+
+  function saveGrowthChart(participantId, input) { // Check versions and retain receipts so retries cannot overwrite another device's work.
+    if (!input || !Number.isSafeInteger(input.baseVersion) || input.baseVersion < 0 || typeof input.mutationId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(input.mutationId)) throw new ApiError(400, 'Invalid chart version or mutation ID.');
+    let chart;
+    try { chart = validateGrowthChart(input.chart); } catch (error) { throw new ApiError(400, error.message); }
+    const fingerprint = hash(JSON.stringify({ baseVersion: input.baseVersion, chart }));
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const receipt = db.prepare('SELECT * FROM growth_chart_mutations WHERE participant_id = ? AND id = ?').get(participantId, input.mutationId);
+      if (receipt && receipt.request_hash !== fingerprint) throw new ApiError(400, 'A chart retry ID was reused for different data.');
+      if (receipt) { db.exec('COMMIT'); return { chart, version: receipt.version, updatedAt: receipt.updated_at }; }
+      if (growthChart(participantId).version !== input.baseVersion) throw new ApiError(409, 'Your Chrysalis file has a newer chart. Choose which version to keep.');
+      const version = input.baseVersion + 1, updatedAt = new Date().toISOString();
+      db.prepare(`INSERT INTO growth_charts VALUES (?, ?, ?, ?) ON CONFLICT(participant_id)
+        DO UPDATE SET payload_json=excluded.payload_json, version=excluded.version, updated_at=excluded.updated_at`).run(participantId, JSON.stringify(chart), version, updatedAt);
+      db.prepare('INSERT INTO growth_chart_mutations VALUES (?, ?, ?, ?, ?)').run(participantId, input.mutationId, fingerprint, version, updatedAt);
+      db.exec('COMMIT');
+      return { chart, version, updatedAt };
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+  }
+
+  function migrateIssuer(previous, next) { // Explicit administrator migration for the same auth account database; never merge usernames or collisions.
+    if (previous === next) throw new Error('Choose two different issuers.');
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const count = db.prepare('SELECT COUNT(*) AS count FROM participants WHERE issuer = ?').get(previous).count;
+      if (!count) throw new Error('No participants use the previous issuer.');
+      const collision = db.prepare('SELECT 1 FROM participants a JOIN participants b ON a.subject=b.subject WHERE a.issuer=? AND b.issuer=? LIMIT 1').get(previous, next);
+      if (collision) throw new Error('Both issuers already have a participant for the same subject. Resolve the account collision before migrating.');
+      db.prepare('UPDATE participants SET issuer=? WHERE issuer=?').run(next, previous);
+      db.exec('DELETE FROM app_sessions; DELETE FROM login_attempts;');
+      db.exec('COMMIT');
+      return count;
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
 
   function ensureParticipant(issuer, subject, label) { // Maps an OIDC identity to an app-specific pseudonym, never to a browser-supplied participant ID.
@@ -162,8 +212,9 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
   }
 
   return {
-    ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows,
+    ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
+    exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),
     backup: destination => backup(db, destination), // Uses SQLite's online backup API so WAL data is included consistently.
     close: () => db.close(),

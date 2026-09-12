@@ -26,3 +26,16 @@ Diaper defaults reset when the selected local date changes, while unsaved intake
 Default position is device-specific; enrollment, wettings and check-in records sync. Sync before switching devices: an offline device cannot know about another device's pending records or cooldown. You can register yourself or use an account created by the lidoll.dev administrator. No email address is collected; contact the administrator for password resets.
 
 During a server update, offline check-ins remain on the device and retry afterward. After a frontend update, close old Little Log tabs and reopen to let the new app version activate.
+
+
+## Linked Potty chart (2026-09-12)
+
+- [ ] Open Potty chart from Little Log's navigation or installed-app shortcut.
+- [ ] Sign in; confirm the browser chart stays unlinked until you choose upload.
+- [ ] Link the chart and check that its file ID matches your observation participant.
+- [ ] On a second device, select the saved file chart and confirm rows/stars.
+- [ ] Edit offline, reopen, reconnect and resolve conflicting versions explicitly.
+- [ ] Download a chart backup before clearing or replacing content you want to keep.
+- [ ] Confirm switching accounts cannot upload the previous account's chart.
+- [ ] Clear chart & reset rows, sync, and confirm cleared stars stay cleared.
+- [ ] Sign out & clear this browser chart only removes this chart's local copy.

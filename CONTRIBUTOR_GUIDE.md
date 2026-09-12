@@ -43,3 +43,15 @@ Keep shell files LF-terminated through `.gitattributes`. Fedora deployment uses 
 Use brief comments to explain each function's purpose and non-obvious decisions. Keep PowerShell scripts in `ps/` and Python scripts in `python/` if either is introduced. Update this guide, the probability guide, user checklist, and testing guide when behavior changes. Keep quest/dialogue integration status accurate when game assets arrive.
 
 There is no supplied `game_editor_gui.py` to update. When integrating the original game, first inspect its editor schema and ensure new fields round-trip through both the editor and runtime. Do not invent a parallel game editor in the tracker repository.
+
+
+## Growth Chart integration (2026-09-12)
+
+The PWA now bundles `potty_chart/` from the game's `web/potty_chart/`.
+Use `scripts/import-growth-chart.mjs <source-folder>` to refresh public assets.
+Both charts use the existing OIDC session and participant ID; keep the
+`growth-chart` API session-owned, CSRF-protected, versioned and uncached.
+The browser chart and its retry/ownership metadata share one atomic save.
+Sign-in alone never links or uploads a guest chart. See GROWTH_CHART_GUIDE.md.
+Production auth defaults use auth.sadgirlsclub.wtf; existing issuer transitions
+require the explicit migration documented in AUTH_GUIDE.md.

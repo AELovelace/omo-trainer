@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { parseEnv } from 'node:util';
 
-export const DEFAULTS = Object.freeze({ repo: 'https://github.com/AELovelace/omo-trainer.git', branch: 'main', bindAddress: '10.1.1.23', proxyIp: '', firewallZone: 'public', publicOrigin: 'https://lidoll.dev', authOrigin: 'https://auth.lidoll.dev' });
+export const DEFAULTS = Object.freeze({ repo: 'https://github.com/AELovelace/omo-trainer.git', branch: 'main', bindAddress: '10.1.1.23', proxyIp: '', firewallZone: 'public', publicOrigin: 'https://lidoll.dev', authOrigin: 'https://auth.sadgirlsclub.wtf' });
 
 export function validateConfig(value) { // Restricts values before they enter Git arguments, env files, systemd units, or firewall rules.
   const config = { ...DEFAULTS, ...value };

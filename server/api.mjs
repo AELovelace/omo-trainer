@@ -25,9 +25,11 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (request.headers['sec-fetch-site'] === 'cross-site' || (origin && origin !== login.origin)) throw new ApiError(403, 'This origin is not allowed.');
       if (!['GET', 'POST'].includes(request.method)) throw new ApiError(405, 'Method not allowed.');
       const session = login.session(request);
-      if (!session) throw new ApiError(401, 'Sign in with your lidoll.dev account to sync.');
+      if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if (route === 'growth-chart' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.growthChart(participant.id) });
+      if (route === 'growth-chart' && request.method === 'POST') return send(response, 200, { participant, ...database.saveGrowthChart(participant.id, await body(request)) });
       if (route === 'session' && request.method === 'GET') return send(response, 200, { participant, csrf, records: database.records(participant.id) });
       if (route === 'logout' && request.method === 'POST') { login.logout(request, response); return send(response, 200, { ok: true }); }
       if (route === 'sync' && request.method === 'POST') {

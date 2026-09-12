@@ -1,0 +1,784 @@
+/* -- LiDOLL QUEST // Promotional Growth Chart -----------------------------
+   Outer shell borrows the main site CRT palette; the chart itself is a
+   nursery-pink Chrysalis document, deliberately sweet against that dark frame.
+   ------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: dark;
+  --page: #1a0611;              /* Site background, matched to ../style.css */
+  --panel: #370f2d;             /* Raised surface behind the promo copy */
+  --ink: #fff0f4;               /* Default light text */
+  --muted: #e0b8cb;             /* Secondary text */
+  --pink: #ff96c8;              /* Site accent */
+  --orchid: #a474d6;            /* Site accent */
+  --rail: #fadadd;              /* Site accent, used for rules and focus */
+  --gold: #ffe66f;              /* Star colour, shared with the site */
+  --line: rgba(250, 218, 221, 0.22);
+
+  --paper: #ffe9f4;             /* Chart card face */
+  --paper-deep: #ffd3e8;        /* Chart card shading and header band */
+  --paper-ink: #6b2a4e;         /* Chart body text */
+  --paper-soft: #a4658a;        /* Chart secondary text */
+  --paper-line: #f0aecd;        /* Chart hairlines and cell borders */
+  --locked: #d8c4d0;            /* The row that can never earn a star */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--page);
+}
+
+body {
+  position: relative;
+  padding: 0;
+  color: var(--ink);
+  font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+  background-color: #200818;
+  background-image: radial-gradient(circle at 50% 0%, rgba(164, 116, 214, 0.22), transparent 62%);
+}
+
+/* Scanline and flicker overlays, toggled by the shared CRT preference */
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(26, 6, 17, 0) 50%, rgba(0, 0, 0, 0.24) 50%),
+    linear-gradient(90deg, rgba(255, 150, 200, 0.045), rgba(250, 218, 221, 0.018), rgba(164, 116, 214, 0.045));
+  background-size: 100% 3px, 4px 100%;
+}
+
+body::after {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  content: "";
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.028);
+  opacity: 0.02;
+  animation: crt-flicker 180ms infinite;
+}
+
+html.crt-disabled body::before,
+html.crt-disabled body::after { display: none; }        /* Accessibility opt-out */
+
+@keyframes crt-flicker {
+  0%   { opacity: 0.02; }
+  50%  { opacity: 0.04; }
+  100% { opacity: 0.02; }
+}
+
+button, a, input { font: inherit; }
+
+.chart-shell {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 40px) 72px;
+}
+
+/* -- Promotional header --------------------------------------------------- */
+
+.promo-kicker {
+  margin: 0 0 10px;
+  color: var(--rail);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.promo-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Arial Black", "Segoe UI Black", Impact, sans-serif;
+  font-size: clamp(2.1rem, 7vw, 4rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 18px rgba(255, 150, 200, 0.55), 0 0 42px rgba(164, 116, 214, 0.35);
+}
+
+.promo-sub {
+  max-width: 62ch;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.promo-sub strong { color: var(--ink); }
+
+.promo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 34px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  background: rgba(55, 15, 45, 0.9);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.action:hover {
+  transform: translateY(-1px);
+  border-color: var(--rail);
+  background: rgba(250, 218, 221, 0.1);
+}
+
+.action.primary {
+  border-color: var(--pink);
+  background: linear-gradient(120deg, rgba(255, 150, 200, 0.28), rgba(164, 116, 214, 0.28));
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--rail);
+  outline-offset: 3px;
+}
+
+.action.ghost {
+  border-color: var(--paper-line);
+  color: var(--paper-soft);
+  background: transparent;
+}
+
+.action.ghost:hover {
+  border-color: var(--paper-ink);
+  color: var(--paper-ink);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* -- The chart document --------------------------------------------------- */
+
+.chart-card {
+  position: relative;
+  padding: clamp(20px, 4vw, 40px);
+  overflow: hidden;
+  border: 3px solid #ffffff;
+  border-radius: 22px;
+  color: var(--paper-ink);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--paper-line), 0 28px 70px rgba(0, 0, 0, 0.7);
+  font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", "Comic Neue", cursive;
+}
+
+/* Candy band across the top, the way a nursery award certificate would have */
+.chart-ribbon {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 10px;
+  background: repeating-linear-gradient(90deg, #ff8ec4 0 22px, #ffd7ea 22px 44px);
+}
+
+.chart-head { text-align: center; }
+
+.chart-head h2 {
+  margin: 12px 0 4px;
+  color: #d63c8c;
+  font-size: clamp(1.5rem, 4.5vw, 2.3rem);
+  text-shadow: 1px 1px 0 #ffffff, 3px 3px 0 var(--paper-deep);
+}
+
+.chart-sub {
+  margin: 0 0 18px;
+  color: var(--paper-soft);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 22px;
+  font-size: 0.98rem;
+}
+
+.name-line label { color: var(--paper-soft); }
+
+#chart-name {
+  width: min(260px, 60vw);
+  padding: 4px 8px;
+  border: none;
+  border-bottom: 2px dashed var(--paper-line);
+  color: var(--paper-ink);
+  background: transparent;
+  font-family: inherit;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+#chart-name::placeholder { color: #d9a8c4; }
+
+#chart-name:focus-visible {
+  outline: none;
+  border-bottom-color: #d63c8c;
+}
+
+.name-star { color: var(--gold); text-shadow: 0 0 6px #ffb400; }
+
+/* -- Progress meter ------------------------------------------------------- */
+
+.progress-block { margin: 0 0 22px; text-align: center; }
+
+.progress-rail {
+  height: 16px;
+  overflow: hidden;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--paper-deep);
+  box-shadow: inset 0 2px 5px rgba(158, 62, 116, 0.28);
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd36f, #ffb400);
+  transition: width 260ms ease;
+}
+
+.progress-read {
+  margin: 8px 0 4px;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+}
+
+.progress-label { color: var(--paper-soft); }
+
+.praise-line {
+  min-height: 2.6em;
+  margin: 0;
+  color: #b8397f;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+/* -- Star grid ------------------------------------------------------------ */
+
+.grid-wrap {
+  overflow-x: auto;                 /* Wide table scrolls itself, never the page */
+  padding-bottom: 6px;
+}
+
+.star-grid {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.6fr) repeat(7, minmax(42px, 1fr));
+  gap: 4px;
+  min-width: 620px;
+}
+
+.grid-corner,
+.grid-day {
+  padding: 6px 4px;
+  color: var(--paper-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.grid-corner {
+  display: flex;
+  align-items: flex-end;
+  text-align: left;
+}
+
+/* Column heads carry a real weekday and a real date, stacked */
+.grid-day {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.day-name { font-weight: 700; }
+
+.day-date {
+  color: #c08cab;
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+}
+
+.grid-day.is-today {
+  color: #d63c8c;                     /* The live column is the one that matters today */
+}
+
+.grid-day.is-today .day-date { color: #d63c8c; }
+
+.day-today-tag {
+  margin-top: 2px;
+  color: #ffffff;
+  background: #d63c8c;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+}
+
+.grid-day.is-future { opacity: 0.45; }    /* Days that have not arrived read as pending */
+
+.row-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.row-label-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;                       /* Lets a long row name wrap instead of stretching the column */
+}
+
+.row-note {
+  margin-top: 3px;
+  color: var(--paper-soft);
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+/* -- Row tools: rename and remove ----------------------------------------- */
+
+.row-tools {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  opacity: 0;                         /* Stay out of the way until the row is approached */
+  transition: opacity 130ms ease;
+}
+
+.row-label:hover .row-tools,
+.row-tools:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .row-tools { opacity: 1; }          /* Touch devices have no hover, so the tools are always shown */
+}
+
+.row-tool {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+  color: var(--paper-soft);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 110ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.row-tool:hover {
+  transform: scale(1.1);
+  border-color: #d63c8c;
+  color: #d63c8c;
+}
+
+.row-tool-delete:hover {
+  border-color: #c8434c;
+  color: #c8434c;
+}
+
+.row-tool:focus-visible {
+  outline: 2px solid #d63c8c;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+/* The locked row keeps its tools, so the refusal has somewhere to land */
+.row-tool.is-locked-tool {
+  border-style: dashed;
+  border-color: var(--locked);
+  color: #c3aab7;
+  cursor: not-allowed;
+}
+
+.row-tool.is-locked-tool:hover {
+  transform: none;
+  border-color: var(--locked);
+  color: #c3aab7;
+}
+
+/* -- Inline rename form --------------------------------------------------- */
+
+.row-edit {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.row-edit-label,
+.row-edit-note {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+  color: var(--paper-ink);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+.row-edit-note {
+  color: var(--paper-soft);
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+.row-edit-label:focus-visible,
+.row-edit-note:focus-visible {
+  outline: none;
+  border-color: #d63c8c;
+}
+
+.row-edit-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.row-edit-save,
+.row-edit-cancel {
+  padding: 3px 10px;
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+  color: var(--paper-ink);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.row-edit-save {
+  border-color: #d63c8c;
+  color: #ffffff;
+  background: #d63c8c;
+}
+
+.row-edit-save:hover { background: #c22f7c; }
+.row-edit-cancel:hover { border-color: var(--paper-ink); }
+
+.row-add-bar {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+#add-row {
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.68rem;
+}
+
+.star-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 2px solid var(--paper-line);
+  border-radius: 8px;
+  color: transparent;
+  background: #ffffff;
+  font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 110ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.star-cell:hover { transform: scale(1.06); border-color: #ffb400; }
+
+.star-cell:focus-visible {
+  outline: 2px solid #d63c8c;
+  outline-offset: 2px;
+}
+
+.star-cell.is-starred {
+  color: var(--gold);
+  border-color: #ffb400;
+  background: #fff8dd;
+  text-shadow: 0 0 8px #ffbe2e;
+}
+
+.star-cell.just-starred { animation: star-pop 340ms ease; }
+
+@keyframes star-pop {
+  0%   { transform: scale(0.4) rotate(-24deg); }
+  60%  { transform: scale(1.28) rotate(8deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* The one row that can never be filled in -- greyed and gently refusing */
+.star-cell.is-locked {
+  border-style: dashed;
+  border-color: var(--locked);
+  background: #f6eef3;
+  cursor: not-allowed;
+}
+
+.star-cell.is-locked:hover { transform: none; border-color: var(--locked); }
+
+.star-cell.refused { animation: refuse-shake 320ms ease; }
+
+@keyframes refuse-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+/* Days that have not happened yet: reachable, refusable, clearly not ready */
+.star-cell.is-future {
+  border-style: dotted;
+  border-color: #e6d3df;
+  background: #fbf5f9;
+  cursor: not-allowed;
+}
+
+.star-cell.is-future:hover { transform: none; border-color: #e6d3df; }
+
+.star-cell.in-today-column { box-shadow: inset 0 0 0 2px rgba(214, 60, 140, 0.14); }
+
+.row-label.locked-row { background: rgba(216, 196, 208, 0.34); color: var(--paper-soft); }
+
+/* -- Week navigation ------------------------------------------------------ */
+
+.week-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.week-step {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid var(--paper-line);
+  border-radius: 999px;
+  color: var(--paper-ink);
+  background: #ffffff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 110ms ease, border-color 140ms ease;
+}
+
+.week-step:hover:not(:disabled) { transform: scale(1.08); border-color: #d63c8c; }
+
+.week-step:focus-visible,
+.history-row:focus-visible {
+  outline: 2px solid #d63c8c;
+  outline-offset: 2px;
+}
+
+.week-step:disabled,
+.action.ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.week-label {
+  min-width: 16ch;
+  margin: 0;
+  color: var(--paper-ink);
+  font-size: 0.94rem;
+  text-align: center;
+}
+
+.week-today { padding: 7px 14px; font-size: 0.68rem; }
+
+/* -- Permanent record ----------------------------------------------------- */
+
+.history-block {
+  margin: 26px auto 0;
+  max-width: 54ch;
+  padding: 16px 18px;
+  border: 2px dashed var(--paper-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.history-block h3 {
+  margin: 0 0 6px;
+  color: #d63c8c;
+  font-size: 1.05rem;
+}
+
+.history-summary {
+  margin: 0;
+  color: var(--paper-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.history-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list li + li { margin-top: 4px; }
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--paper-ink);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 130ms ease, transform 110ms ease;
+}
+
+.history-row:hover { transform: translateX(2px); border-color: #ffb400; }
+
+.history-row.is-viewing {
+  border-color: #d63c8c;
+  background: #fff3f9;
+}
+
+.history-range { flex: 1 1 auto; }
+
+.history-score {
+  flex: 0 0 auto;
+  color: var(--paper-soft);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+html.crt-disabled .star-cell.just-starred,
+html.crt-disabled .star-cell.refused { animation: none; }   /* Honours the motion opt-out */
+
+/* -- Reveals -------------------------------------------------------------- */
+
+.fineprint {
+  margin: 18px 0 0;
+  color: var(--paper-soft);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.ledger-stamp {
+  max-width: 46ch;
+  margin: 20px auto 0;
+  padding: 14px 18px;
+  border: 1px solid #c9a06f;
+  border-radius: 4px;
+  color: #6a4a24;
+  background: #f7ecd8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.82rem;
+  transform: rotate(-0.6deg);
+}
+
+.ledger-line { margin: 0 0 6px; }
+
+.ledger-margin {
+  margin: 0;
+  color: #a6432f;
+  font-family: "Comic Sans MS", "Segoe Print", cursive;
+}
+
+.friend-note {
+  max-width: 44ch;
+  margin: 20px auto 0;
+  padding: 16px 18px;
+  border: 1px solid #b9c6d8;
+  border-radius: 3px;
+  color: #2f3d52;
+  background: #eef2f8;
+  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  text-align: left;
+  transform: rotate(0.7deg);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.friend-note p { margin: 0 0 10px; }
+
+.friend-sign { color: #5d6b80; text-align: right; }
+
+.slide-cta { margin-top: 6px; }
+
+.chart-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* -- Page footer ---------------------------------------------------------- */
+
+#install-chart[hidden] { display: none; } /* Keep the flex-styled action hidden until the browser offers installation. */
+
+.promo-foot {
+  margin-top: 30px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.promo-foot p { margin: 0 0 6px; }
+.promo-foot strong { color: var(--pink); }
+
+@media (max-width: 560px) {
+  .star-grid {
+    grid-template-columns: minmax(150px, 1.4fr) repeat(7, minmax(38px, 1fr));
+    min-width: 540px;
+  }
+
+  .row-note { display: none; }              /* Keeps narrow phones readable */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.account-card { margin-top: 24px; padding: 20px; border: 2px solid var(--rail); background: var(--panel); line-height: 1.6; }
+.account-card [hidden] { display: none; }
+.account-card .action { white-space: normal; }

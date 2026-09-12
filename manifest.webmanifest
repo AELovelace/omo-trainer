@@ -28,5 +28,13 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Potty chart",
+      "short_name": "Potty chart",
+      "url": "./potty_chart/",
+      "description": "Open the Growth Chart in your Chrysalis file"
+    }
   ]
 }

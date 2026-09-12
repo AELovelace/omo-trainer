@@ -11,7 +11,7 @@ Usage: sudo bash deploy/fedora-deploy.sh [options]
   --proxy-ip IP              Allow this proxy through an already-running firewalld
   --firewall-zone NAME       Zone for those rules (default: public)
   --public-origin URL        Tracker origin (default: https://lidoll.dev)
-  --auth-origin URL          Shared auth origin (default: https://auth.lidoll.dev)
+  --auth-origin URL          Shared auth origin (default: https://auth.sadgirlsclub.wtf)
 
 Run on the Fedora Node/service server. Existing env files and databases are preserved.
 The web server's existing Nginx/TLS configuration is managed separately.

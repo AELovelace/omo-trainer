@@ -62,3 +62,24 @@ test('API requires authentication and rejects cross-origin and unauthenticated u
   const crossSite = await fetch(`${origin}/tracker/api/session`, { headers: { Origin: 'https://untrusted.example' } });
   assert.equal(crossSite.status, 403);
 });
+
+
+test('bundled chart stays inside the PWA and serves only its public assets under the same CSP', async () => {
+  const redirect = await fetch(`${origin}/tracker/potty_chart`, { redirect: 'manual' });
+  assert.equal(redirect.status, 308);
+  assert.equal(redirect.headers.get('location'), '/tracker/potty_chart/');
+  const response = await fetch(`${origin}/tracker/potty_chart/`);
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /name="tracker-base" content="\.\.\/"/);
+  assert.match(html, /rel="manifest" href="\.\.\/manifest.webmanifest"/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
+  for (const file of ['app.js', 'account.js', 'crt-init.js', 'pwa.js', 'style.css', 'icons/icon-192.png', 'icons/icon-512.png']) {
+    assert.equal((await fetch(`${origin}/tracker/potty_chart/${file}`)).status, 200, file);
+  }
+  for (const file of ['sw.js', 'README.md', 'tests/browser.mjs']) assert.equal((await fetch(`${origin}/tracker/potty_chart/${file}`)).status, 404, file);
+  const manifest = await (await fetch(`${origin}/tracker/manifest.webmanifest`)).json();
+  assert.equal(manifest.shortcuts[0].url, './potty_chart/');
+  assert.equal(manifest.scope, './');
+});

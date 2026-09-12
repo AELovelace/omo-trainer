@@ -71,3 +71,20 @@ The connected suite also syncs enrollment and a classified wetting to the second
 Nginx snippets are deployment templates; validate them against the real server configuration with `nginx -t`. Live domain deployment, real-device installation, and screen-reader checks require the actual hosting/devices and are not implied by local tests.
 
 For a new auth proxy host, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md): validate the HTTP bootstrap before certificate issuance, then validate the complete HTTPS configuration before reload. Check HTTP redirects to the fixed auth origin, certificate challenge URLs remain local, HTTPS discovery reports the correct issuer, and the real OIDC sign-in succeeds. Verify Certbot renewal with `certbot renew --dry-run` and confirm a renewal schedule and Nginx reload hook exist.
+
+
+## Linked Growth Chart (2026-09-12)
+
+`npm test` includes growth-chart.test.mjs: bounded validation, SQLite persistence,
+participant isolation, CSRF/origin checks, stale writes, lost-response receipts,
+clearing and explicit issuer migration/collision rollback.
+
+Run `node tests/growth-chart-browser.mjs` with `PUPPETEER_MODULE` pointing to an
+installed Puppeteer module and `CHROME_PATH` pointing to installed Chrome.
+It creates temporary local auth/tracker services and synthetic accounts under
+artifacts/, exercises real OAuth/consent and the chart callback, verifies
+explicit linking, a second-device restore, offline conflicts, lost-response
+retries, account isolation, clearing and phone layout. It does not contact or
+change production. A restricted environment may need permission to start the
+headless browser. Actual installation and shared browser/installed-app storage
+still need testing on the intended phones. See GROWTH_CHART_GUIDE.md.

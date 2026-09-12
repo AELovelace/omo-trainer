@@ -1,6 +1,6 @@
-# Shared lidoll.dev authentication
+# Shared SadGirlsClub authentication
 
-The identity service is a separate Node process intended for **https://auth.lidoll.dev**. It implements OpenID Connect through [oidc-provider](https://github.com/panva/node-oidc-provider). Little Log uses [openid-client](https://github.com/panva/openid-client) as a relying party. The code is pinned in `package-lock.json`.
+The identity service is a separate Node process intended for **https://auth.sadgirlsclub.wtf**. It implements OpenID Connect through [oidc-provider](https://github.com/panva/node-oidc-provider). Little Log uses [openid-client](https://github.com/panva/openid-client) as a relying party. The code is pinned in `package-lock.json`.
 
 All applications use the same issuer and stable account subject. Each application has its own registered client ID, exact callback URLs, session cookies, database, and authorization rules. Logging in to a second registered app reuses the auth server's existing login session. Signing in does not grant an app access to another app's records.
 
@@ -16,7 +16,7 @@ node scripts/auth-admin.mjs create alice
 node scripts/auth-server.mjs
 ```
 
-The create command generates a strong password and displays it once. Share credentials privately; passwords are never accepted as shell arguments. Run `node scripts/serve.mjs` in another terminal and open **http://127.0.0.1:4173/tracker/**. Choose **Settings & data → Sign in with lidoll.dev**.
+The create command generates a strong password and displays it once. Share credentials privately; passwords are never accepted as shell arguments. Run `node scripts/serve.mjs` in another terminal and open **http://127.0.0.1:4173/tracker/**. Choose **Settings & data → Sign in with SadGirlsClub**.
 
 Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Default callback: `http://127.0.0.1:4173/tracker/auth/callback`. Use these exact hostnames consistently: `localhost` and `127.0.0.1` are different cookie origins.
 
@@ -43,11 +43,11 @@ node --env-file=/etc/lidoll/tracker.env scripts/serve.mjs
 
 Run auth administrator commands with the **same auth environment file**. Initialization writes `clients.json` only if it does not exist. Changing `TRACKER_REDIRECT_URI` later does not overwrite existing clients; update the callback in that file and restart auth.
 
-On the reverse-proxy server, configure DNS and HTTPS for `auth.lidoll.dev`, then include [nginx-auth.conf](deploy/nginx-auth.conf) inside that HTTPS server block. Keep the tracker proxy inside the existing `lidoll.dev` HTTPS block. The snippets preserve the configured service address `10.1.1.23`, using ports 4173 and 4180. Only the reverse proxy should reach those service ports. `AUTH_TRUST_PROXY=1` trusts the proxy's scheme/IP headers, so the proxy must replace `X-Real-IP` and the service must not be directly reachable by clients.
+On the reverse-proxy server, configure DNS and HTTPS for `auth.sadgirlsclub.wtf`, then include [nginx-auth.conf](deploy/nginx-auth.conf) inside that HTTPS server block. Keep the tracker proxy inside the existing `lidoll.dev` HTTPS block. The snippets preserve the configured service address `10.1.1.23`, using ports 4173 and 4180. Only the reverse proxy should reach those service ports. `AUTH_TRUST_PROXY=1` trusts the proxy's scheme/IP headers, so the proxy must replace `X-Real-IP` and the service must not be directly reachable by clients.
 
 If the auth HTTPS server block does not exist yet, use the complete [auth server configuration](deploy/nginx-auth-server.conf) and follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) for certificate issuance, installation, and renewal.
 
-Production startup requires explicit HTTPS issuer/app URLs. Auth metadata is available at `https://auth.lidoll.dev/.well-known/openid-configuration`. Avoid changing the issuer after accounts are in use: the combination of issuer and subject identifies an account to applications.
+Production startup requires explicit HTTPS issuer/app URLs. Auth metadata is available at `https://auth.sadgirlsclub.wtf/.well-known/openid-configuration`. The combination of issuer and subject identifies an account. Follow the explicit issuer migration section below when moving an existing installation.
 
 ## Add another application
 
@@ -59,7 +59,7 @@ Restart the auth service after editing client configuration. Configure the new a
 
 | Setting | Value |
 | --- | --- |
-| Issuer | `https://auth.lidoll.dev` |
+| Issuer | `https://auth.sadgirlsclub.wtf` |
 | Client ID | Its unique registered ID, such as `my-next-app` |
 | Scopes | `openid profile` |
 | Flow | Authorization code, mandatory PKCE S256 |
@@ -87,3 +87,36 @@ Passwords use salted scrypt. Login attempts are limited per username and source 
 This release supports self-registration and administrator-provisioned username/password accounts. Password resets remain administrator-managed; email delivery/recovery, MFA/passkeys, and a web admin console are not implemented. Shared login sessions last up to seven days. Little Log sessions expire after one hour and can reauthenticate through shared login. Disabling an account or resetting its password removes auth-service sessions; existing application sessions expire on their own schedule (up to one hour for Little Log).
 
 **Sign out & clear device** ends Little Log's session and clears its browser records; it does not sign out every other application or end the shared auth login. Global app-session revocation/back-channel logout is not implemented. Treat these lifetime and logout semantics as part of the contract when integrating future apps.
+
+
+## Move the existing issuer to auth.sadgirlsclub.wtf
+
+Production examples and new-install defaults use `https://auth.sadgirlsclub.wtf`.
+The updater preserves existing environment files. The same `little-log` client
+and exact callback `https://lidoll.dev/tracker/auth/callback` serve both
+observations and the Growth Chart; no second chart OAuth client is needed.
+
+If this is a hostname move of the **same identity database and stable subjects**,
+back up the identity service and tracker, stop the tracker, and run the migration
+as its service user with the existing tracker environment:
+
+```sh
+node --env-file=/etc/lidoll/tracker.env scripts/migrate-issuer.mjs https://auth.lidoll.dev https://auth.sadgirlsclub.wtf --same-accounts
+```
+
+This command writes a new SQLite recovery backup, changes only the issuer key
+on existing participants, and expires app sessions/login attempts. IDs,
+observations and charts remain intact. It refuses subject collisions and never
+merges usernames. Do not run it if the new provider has different accounts or
+subjects; that requires a separately verified account mapping.
+
+Set `OIDC_ISSUER` in tracker.env and `AUTH_ISSUER` in auth.env to the same new
+HTTPS origin. Retain the auth database, signing/cookie keys and client
+registration. Publish DNS/TLS/proxy configuration per AUTH_PROXY_SETUP.md, then
+restart the services and verify discovery, sign-in and access to an existing
+file before allowing further use. A different issuer without migration is a
+different identity, even when its username matches. Restoring the old hostname
+also requires a coordinated issuer-key migration or the recovery backup.
+
+See [Growth Chart integration](GROWTH_CHART_GUIDE.md) for linking, offline changes,
+conflict resolution and chart exports.

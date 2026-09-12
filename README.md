@@ -12,6 +12,8 @@ The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CS
 
 New participants can choose **Settings & data → Create account**, or register from the shared sign-in page. Registration uses a username and password, then returns through app consent. The account works across registered lidoll.dev apps. Email is not collected; password resets are handled by the administrator. [AUTH_GUIDE.md](AUTH_GUIDE.md) describes registration and its request limits.
 
+The PWA now includes the **Potty chart** from LiDOLL QUEST. It can be linked to the same Chrysalis participant file as observations, with explicit first upload, offline edits and version-conflict choices. See [Growth Chart setup and behavior](GROWTH_CHART_GUIDE.md).
+
 ## Run locally
 
 Install Node 24 or newer, then:
@@ -29,7 +31,7 @@ node scripts/auth-server.mjs
 node scripts/serve.mjs
 ~~~
 
-Open **http://127.0.0.1:4173/tracker/** and choose **Settings & data → Sign in with lidoll.dev**. On Windows use npm.cmd if PowerShell blocks npm.ps1. No frontend build is required. Use the exact same hostname throughout: localhost and 127.0.0.1 are different cookie origins.
+Open **http://127.0.0.1:4173/tracker/** and choose **Settings & data → Sign in with SadGirlsClub**. On Windows use npm.cmd if PowerShell blocks npm.ps1. No frontend build is required. Use the exact same hostname throughout: localhost and 127.0.0.1 are different cookie origins.
 
 ## Your two-server deployment
 
@@ -38,8 +40,8 @@ For your Fedora service server, use the [Fedora deployment and GitHub update scr
 Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](deploy/auth.env.example). Put persistent data directories outside the public web directory. See [AUTH_GUIDE.md](AUTH_GUIDE.md) for production commands, account setup, and adding future apps.
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
-2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.lidoll.dev** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, and icons/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.sadgirlsclub.wtf** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 
@@ -84,7 +86,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current cache is version 2. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v12-growth-chart. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
@@ -99,4 +101,4 @@ The Fedora scripts stamp the deployed service worker with the Git commit automat
 - [Quest integration status](QUEST_MAKING_GUIDE.md)
 - [Dialogue integration status](NPC_DIALOGUE_TREES.md)
 
-The original game, trainer source, and game_editor_gui.py were not supplied. This is the standalone tracker implementation; no absent game editor is claimed to have been updated.
+The GameMaker runtime and game_editor_gui.py remain in the separate lidollquest repository. The bundled promotional Growth Chart uses no new game/editor schema fields.

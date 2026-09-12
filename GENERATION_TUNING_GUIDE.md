@@ -28,3 +28,12 @@ SQLite schema version 2 adds payload_json while retaining old typed columns and 
 Use the deployment updater's pre-activation backup when upgrading. A code rollback to an older build that only supports SQLite version 1 cannot open a migrated database. Preserve the migrated database and resolve the code issue or explicitly plan a restore; never silently replace it with an older backup and lose newer observations.
 
 Run node --test tests/*.test.mjs and the browser workflows in TESTING_GUIDE.md after changes to these rules. Version future protocol changes explicitly so researchers can distinguish them.
+
+
+## Promotional chart (2026-09-12)
+
+The PWA's Potty chart is a separate star chart, linked to the same participant
+file. Its stars and refusal counters do not affect Little Log probability,
+classified wettings or cooldowns. Tune authored rows/praise in the game's
+web/potty_chart/app.js and rebundle with scripts/import-growth-chart.mjs.
+See GROWTH_CHART_GUIDE.md for bounded storage and sync behavior.

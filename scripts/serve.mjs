@@ -18,6 +18,7 @@ const files = new Map([
   ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
   ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
   ['lib/training.js', 'text/javascript; charset=utf-8'],
+  ...['index.html', 'style.css', 'app.js', 'account.js', 'crt-init.js', 'pwa.js', 'icons/icon-192.png', 'icons/icon-512.png'].map(name => [`potty_chart/${name}`, name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.css') ? 'text/css; charset=utf-8' : name.endsWith('.png') ? 'image/png' : 'text/javascript; charset=utf-8']),
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
   ['icons/icon.svg', 'image/svg+xml'], ['icons/icon-192.png', 'image/png'],
   ['icons/icon-512.png', 'image/png'], ['icons/maskable-512.png', 'image/png'], ['icons/apple-touch-icon.png', 'image/png'],
@@ -37,7 +38,8 @@ export const server = http.createServer(async (request, response) => { // Serves
     return response.end();
   }
   if (!pathname.startsWith(base)) { response.writeHead(404); return response.end('Not found'); }
-  const filename = pathname.slice(base.length) || 'index.html';
+  if (pathname === `${base}potty_chart`) { response.writeHead(308, { Location: `${base}potty_chart/` }); return response.end(); }
+  const filename = pathname.slice(base.length) === 'potty_chart/' ? 'potty_chart/index.html' : pathname.slice(base.length) || 'index.html';
   if (!files.has(filename)) { response.writeHead(404); return response.end('Not found'); }
   try {
     const content = await readFile(path.join(root, filename));

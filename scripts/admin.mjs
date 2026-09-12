@@ -3,9 +3,9 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const [command, argument] = process.argv.slice(2);
-const valid = ['list', 'export-json', 'export-csv', 'backup'];
+const valid = ['list', 'export-json', 'export-csv', 'export-charts-json', 'backup'];
 if (!valid.includes(command) || (command !== 'list' && !argument)) {
-  console.log('Usage: node scripts/admin.mjs list | export-json <file> | export-csv <file> | backup <new-file>');
+  console.log('Usage: node scripts/admin.mjs list | export-json <file> | export-csv <file> | export-charts-json <file> | backup <new-file>');
   process.exit(1);
 }
 const database = openDatabase();
@@ -17,6 +17,8 @@ try {
     if (command === 'backup') {
       await writeFile(destination, '', { flag: 'wx', mode: 0o600 }); // Refuses to overwrite an existing backup or the live database.
       await database.backup(destination);
+    } else if (command === 'export-charts-json') {
+      await writeFile(destination, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), charts: database.exportCharts() }, null, 2), { flag: 'wx', mode: 0o600 }); // Keep chart exports private and never overwrite existing files.
     } else {
       const rows = database.exportRows();
       const columns = ['participant_id', 'entry_id', 'occurred_at', 'local_date', 'liquids_ml', 'position', 'diaper_number', 'wettings_count', 'probability', 'result', 'source', 'edited', 'version', 'created_at', 'updated_at', 'kind', 'category', 'rolled_at', 'rolled_result', 'protocol_version', 'time_zone', 'last_failure_at', 'liquids_mode'];

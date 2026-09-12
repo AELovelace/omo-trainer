@@ -7,3 +7,11 @@ The recovered Chrysalis terminal styling references the public site's diagnostic
 If quests are added through the original game later, document their actual schema and editor workflow here after inspecting that source. Do not make completing a prompt a prerequisite for logging, correcting, exporting, or deleting personal records.
 
 Future game apps can use the shared lidoll.dev identity service described in AUTH_GUIDE.md. Register a separate OIDC client and keep game progress separate from tracker records and permissions.
+
+
+## Growth Chart integration (2026-09-12)
+
+The game website's promotional Growth Chart is now bundled in this PWA and
+links to the same shared account as observations. Its orb-derived text remains
+authored in the game checkout; chart sync does not change quests, game saves
+or game_editor_gui.py fields. See GROWTH_CHART_GUIDE.md.

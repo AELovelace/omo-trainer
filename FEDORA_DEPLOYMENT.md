@@ -13,7 +13,7 @@ cd omo-trainer
 sudo bash deploy/fedora-deploy.sh
 ```
 
-Defaults match the existing project configuration: service address **10.1.1.23**, tracker **https://lidoll.dev/tracker/**, auth **https://auth.lidoll.dev**, and ports **4173/4180**. The installer uses Fedora's [nodejs24](https://packages.fedoraproject.org/pkgs/nodejs24/nodejs24/) and [nodejs24-npm](https://packages.fedoraproject.org/pkgs/nodejs24/nodejs24-npm/) packages. It invokes the versioned Node 24 binary directly, without changing your preferred global Node alternative. It does not perform a general OS upgrade.
+Defaults match the existing project configuration: service address **10.1.1.23**, tracker **https://lidoll.dev/tracker/**, auth **https://auth.sadgirlsclub.wtf**, and ports **4173/4180**. The installer uses Fedora's [nodejs24](https://packages.fedoraproject.org/pkgs/nodejs24/nodejs24/) and [nodejs24-npm](https://packages.fedoraproject.org/pkgs/nodejs24/nodejs24-npm/) packages. It invokes the versioned Node 24 binary directly, without changing your preferred global Node alternative. It does not perform a general OS upgrade.
 
 For another service address or to add source-restricted firewalld access, supply options on the **first** invocation:
 
@@ -50,9 +50,9 @@ Run the installer with no replacement flags to retry an incomplete setup. After 
 
 ## Connect the other server
 
-If `auth.lidoll.dev` has no server block yet, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md). It provides a complete HTTP/HTTPS configuration and first-certificate setup on the reverse proxy.
+If `auth.sadgirlsclub.wtf` has no server block yet, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md). It provides a complete HTTP/HTTPS configuration and first-certificate setup on the reverse proxy.
 
-Use the existing [tracker proxy snippet](deploy/nginx-proxy.conf) inside lidoll.dev's HTTPS server block, and the [auth proxy snippet](deploy/nginx-auth.conf) inside auth.lidoll.dev's HTTPS block. Update their upstream address if you changed --bind-address. Configure DNS and the actual TLS certificate on that web server.
+Use the existing [tracker proxy snippet](deploy/nginx-proxy.conf) inside lidoll.dev's HTTPS server block, and the [auth proxy snippet](deploy/nginx-auth.conf) inside auth.sadgirlsclub.wtf's HTTPS block. Update their upstream address if you changed --bind-address. Configure DNS and the actual TLS certificate on that web server.
 
 If the **reverse-proxy server is also Fedora**, Nginx may need SELinux permission for upstream network connections. Keep SELinux enforcing; grant the relevant network permission rather than disabling SELinux:
 
