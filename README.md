@@ -103,7 +103,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v28-about-last. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v29-wallet-activity-last. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
