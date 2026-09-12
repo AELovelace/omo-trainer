@@ -5,21 +5,23 @@ const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); // Escape user-authored labels before creating HTML or SVG.
 const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
-let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false;
+let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
-  csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
+  accessEpoch++; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
   for(const selector of ['#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
   $('#participant-filter').innerHTML='<option value="">Everyone</option>';
   $('#admin-workspace').hidden=true; $('#admin-gate').hidden=false; $('#refresh').hidden=true; $('#admin-identity').textContent='';
 }
 function status(message) { $('#admin-status').textContent=message; }
 async function request(route,payload) { // Same-origin HttpOnly sessions and CSRF protect every privileged operation; responses are never cached.
+  const epoch=accessEpoch;
   const response=await fetch('../api/admin/'+route,{credentials:'same-origin',cache:'no-store',redirect:'error',
     ...(payload===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(payload)})});
   const result=await response.json();
+  if(epoch!==accessEpoch) throw Error('Administrator session changed. Refresh to continue.');
   if(!response.ok) {
     if(response.status===401 || response.status===403) clearPrivateView();
     throw Error(result.error || 'The request failed.');
@@ -190,8 +192,12 @@ $('#graphs').addEventListener('click',event=>{
 window.addEventListener('hashchange',navigate);
 window.addEventListener('pagehide',()=>clearPrivateView()); // A shared console should not retain everyone’s records in the back-forward cache.
 window.addEventListener('pageshow',event=>{if(event.persisted)void refresh();});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden && actor)void refresh();});
-setInterval(()=>{if(!document.hidden && actor)void refresh();},60000);
+async function checkAccess() { // Revalidate access without erasing a file preview or changing the analyst's current dataset.
+  if(!actor || loading) return;
+  try { await request('users'); } catch(error) { status(error.message); }
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkAccess();});
+setInterval(()=>{if(!document.hidden)void checkAccess();},60000);
 const today=new Date(),start=new Date(); start.setDate(start.getDate()-29);
 const date=value=>new Date(value.getTime()-value.getTimezoneOffset()*60000).toISOString().slice(0,10);
 $('#date-from').value=date(start);$('#date-to').value=date(today);

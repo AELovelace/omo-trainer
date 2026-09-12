@@ -1,4 +1,4 @@
-# Shared SadGirlsClub authentication
+# Shared LiD0llID authentication
 
 The identity service is a separate Node process intended for **https://auth.sadgirlsclub.wtf**. It implements OpenID Connect through [oidc-provider](https://github.com/panva/node-oidc-provider). Little Log uses [openid-client](https://github.com/panva/openid-client) as a relying party. The code is pinned in `package-lock.json`.
 
@@ -16,7 +16,7 @@ node scripts/auth-admin.mjs create alice
 node scripts/auth-server.mjs
 ```
 
-The create command generates a strong password and displays it once. Share credentials privately; passwords are never accepted as shell arguments. Run `node scripts/serve.mjs` in another terminal and open **http://127.0.0.1:4173/tracker/**. Choose **Settings & data → Sign in with LidollID**.
+The create command generates a strong password and displays it once. Share credentials privately; passwords are never accepted as shell arguments. Run `node scripts/serve.mjs` in another terminal and open **http://127.0.0.1:4173/tracker/**. Choose **Settings & data → Sign in with LiD0llID**.
 
 Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Default callback: `http://127.0.0.1:4173/tracker/auth/callback`. Use these exact hostnames consistently: `localhost` and `127.0.0.1` are different cookie origins.
 

@@ -35,7 +35,7 @@ node scripts/auth-server.mjs
 node scripts/serve.mjs
 ~~~
 
-Open **http://127.0.0.1:4173/tracker/** and choose **Settings & data → Sign in with LidollID**. On Windows use npm.cmd if PowerShell blocks npm.ps1. No frontend build is required. Use the exact same hostname throughout: localhost and 127.0.0.1 are different cookie origins.
+Open **http://127.0.0.1:4173/tracker/** and choose **Settings & data → Sign in with LiD0llID**. On Windows use npm.cmd if PowerShell blocks npm.ps1. No frontend build is required. Use the exact same hostname throughout: localhost and 127.0.0.1 are different cookie origins.
 
 ## Your two-server deployment
 
@@ -90,7 +90,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v17-admin-console. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v18-lid0llid. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 

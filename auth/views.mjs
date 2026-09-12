@@ -7,12 +7,12 @@ export function authPage({ uid, mode, clientName, csrf, error = '', username = '
   const action = `/interaction/${escape(uid)}${register ? '/register' : ''}`;
   const heading = register ? 'Establish your identity.' : login ? 'Identify yourself.' : 'Authorize access.';
   const description = register ? `Create one lidoll.dev account for ${escape(clientName)} and other lidoll.dev apps. Each app has its own data and permissions.`
-    : login ? `Sign in to ${escape(clientName)} with your shared SadGirlsClub account.`
+    : login ? `Sign in to ${escape(clientName)} with your shared LiD0llID account.`
       : `${escape(clientName)} will receive your account ID and username. Your password stays with lidoll.dev accounts.`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a0611">
 <title>${register ? 'Create account' : login ? 'Sign in' : 'Authorize access'} · lidoll.dev</title><style>${css}</style></head>
-<body><main><div class="brand">✦ CHRYSALIS<span>IDENTITY GATEWAY // SadGirlsClub accounts</span></div>
+<body><main><div class="brand">✦ CHRYSALIS<span>IDENTITY GATEWAY // LiD0llID accounts</span></div>
 <h1>${heading}</h1><p>${description}</p>
 ${error ? `<p id="form-error" class="error" role="alert">${escape(error)}</p>` : ''}
 <form method="post" action="${action}"${error ? ' aria-describedby="form-error"' : ''}>
@@ -24,7 +24,7 @@ ${register ? '<p class="help" id="username-help">3–40 letters, numbers, dots, 
 ${register ? '<p class="help" id="password-help">12–128 characters. A long, unique passphrase works well.</p><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="128">' : ''}` : ''}
 <button type="submit">${register ? 'Create account' : login ? 'Sign in' : 'Continue'}</button></form>
 ${register ? `<p class="switch">Already registered? <a href="/interaction/${escape(uid)}">Sign in</a></p><small>No email address is collected. Save your password; password resets are handled by the lidoll.dev administrator. Next, review the app's access to your shared identity. Each app manages its own records and sync settings.</small>`
-  : login ? `<p class="switch">New to SadGirlsClub? <a id="create-account-link" href="/interaction/${escape(uid)}/register">Create an account</a></p><small>Need a password reset? Contact the lidoll.dev administrator.</small>`
+  : login ? `<p class="switch">New to LiD0llID? <a id="create-account-link" href="/interaction/${escape(uid)}/register">Create an account</a></p><small>Need a password reset? Contact the lidoll.dev administrator.</small>`
     : '<small>Each app manages access to its own data.</small>'}
 </main></body></html>`;
 }

@@ -97,8 +97,8 @@ function renderSync() { // Separates local saving, pending uploads, conflicts, a
   if (syncRunning) status = 'Syncing with lidoll.dev…';
   if (!storageBlocked) $('.local-badge').lastChild.textContent = ` ${status}`;
   $('#sync-status').textContent = syncMessage || status;
-  $('#account-status').textContent = sync.participant ? `Connected as ${sync.participant.label}. Participant ID: ${sync.participant.id}` : serverSession ? `Signed in as ${serverSession.participant.label}. Connect this device to upload its entries.` : 'Sign in with your shared SadGirlsClub account to save entries centrally.';
-  $('#connect-account').textContent = sync.participant ? 'Sign in again' : serverSession ? 'Connect & upload my entries' : 'Sign in with LidollID';
+  $('#account-status').textContent = sync.participant ? `Connected as ${sync.participant.label}. Participant ID: ${sync.participant.id}` : serverSession ? `Signed in as ${serverSession.participant.label}. Connect this device to upload its entries.` : 'Sign in with your shared LiD0llID account to save entries centrally.';
+  $('#connect-account').textContent = sync.participant ? 'Sign in again' : serverSession ? 'Connect & upload my entries' : 'Sign in with LiD0llID';
   $('#connect-account').hidden = Boolean(sync.participant && serverSession);
   $('#register-account').hidden = Boolean(sync.participant || serverSession);
   $('#topbar-sign-in').hidden = Boolean(sync.participant && serverSession);

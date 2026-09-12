@@ -25,11 +25,11 @@ window.createGrowthChartAccount = function (adapter) {
     const signIn = document.querySelector("#chart-sign-in");
     signIn.hidden = Boolean(session && !mismatch);
     signIn.href = new URL(`auth/login?returnTo=growth-chart${mismatch ? "&reauth=1" : ""}`, endpoint).href;
-    signIn.textContent = mismatch ? "Sign in to the linked account" : "Sign in with LidollID";
+    signIn.textContent = mismatch ? "Sign in to the linked account" : "Sign in with LiD0llID";
     document.querySelector("#chart-register").hidden = Boolean(owner || session);
     status.textContent = message || (owner
       ? `Linked to ${owner.label}'s Chrysalis file (${owner.id}). ${dirty() || link().pending ? "Changes waiting to sync." : "Chart saved to your file."}`
-      : session ? `Signed in as ${session.participant.label}. Linking this chart to your file…` : "Sign in with LidollID to automatically link and sync this chart.");
+      : session ? `Signed in as ${session.participant.label}. Linking this chart to your file…` : "Sign in with LiD0llID to automatically link and sync this chart.");
     syncButton.hidden = !owner;
     logoutButton.hidden = !owner && !session;
     conflictPanel.hidden = !conflict || Boolean(mismatch);
