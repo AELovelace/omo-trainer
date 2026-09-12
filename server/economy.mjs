@@ -1,13 +1,15 @@
 import {randomInt,randomUUID,createHash} from 'node:crypto';
 import {stickerCatalog} from './sticker-catalog.mjs';
+import {mergeStickerDuplicates} from './sticker-duplicates.mjs';
 
 const BANK='stickerbank', MAX=2147483647;
 function fail(status,message) { throw Object.assign(new Error(message),{status}); } // Return safe actionable errors through the authenticated API.
 function integer(value,min=1,max=MAX) { if(!Number.isSafeInteger(value)||value<min||value>max) fail(400,'Use a whole number within the allowed range.'); return value; }
 
-export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true) { // Market balances and exchanges use their own database, separate from scientific records.
+export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,duplicates) { // Market balances and exchanges use their own database, separate from scientific records.
   db.exec(`
     CREATE TABLE IF NOT EXISTS sticker_types(id TEXT PRIMARY KEY,name TEXT NOT NULL,url TEXT NOT NULL,active INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS sticker_aliases(alias TEXT PRIMARY KEY REFERENCES sticker_types(id),canonical TEXT NOT NULL REFERENCES sticker_types(id));
     CREATE TABLE IF NOT EXISTS economy_wallets(owner TEXT PRIMARY KEY,participant_id TEXT UNIQUE,coins INTEGER NOT NULL DEFAULT 0 CHECK(typeof(coins)='integer' AND coins BETWEEN 0 AND 2147483647),stars INTEGER NOT NULL DEFAULT 0 CHECK(typeof(stars)='integer' AND stars BETWEEN 0 AND 2147483647));
     CREATE TABLE IF NOT EXISTS sticker_inventory(owner TEXT NOT NULL REFERENCES economy_wallets(owner),sticker TEXT NOT NULL REFERENCES sticker_types(id),quantity INTEGER NOT NULL CHECK(typeof(quantity)='integer' AND quantity BETWEEN 0 AND 2147483647),PRIMARY KEY(owner,sticker));
     CREATE TABLE IF NOT EXISTS sticker_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),entry_id TEXT NOT NULL,kind TEXT NOT NULL,sticker TEXT REFERENCES sticker_types(id),created_at TEXT NOT NULL,PRIMARY KEY(owner,entry_id));
@@ -27,6 +29,8 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true) { //
     db.prepare('INSERT OR IGNORE INTO economy_wallets(owner) VALUES (?)').run(BANK);
     db.exec('UPDATE sticker_types SET active=0');
     for(const sticker of catalog) db.prepare('INSERT INTO sticker_types VALUES (?,?,?,1) ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,active=1').run(sticker.id,sticker.name,sticker.url);
+    mergeStickerDuplicates(db,catalog,adjust,duplicates);
+    catalog=catalog.filter(type=>!db.prepare('SELECT 1 FROM sticker_aliases WHERE alias=?').get(type.id));
     db.exec('COMMIT');
   } catch(error) {db.exec('ROLLBACK');throw error;}
 
@@ -69,7 +73,7 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true) { //
   }
   function price(sticker) { // Each distinct participant counts once per sticker in a rolling 30-day window, including completed bank trades.
     const since=new Date(Date.now()-30*86400000).toISOString();
-    const traders=db.prepare('SELECT COUNT(*) AS n FROM (SELECT seller AS person FROM sticker_trades WHERE sticker=? AND created_at>=? UNION SELECT buyer FROM sticker_trades WHERE sticker=? AND created_at>=?) WHERE person<>?').get(sticker,since,sticker,since,BANK).n;
+    const traders=db.prepare('SELECT COUNT(*) AS n FROM (SELECT seller AS person FROM sticker_trades WHERE (sticker=? OR sticker IN (SELECT alias FROM sticker_aliases WHERE canonical=?)) AND created_at>=? UNION SELECT buyer FROM sticker_trades WHERE (sticker=? OR sticker IN (SELECT alias FROM sticker_aliases WHERE canonical=?)) AND created_at>=?) WHERE person<>?').get(sticker,sticker,since,sticker,sticker,since,BANK).n;
     return {traders,price:10+Math.min(990,traders)};
   }
   function listing(id) { // Disabled sellers cannot receive new trades; their escrow remains intact for later restoration.
@@ -90,6 +94,8 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true) { //
         if(receipt.hash!==fingerprint) fail(409,'This request ID was already used for a different exchange.');
         db.exec('COMMIT');return JSON.parse(receipt.result);
       }
+      const canonical=asset=>typeof asset==='string'?(db.prepare('SELECT canonical FROM sticker_aliases WHERE alias=?').get(asset)?.canonical??asset):asset;
+      input={...input,sticker:canonical(input.sticker),wantSticker:canonical(input.wantSticker)}; // Old clients retain retry receipts while new actions use the merged design.
       const operation=randomUUID();let result={ok:true,operation};
       if(['bank-buy','bank-sell','list'].includes(input.action)) {
         if(typeof input.sticker!=='string') fail(400,'Choose a sticker.');
@@ -144,9 +150,9 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true) { //
     db.exec('BEGIN IMMEDIATE');
     try {
       wallet(owner);assignPending(owner);
-      const types=db.prepare('SELECT * FROM sticker_types ORDER BY name,id').all().map(type=>({...type,...price(type.id),quantity:balance(owner,type.id),bankQuantity:balance(BANK,type.id),earned:db.prepare('SELECT COUNT(*) AS n FROM sticker_rewards WHERE owner=? AND sticker=?').get(owner,type.id).n,escrow:db.prepare("SELECT COALESCE(SUM(quantity),0) AS n FROM sticker_listings WHERE owner=? AND sticker=? AND status='open'").get(owner,type.id).n}));
+      const types=db.prepare('SELECT * FROM sticker_types WHERE id NOT IN (SELECT alias FROM sticker_aliases) ORDER BY name,id').all().map(type=>({...type,...price(type.id),quantity:balance(owner,type.id),bankQuantity:balance(BANK,type.id),earned:db.prepare('SELECT COUNT(*) AS n FROM sticker_rewards WHERE owner=? AND sticker=?').get(owner,type.id).n,escrow:db.prepare("SELECT COALESCE(SUM(quantity),0) AS n FROM sticker_listings WHERE owner=? AND sticker=? AND status='open'").get(owner,type.id).n}));
       const offers=db.prepare("SELECT * FROM sticker_listings WHERE status='open' AND (owner=? OR id IN (SELECT id FROM sticker_listings WHERE status='open' ORDER BY created_at DESC,id LIMIT 500)) ORDER BY created_at DESC,id").all(owner).filter(row=>enabled(row.owner)).map(row=>({id:row.id,mine:row.owner===owner,sticker:row.sticker,quantity:row.quantity,wantSticker:row.want_sticker,wantQuantity:row.want_quantity,createdAt:row.created_at}));
-      const data={wallet:wallet(owner),bank:{...wallet(BANK),issuedCoins:db.prepare("SELECT COALESCE(SUM(delta),0) AS n FROM economy_ledger WHERE owner=? AND reason='bank coin issuance'").get(BANK).n},types,listings:offers,pendingRewards:db.prepare('SELECT COUNT(*) AS n FROM sticker_rewards WHERE owner=? AND sticker IS NULL').get(owner).n,history:db.prepare('SELECT id,asset,delta,reason,created_at AS createdAt FROM economy_ledger WHERE owner=? ORDER BY id DESC LIMIT 100').all(owner)};
+      const data={wallet:wallet(owner),bank:{...wallet(BANK),issuedCoins:db.prepare("SELECT COALESCE(SUM(delta),0) AS n FROM economy_ledger WHERE owner=? AND reason='bank coin issuance'").get(BANK).n},types,aliases:db.prepare('SELECT a.alias AS id,t.name,a.canonical FROM sticker_aliases a JOIN sticker_types t ON t.id=a.alias').all(),listings:offers,pendingRewards:db.prepare('SELECT COUNT(*) AS n FROM sticker_rewards WHERE owner=? AND sticker IS NULL').get(owner).n,history:db.prepare('SELECT id,asset,delta,reason,created_at AS createdAt FROM economy_ledger WHERE owner=? ORDER BY id DESC LIMIT 100').all(owner)};
       db.exec('COMMIT');return data;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }

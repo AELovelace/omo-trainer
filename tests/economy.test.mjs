@@ -180,3 +180,54 @@ test('distinct demand expires after 30 days and cannot be increased by repeated 
     assert.equal(db.economy.snapshot(a.id).types[0].price,10);
   }finally{db.close();rmSync(directory,{recursive:true});}
 });
+
+
+test('duplicate designs merge user and bank inventory, rewards and escrow while retaining receipts and market history',async()=>{
+  const {createEconomy}=await import('../server/economy.mjs');
+  const {stickerCatalog}=await import('../server/sticker-catalog.mjs');
+  const {STICKER_DUPLICATES}=await import('../server/sticker-duplicates.mjs');
+  const market=new DatabaseSync(':memory:');market.exec('PRAGMA foreign_keys=ON');
+  const first=stickerCatalog()[0],second=stickerCatalog()[1],duplicate={id:STICKER_DUPLICATES[0].alias,name:'Sticker 13',url:'sprites/13.png'};
+  let economy=createEconomy(market,[duplicate],()=>true,[]);
+  const perform=(owner,input)=>economy.act(owner,{requestId:randomUUID(),...input});
+  try {
+    for(let i=0;i<6;i++)economy.awardRecord('alice',{id:'duplicate-'+i});economy.awardRecord('bob',{id:'duplicate-bob'});
+    const oldSale={requestId:'old-sale',action:'bank-sell',sticker:duplicate.id,quantity:1,expectedPrice:10};const saleReceipt=economy.act('alice',oldSale);
+    economy=createEconomy(market,[first],()=>true,[]);economy.awardRecord('alice',{id:'original'});economy.awardRecord('bob',{id:'original'});
+    perform('bob',{action:'bank-sell',sticker:first.id,quantity:1,expectedPrice:10});
+    economy=createEconomy(market,[second],()=>true,[]);economy.awardRecord('bob',{id:'second-design'});
+    const coins=perform('alice',{action:'list',sticker:duplicate.id,quantity:1,wantQuantity:5});
+    const selfSwap=perform('alice',{action:'list',sticker:duplicate.id,quantity:1,wantSticker:first.id,wantQuantity:1});
+    const wanted=perform('bob',{action:'list',sticker:second.id,quantity:1,wantSticker:duplicate.id,wantQuantity:1});
+    economy=createEconomy(market,stickerCatalog());
+    const alice=economy.snapshot('alice'),bob=economy.snapshot('bob'),merged=alice.types.find(type=>type.id===first.id);
+    assert.equal(alice.types.length,12);assert.ok(!alice.types.some(type=>type.id===duplicate.id));
+    assert.equal(merged.quantity,5);assert.equal(merged.escrow,1);assert.equal(merged.earned,7);assert.equal(merged.bankQuantity,2);
+    assert.equal(merged.traders,2);assert.equal(merged.price,12);assert.equal(bob.types.find(type=>type.id===first.id).quantity,1);
+    assert.equal(alice.wallet.coins,10);assert.equal(bob.wallet.coins,10);assert.equal(alice.bank.issuedCoins,20);
+    assert.equal(alice.listings.find(offer=>offer.id===coins.listingId).sticker,first.id);
+    assert.equal(alice.listings.find(offer=>offer.id===wanted.listingId).wantSticker,first.id);
+    assert.ok(!alice.listings.some(offer=>offer.id===selfSwap.listingId));assert.ok(alice.history.some(event=>event.reason==='duplicate swap cancelled'));
+    assert.equal(market.prepare('SELECT COUNT(*) AS n FROM sticker_trades WHERE sticker=?').get(duplicate.id).n,1,'Historical trades retain their original asset ID');
+    assert.deepEqual(economy.act('alice',oldSale),saleReceipt,'A pre-migration retry never repeats its payment');
+    const historyLength=alice.history.length;economy=createEconomy(market,stickerCatalog());assert.equal(economy.snapshot('alice').history.length,historyLength);
+    perform('alice',{action:'bank-sell',sticker:duplicate.id,quantity:1,expectedPrice:12});
+    assert.equal(economy.snapshot('alice').types.find(type=>type.id===first.id).quantity,4);assert.equal(economy.snapshot('alice').wallet.coins,22);
+    assert.equal(market.prepare('SELECT COALESCE(SUM(quantity),0) AS n FROM sticker_inventory WHERE sticker=?').get(duplicate.id).n,0);
+    assert.equal(market.prepare('SELECT COALESCE(SUM(delta),0) AS n FROM economy_ledger WHERE owner=? AND asset=?').get('alice',first.id).n,4);
+  }finally{market.close();}
+});
+
+test('a duplicate merge that would overflow a balance rolls back without losing either holding',async()=>{
+  const {createEconomy}=await import('../server/economy.mjs');const {stickerCatalog}=await import('../server/sticker-catalog.mjs');const {STICKER_DUPLICATES}=await import('../server/sticker-duplicates.mjs');
+  const market=new DatabaseSync(':memory:'),original=stickerCatalog()[0],duplicate={id:STICKER_DUPLICATES[0].alias,name:'Sticker 13',url:'sprites/13.png'};
+  try {
+    let economy=createEconomy(market,[duplicate],()=>true,[]);economy.awardRecord('alice',{id:'one'});
+    economy=createEconomy(market,[original],()=>true,[]);economy.awardRecord('alice',{id:'two'});
+    market.prepare('UPDATE sticker_inventory SET quantity=2147483647 WHERE sticker=?').run(original.id);
+    assert.throws(()=>createEconomy(market,stickerCatalog()),error=>error.status===409);
+    assert.equal(market.prepare('SELECT quantity FROM sticker_inventory WHERE sticker=?').get(duplicate.id).quantity,1);
+    assert.equal(market.prepare('SELECT quantity FROM sticker_inventory WHERE sticker=?').get(original.id).quantity,2147483647);
+    assert.equal(market.prepare('SELECT COUNT(*) AS n FROM sticker_aliases').get().n,0);
+  }finally{market.close();}
+});

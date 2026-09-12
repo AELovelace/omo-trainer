@@ -127,3 +127,7 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 Run `node --test tests/economy.test.mjs` for reward receipts, existing imports, separate star currency, bank conversion and inventory, distinct demand and expiry, escrow, swaps, insufficient funds, CSRF/account isolation, unavailable market recovery and replay after a market commit. The isolation regression checks that science has no market tables and market has no scientific records or sessions.
 
 With PUPPETEER_MODULE and CHROME_PATH configured, run `node tests/economy-browser.mjs`. It starts disposable local storage, loads the actual sprite collection, and verifies actual image loading, five viewport widths, bank sales, peer purchases, an interrupted response retried after reload, and sign-out. Never point test DATA_DIR at live account data.
+
+Duplicate-design coverage verifies 13-16 merge into 1-4 while preserving player and bank holdings, earned counts, open sale listings, requested swap types, unchanged coins, historical trades and old request receipts. It also checks automatic same-design swap cancellation, repeat migration safety, and rollback when combined holdings would exceed the integer balance limit.
+
+The market browser workflow opens sales from a gallery sticker, verifies its preselected type and five modal widths, checks Escape and Close without a transaction, opens bank purchases, and verifies successful sales close the dialog while uncertain results keep a retry available.

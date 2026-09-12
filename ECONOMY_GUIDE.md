@@ -2,7 +2,7 @@
 
 The gallery and market live at /tracker/#stickers in the main app. A synced observation, wetting or diaper change earns one uniformly random sticker from the full active collection, using the server's cryptographic random-number generator. Rolls do not earn stickers. The gallery immediately above recent wallet activity at the bottom shows only types you currently own, including stickers reserved in your open listings. Each card tracks available quantity, reserved quantity, lifetime earned quantity, the current bank price and bank stock. The exchange selectors still include the full catalog so you can buy types you do not yet own.
 
-The active collection is the 16 numbered images in sprites/. Nested folders are supported; _originals and hidden files are excluded so backup copies never become reward types. PNG, WebP, JPEG and GIF are supported. Restart the service after changes. File paths determine stable sticker IDs: do not rename published assets. Retired files keep their old inventories and trading identities. Missing assets leave earned stickers pending; opening the gallery or recording again resolves pending awards after the collection is installed. Images are lazy loaded online; the PWA caches the gallery shell but never caches wallet APIs. Trading requires an online account session.
+The active collection is the 12 unique numbered images (1.png through 12.png) in sprites/. Nested folders are supported; _originals and hidden files are excluded so backup copies never become reward types. PNG, WebP, JPEG and GIF are supported. Restart the service after changes. File paths determine stable sticker IDs: do not rename published assets. Retired files keep their old inventories and trading identities. Missing assets leave earned stickers pending; opening the gallery or recording again resolves pending awards after the collection is installed. Images are lazy loaded online; the PWA caches the gallery shell but never caches wallet APIs. Trading requires an online account session.
 
 ## Two separate databases
 
@@ -41,3 +41,11 @@ Restore matched backups while the tracker service is stopped. Restoring an old m
 ## Verification
 
 Run npm test for unit/API coverage. tests/economy.test.mjs covers reward idempotency, imports, stars, bank supply/stock, demand expiry, escrow, insufficient funds, swaps, authorization, database separation, market outages and replay after a simulated cross-database crash. tests/economy-browser.mjs uses disposable accounts and the actual sprite collection to check real gallery rendering, mobile widths, peer purchases, lost-response retry through reload and shared sign-out.
+
+## Duplicate designs
+
+Market schema version 2 merges duplicate types 13-16 into 1-4 on initialization. Player and bank quantities combine, reward receipts remain unique, and open listings use the original design. Swaps that become a same-design swap are cancelled with escrow returned. Coin and star balances are unchanged. Ledger transfers document the merge; completed trades and request receipts remain intact. Demand includes both historical IDs without counting a trader twice. Old sticker IDs are accepted as aliases on new requests. Duplicate images are excluded from the active collection and public asset allowlist.
+
+## Sale dialog
+
+Choose **Sell this sticker** in your gallery to open the sale dialog with that type selected. Choose the quantity and either sell to the bank, list for coins, or offer a swap. Opening or closing the dialog never submits a transaction. A successful exchange closes it; errors and pending retries stay visible. **Browse bank stickers** opens the same dialog for purchases, including types you do not own. The standalone selling card has been removed.

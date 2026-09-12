@@ -17,10 +17,10 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     if(marketPath!==':memory:')mkdirSync(dirname(marketPath),{recursive:true,mode:0o700});
     market=new DatabaseSync(marketPath);
     try {
-      if(market.prepare('PRAGMA user_version').get().user_version>1)throw Error('The market database requires a newer service version.');
+      if(market.prepare('PRAGMA user_version').get().user_version>2)throw Error('The market database requires a newer service version.');
       market.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=100;');
-      store=createEconomy(market,options.stickerCatalog,id=>Boolean(science.prepare('SELECT p.id FROM participants p LEFT JOIN participant_access a ON a.participant_id=p.id WHERE p.id=? AND COALESCE(a.disabled,0)=0').get(id)));
-      market.exec('PRAGMA user_version=1');
+      store=createEconomy(market,options.stickerCatalog,id=>Boolean(science.prepare('SELECT p.id FROM participants p LEFT JOIN participant_access a ON a.participant_id=p.id WHERE p.id=? AND COALESCE(a.disabled,0)=0').get(id)),options.stickerDuplicates);
+      market.exec('PRAGMA user_version=2');
       return store;
     } catch(error) {market.close();market=null;store=null;throw error;}
   }

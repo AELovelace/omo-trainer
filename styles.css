@@ -1596,7 +1596,7 @@ dialog .primary {
 .economy-wide { grid-column:1/-1; }
 .market-listings { display:grid; gap:12px; }
 .market-offer { border-bottom:1px solid var(--border, #434047); padding:12px 0; overflow-wrap:anywhere; }
-#economy-history { padding-left:20px; overflow-wrap:anywhere; }
+#economy-history { padding-left:20px; overflow-wrap:anywhere; font-family:var(--mono); } /* Align ledger text with the terminal monospace typography. */
 #page-stickers .card { margin-bottom:20px; }
 
 /* Keep administrator access separate from the six participant destinations. */
@@ -1606,3 +1606,11 @@ dialog .primary {
   .sidebar nav .nav-item { padding:10px 1px; white-space:nowrap; }
   .admin-shortcut { bottom:calc(var(--mobile-actions-height) + env(safe-area-inset-bottom,0px) + 12px); }
 }
+
+/* The sale dialog scrolls within a phone viewport and stays above fixed navigation. */
+#market-dialog { overflow-y:auto; }
+#market-dialog .card-heading { align-items:center; gap:12px; }
+#market-dialog .card-heading h2 { margin:0; overflow-wrap:anywhere; }
+#market-close { flex-shrink:0; }
+#market-dialog-status:empty { display:none; }
+#market-retry { margin-top:16px; }

@@ -37,12 +37,27 @@ try {
   for(const width of [320,390,680,1024,1440]) {
     await a.setViewport({width,height:900});assert.equal(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'Gallery overflow at '+width);
   }
-  await a.setViewport({width:390,height:844});await a.bringToFront();await a.select('#market-sticker',type.id);
+  await a.setViewport({width:390,height:844});await a.bringToFront();
+  assert.equal(await a.$eval('#economy-form',form=>form.closest('dialog')?.id),'market-dialog');
+  await a.click('#sticker-gallery button');await a.waitForFunction(()=>document.querySelector('#market-dialog').open);
+  assert.equal(await a.$eval('#market-sticker',select=>select.value),type.id);
+  assert.equal(db.economy.snapshot(alice.id).wallet.coins,0,'Opening the dialog does not submit a sale');
+  for(const width of [320,390,680,1024,1440]) {
+    await a.setViewport({width,height:844});assert.equal(await a.$eval('#market-dialog',dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Sale modal fits '+width);
+  }
+  await a.setViewport({width:390,height:844});await a.screenshot({path:resolve(directory,'sale-modal-mobile.png')});
+  await a.keyboard.press('Escape');await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);
+  assert.equal(db.economy.snapshot(alice.id).wallet.coins,0,'Escape cancels without a transaction');
+  await a.click('#market-bank-open');await a.waitForFunction(()=>document.querySelector('#market-dialog').open);
+  assert.equal(await a.$eval('#market-action',select=>select.value),'bank-buy');
+  await a.click('#market-close');
+  await a.click('#sticker-gallery button');
   await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='10');
+  await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);await a.click('#sticker-gallery button');
   await a.select('#market-action','list-coins');await a.$eval('#market-price',el=>{el.value='7';el.dispatchEvent(new Event('input',{bubbles:true}));});
   await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#market-listings').textContent.includes('Your listing:'));
   await b.bringToFront();await b.click('#economy-refresh');await b.waitForFunction(()=>document.querySelector('#market-listings').textContent.includes('Buy bundle'));
-  await b.select('#market-sticker',type.id);await b.click('#market-submit');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='11');
+  await b.click('#sticker-gallery button');assert.equal(await b.$eval('#market-sticker',select=>select.value),type.id);await b.click('#market-submit');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='11');
   await b.click('#market-listings button');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='4');
   assert.equal(db.economy.snapshot(alice.id).wallet.coins,17);assert.equal(db.economy.snapshot(bob.id).types.find(t=>t.id===type.id).quantity,3);
   // Drop a successful response after the server commits, then retry through the actual UI.
@@ -52,7 +67,8 @@ try {
       dropped=true;const response=await fetch(request.url(),{method:'POST',headers:request.headers(),body:request.postData()});assert.equal(response.status,200);await request.abort('failed');
     }else await request.continue();
   });
-  await b.click('#market-submit');await b.waitForFunction(()=>!document.querySelector('#economy-retry').hidden);
+  await b.click('#sticker-gallery button');await b.click('#market-submit');await b.waitForFunction(()=>!document.querySelector('#market-retry').hidden);
+  assert.equal(await b.$eval('#market-dialog',dialog=>dialog.open),true,'An uncertain sale keeps its retry visible in the modal');
   const balance=db.economy.snapshot(bob.id).wallet.coins;
   await b.reload({waitUntil:'networkidle0'});await b.waitForFunction(()=>!document.querySelector('#economy-retry').hidden);await b.click('#economy-retry');
   await b.waitForFunction(()=>document.querySelector('#economy-retry').hidden);assert.equal(db.economy.snapshot(bob.id).wallet.coins,balance);
