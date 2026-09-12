@@ -743,6 +743,7 @@ input[type="number"] {
   line-height: 1.7;
   color: var(--ink);
 }
+.left-column,
 .right-column {
   display: grid;
   gap: 22px;
@@ -1450,6 +1451,7 @@ dialog .primary {
     font-size: 10px;
     padding: 11px 6px;
   }
+  .left-column,
   .right-column {
     gap: 19px;
   }

@@ -51,6 +51,7 @@
           <article class="stat-card"><div class="stat-top"><span>Latest diaper today</span><span class="stat-icon peach"><svg class="icon"><use href="#i-heart"/></svg></span></div><div class="stat-value" id="stat-diaper">—</div><span class="stat-foot" id="stat-wettings">No check-ins yet</span></article>
         </div>
         <div class="dashboard-grid">
+          <div class="left-column">
           <section class="card log-card" aria-labelledby="log-title">
             <div class="card-heading"><div><h2 id="log-title">Record an observation</h2><p>A snapshot of the present. Filed for later.</p></div><span class="pill lavender">FORM 01</span></div>
             <form id="log-form">
@@ -62,6 +63,14 @@
               <button class="button primary" id="save-observation" type="submit">Save observation</button>
             </form>
           </section>
+            <section class="card wetting-card" aria-labelledby="wetting-title"><div class="card-heading"><div><h2 id="wetting-title">Record a wetting</h2><p>One event. One classification. Independent of rolls.</p></div><span class="pill lavender">FORM 02</span></div>
+              <form id="wetting-form"><label for="wetting-time">Date &amp; time</label><input id="wetting-time" name="occurredAt" type="datetime-local" required>
+                <label for="wetting-category">Classification</label><select id="wetting-category" name="category" required><option value="" disabled selected>Choose a classification</option><option value="forced">Forced (F)</option><option value="voluntary">Voluntary (V)</option><option value="semi-involuntary">Semi-involuntary (SI)</option><option value="involuntary">Involuntary (I)</option></select>
+                <div class="field-pair"><div><label for="wetting-diaper">Diaper number that day</label><input id="wetting-diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required></div><div><label for="wetting-position">Position</label><select id="wetting-position" name="position"><option value="standing">Standing</option><option value="sitting" selected>Sitting</option><option value="laying-down">Laying down</option></select></div></div>
+                <p class="field-help">Record each actual wetting once, including events without a roll. Roll snapshots and their cumulative wetting counts do not add classified events.</p><button class="button primary" type="submit">Save wetting</button>
+              </form>
+            </section>
+          </div>
           <div class="right-column">
             <section class="card roll-card" aria-labelledby="roll-title"><div class="card-heading"><div><h2 id="roll-title">Roll for a result</h2><p>Uses your daily chance. Saves only the roll.</p></div><svg class="icon"><use href="#i-dice"/></svg></div>
               <div class="probability-box"><div class="probability-heading"><label for="probability">Calculated chance of a “pee” result</label><div class="probability-number"><input id="probability" name="probability" readonly aria-label="Calculated pee probability percentage" type="number" min="20" max="80" step="1" value="50" required inputmode="numeric"><span>%</span></div></div></div>
@@ -69,13 +78,6 @@
               <p id="cooldown-status" class="field-help" role="timer" aria-live="off"></p><p class="prompt-note">A random prompt, never permission. Use the bathroom whenever you need. A result doesn't add a wetting.</p>
               <button class="button primary roll-button" type="button"><svg class="icon"><use href="#i-dice"/></svg>Roll <span>↗</span></button>
               <div id="roll-result" class="result-message" role="status" aria-live="polite" hidden></div>
-            </section>
-            <section class="card wetting-card" aria-labelledby="wetting-title"><div class="card-heading"><div><h2 id="wetting-title">Record a wetting</h2><p>One event. One classification. Independent of rolls.</p></div><span class="pill lavender">FORM 02</span></div>
-              <form id="wetting-form"><label for="wetting-time">Date &amp; time</label><input id="wetting-time" name="occurredAt" type="datetime-local" required>
-                <label for="wetting-category">Classification</label><select id="wetting-category" name="category" required><option value="" disabled selected>Choose a classification</option><option value="forced">Forced (F)</option><option value="voluntary">Voluntary (V)</option><option value="semi-involuntary">Semi-involuntary (SI)</option><option value="involuntary">Involuntary (I)</option></select>
-                <div class="field-pair"><div><label for="wetting-diaper">Diaper number that day</label><input id="wetting-diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required></div><div><label for="wetting-position">Position</label><select id="wetting-position" name="position"><option value="standing">Standing</option><option value="sitting" selected>Sitting</option><option value="laying-down">Laying down</option></select></div></div>
-                <p class="field-help">Record each actual wetting once, including events without a roll. Roll snapshots and their cumulative wetting counts do not add classified events.</p><button class="button primary" type="submit">Save wetting</button>
-              </form>
             </section>
             <section class="card chart-card" aria-labelledby="chart-title"><div class="card-heading"><div><h2 id="chart-title">Pattern analysis</h2><p>The record reveals what memory misses.</p></div><label class="sr-only" for="chart-days">Chart date range</label><select id="chart-days" class="compact-select"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></div><div class="chart-toolbar"><div class="segmented chart-tabs" role="group" aria-label="Chart metric"><button type="button" data-metric="entries" aria-pressed="true" class="active">Roll results</button><button type="button" data-metric="liquids" aria-pressed="false">Liquids</button></div><div class="chart-legend" id="chart-legend"><span><i class="legend-pee"></i>Pee</span><span><i class="legend-hold"></i>Hold</span></div></div><div id="chart" class="chart"></div><p id="chart-caption" class="chart-caption">Observations accumulate into a pattern.</p><details class="chart-details"><summary>View chart data</summary><div class="table-scroll"><table><thead><tr><th scope="col">Date</th><th scope="col">Pee</th><th scope="col">Hold</th><th scope="col">Liquids (mL)</th></tr></thead><tbody id="chart-data"></tbody></table></div></details></section>
             <section class="card recent-card" aria-labelledby="recent-title"><div class="card-heading"><div><h2 id="recent-title">Latest observations</h2><p>Most recent entries in your record.</p></div><a href="#history" class="text-link">View all <span>↗</span></a></div><div id="recent-list"></div></section>

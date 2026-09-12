@@ -3,6 +3,7 @@
 This repository currently contains a standalone browser tracker, not the original game.
 
 - `index.html` and `styles.css`: accessible forms and responsive dashboard.
+- The desktop dashboard groups observation and wetting forms in `.left-column`; rolling, charts and recent records use `.right-column`. Both columns stack at the existing narrow-screen breakpoint.
 - `#about` in `index.html`, routed by `navigate()` in `app.js`, contains the protocol explanation and daily adjustment history. The tracker keeps the live roll probability and cooldown beside its controls.
 - `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
 - New `kind: observation` records use `liquidsMode: interval` and carry no roll outcome; standalone `kind: roll` records contain only draw metadata. Keep their UI actions, validation, exports and summary contributions separate. Untyped legacy records retain cumulative intake semantics.

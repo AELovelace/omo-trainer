@@ -1,4 +1,4 @@
-const CACHE = `little-log-v9-independent-observations-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
+const CACHE = `little-log-v10-observation-column-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
 const SHELL = ['./', './index.html', './styles.css', './app.js', './lib/model.js', './lib/sync.js', './lib/training.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
