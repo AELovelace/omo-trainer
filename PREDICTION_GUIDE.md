@@ -36,3 +36,9 @@ NIDDK recommends recording what, when and how much a person drinks alongside uri
 - Deploy the updated app and both new modules together. No scientific or market database migration is needed. Existing PWA installations receive the new service worker using their usual update flow.
 
 Run `npm.cmd test` for model and existing app/server tests. Run `node tests/prediction-browser.mjs` for mobile layouts, real form saves, empty/reset histories and offline prediction with synthetic records. The browser test supports `PUPPETEER_MODULE` and `CHROME_PATH` and uses an isolated temporary database. Never tune or benchmark against another user's records without their authorized data access.
+
+## Admin participant predictions
+
+In Admin, open **Predictions** and select one participant, or choose **Prediction** from their User management row. The shared renderer uses the same personal model and probability chart as Little Log. It reads the selected user through the existing admin-authorized data endpoint, independently of analysis date filters. Records refresh every 30 seconds while the panel is visible, and **Refresh estimate** fetches immediately. Unsynced device records are unavailable to the admin; timestamps use the admin browser timezone. Everyone shows a selection prompt instead of pooling users into a model.
+
+All model inputs remain in memory. Switching participants, leaving the panel or losing authorization clears the rendered estimate and training cache; late responses cannot replace another participant?s view. No extra database migration or storage is added. The admin renderer bypasses older installed PWA shell caches, and shell v41 includes the shared module update. Run `node tests/admin-prediction-browser.mjs` to verify user drilldown, fresh data, selection races, empty histories, mobile layout, session revocation and ordinary-user denial with isolated synthetic accounts.

@@ -1,3 +1,4 @@
+import { renderPrediction, clearPrediction } from '../lib/prediction-view.js?admin=1'; // Bypass older PWA shell caches for the admin renderer.
 import { analyzeDataset } from '../lib/admin-analytics.js';
 import { datasetCsv } from '../lib/admin-format.js';
 
@@ -7,6 +8,7 @@ const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
+let predictionRequest=0,predictionUser='',predictionEntries=null,predictionBusy=false;
 let chartUserId='',chartWeek='',chartRequest=0,chartRefreshing=false;
 const noticeEditors=[createNoticeEditor('reminder','Reminder'),createNoticeEditor('margin-note','Margin note')];
 const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('little-log-chart-updates'):null; // Keep drilldown state only in memory alongside the authorized dataset.
@@ -14,6 +16,7 @@ const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
+  resetPrediction();
   for(const editor of noticeEditors)editor.clear();
   accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
   for(const selector of ['#potty-graphs','#potty-summary','#potty-users','#potty-detail-content','#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
@@ -188,18 +191,19 @@ function renderRecords() {
 function renderUsers() { // User controls refer only to immutable participant IDs, including when usernames collide across issuers.
   const search=$('#user-search').value.trim().toLowerCase();
   const selected=users.filter(user=>(user.label+' '+user.id).toLowerCase().includes(search));
-  $('#user-table').innerHTML='<table><thead><tr><th>User</th><th>Records / chart</th><th>Role</th><th>Access</th><th>Actions</th></tr></thead><tbody>'+selected.map(user=>'<tr data-user="'+escape(user.id)+'"><td>'+escape(user.label)+(user.id===actor?.id?' (you)':'')+'<br><small>'+escape(user.id)+'</small><details><summary>Verified identity</summary><p>'+escape(user.issuer)+'<br>'+escape(user.subject)+'</p></details></td><td>'+user.recordCount+' records<br>'+(user.hasChart?'Chart linked':'No chart')+'</td><td><select data-role aria-label="Role for '+escape(user.label)+'"><option value="participant"'+(user.role==='participant'?' selected':'')+'>Participant</option><option value="admin"'+(user.role==='admin'?' selected':'')+'>Admin</option></select></td><td><select data-disabled aria-label="Access for '+escape(user.label)+'"><option value="false"'+(!user.disabled?' selected':'')+'>Enabled</option><option value="true"'+(user.disabled?' selected':'')+'>Disabled</option></select></td><td><div class="admin-buttons"><button class="button primary small" data-save-user="'+escape(user.id)+'">Save access</button><button class="button secondary small" data-revoke="'+escape(user.id)+'">Revoke sessions</button><button class="button secondary small" data-inspect="'+escape(user.id)+'">View data</button></div></td></tr>').join('')+'</tbody></table>';
+  $('#user-table').innerHTML='<table><thead><tr><th>User</th><th>Records / chart</th><th>Role</th><th>Access</th><th>Actions</th></tr></thead><tbody>'+selected.map(user=>'<tr data-user="'+escape(user.id)+'"><td>'+escape(user.label)+(user.id===actor?.id?' (you)':'')+'<br><small>'+escape(user.id)+'</small><details><summary>Verified identity</summary><p>'+escape(user.issuer)+'<br>'+escape(user.subject)+'</p></details></td><td>'+user.recordCount+' records<br>'+(user.hasChart?'Chart linked':'No chart')+'</td><td><select data-role aria-label="Role for '+escape(user.label)+'"><option value="participant"'+(user.role==='participant'?' selected':'')+'>Participant</option><option value="admin"'+(user.role==='admin'?' selected':'')+'>Admin</option></select></td><td><select data-disabled aria-label="Access for '+escape(user.label)+'"><option value="false"'+(!user.disabled?' selected':'')+'>Enabled</option><option value="true"'+(user.disabled?' selected':'')+'>Disabled</option></select></td><td><div class="admin-buttons"><button class="button primary small" data-save-user="'+escape(user.id)+'">Save access</button><button class="button secondary small" data-revoke="'+escape(user.id)+'">Revoke sessions</button><button class="button secondary small" data-inspect="'+escape(user.id)+'">View data</button><button class="button secondary small" data-prediction="'+escape(user.id)+'">Prediction</button></div></td></tr>').join('')+'</tbody></table>';
 }
 async function renderAudit() {
   const result=await request('audit');
   $('#audit-table').innerHTML=table(['When','Actor','Action','Target','Details'],result.audit.map(row=>[row.created_at,users.find(user=>user.id===row.actor_id)?.label??row.actor_id,row.action,row.target_id,row.details_json]));
 }
 function navigate() {
-  const route=['analytics','potty-charts','users','transfer','reminders','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
+  const route=['analytics','potty-charts','predictions','users','transfer','reminders','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
   $('.admin-filters').hidden=route==='reminders';
   if(route==='reminders'&&actor)for(const editor of noticeEditors)editor.loadInitial();
+  if(route==='predictions') void loadPrediction(); else resetPrediction();
   if(route==='potty-charts') void refreshCharts();
   if(route==='audit' && actor) void renderAudit().catch(error=>status(error.message));
 }
@@ -276,6 +280,7 @@ $('#apply-import').addEventListener('click',async()=>{
 });
 for(const selector of ['#import-file','#import-mode']) $(selector).addEventListener('change',resetPreview);
 $('#participant-filter').addEventListener('change',()=>{
+  resetPrediction();if(location.hash==='#predictions')void loadPrediction();
   chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); resetPreview(); renderAnalytics();
   if(selectedId() && location.hash==='#potty-charts') void loadPottyChart(selectedId());
 });
@@ -294,8 +299,9 @@ for(const format of ['json','csv']) $('#export-'+format).addEventListener('click
 });
 $('#user-table').addEventListener('click',async event=>{
   const button=event.target.closest('button'); if(!button) return;
-  const id=button.dataset.saveUser??button.dataset.revoke??button.dataset.inspect,user=users.find(value=>value.id===id);
+  const id=button.dataset.saveUser??button.dataset.revoke??button.dataset.inspect??button.dataset.prediction,user=users.find(value=>value.id===id);
   if(!user) return;
+  if(button.dataset.prediction) { $('#participant-filter').value=id;resetPreview();resetPrediction();renderAnalytics();if(location.hash==='#predictions')void loadPrediction();else location.hash='predictions';return; }
   if(button.dataset.inspect) { $('#participant-filter').value=id; resetPreview();renderAnalytics();location.hash='analytics';return; }
   const row=button.closest('tr'),action=button.dataset.revoke?'revoke':'update';
   const input={id,version:user.version,action,role:row.querySelector('[data-role]').value,disabled:row.querySelector('[data-disabled]').value==='true'};
@@ -314,6 +320,33 @@ $('#admin-workspace').addEventListener('click',event=>{
     download('little-log-'+id+'.csv','\uFEFF'+[graph.columns,...graph.rows].map(row=>row.map(cell).join(',')).join('\r\n'),'text/csv;charset=utf-8');
   }
 });
+
+function resetPrediction() { // Invalidate in-flight responses and clear sensitive model state rather than leaving a hidden previous participant's estimate.
+  predictionRequest++;predictionUser='';predictionEntries=null;predictionBusy=false;clearPrediction();
+  $('#admin-prediction-card').hidden=true;$('#prediction-selection').textContent='Select an individual participant to view their estimate.';$('#prediction-fetched').textContent='';$('#prediction-refresh').disabled=!actor||!selectedId();
+}
+async function loadPrediction() { // Fetch just the selected participant through the existing authorized API; date filters never distort the current model.
+  const id=selectedId();if(!actor||location.hash!=='#predictions'||!id){resetPrediction();return;}
+  if(predictionBusy&&predictionUser===id)return;
+  if(predictionUser!==id)resetPrediction();
+  predictionUser=id;predictionBusy=true;const sequence=++predictionRequest,epoch=accessEpoch;
+  $('#prediction-refresh').disabled=true;
+  if(!predictionEntries)$('#prediction-selection').textContent='Loading participant estimate...';
+  try {
+    const result=await request('data?participantId='+encodeURIComponent(id));
+    if(sequence!==predictionRequest||epoch!==accessEpoch||selectedId()!==id||location.hash!=='#predictions')return;
+    const user=result.users.find(user=>user.id===id);if(!user)throw Error('Participant no longer available.');
+    predictionEntries=user.records.filter(record=>record.entry).map(record=>record.entry);
+    $('#prediction-selection').textContent=user.label+' / '+user.id;
+    $('#prediction-fetched').textContent='Synced records fetched '+new Date().toLocaleString()+'. Refreshes every 30 seconds while this panel is visible.';
+    $('#admin-prediction-card').hidden=false;renderPrediction(predictionEntries,id,true);
+  }catch(error){if(sequence===predictionRequest&&epoch===accessEpoch)$('#prediction-fetched').textContent='Could not refresh. '+(predictionEntries?'The previous snapshot is still shown. ':'')+error.message;}
+  finally{if(sequence===predictionRequest){predictionBusy=false;$('#prediction-refresh').disabled=false;}}
+}
+$('#prediction-refresh').addEventListener('click',()=>void loadPrediction());
+setInterval(()=>{if(!document.hidden&&location.hash==='#predictions')void loadPrediction();},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&location.hash==='#predictions')void loadPrediction();});
+
 window.addEventListener('hashchange',navigate);
 window.addEventListener('pagehide',()=>clearPrivateView()); // A shared console should not retain everyone’s records in the back-forward cache.
 window.addEventListener('pageshow',event=>{if(event.persisted)void refresh();});

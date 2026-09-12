@@ -149,3 +149,9 @@ LiDollQuest browser sign-in uses the first-party wallet session described in LID
 ## Personal potty estimates
 
 Pattern analysis includes a per-profile next-wetting model using actual wetting intervals and, when chronological validation supports it, intake timing and a learned fluid-response delay. It runs offline from the existing scientific records and updates after changes or sync. See [PREDICTION_GUIDE.md](PREDICTION_GUIDE.md) for inputs, limits, validation, deployment and browser tests. No database migration or external model service is needed.
+
+## Admin participant predictions
+
+In Admin, open **Predictions** and select one participant, or choose **Prediction** from their User management row. The shared renderer uses the same personal model and probability chart as Little Log. It reads the selected user through the existing admin-authorized data endpoint, independently of analysis date filters. Records refresh every 30 seconds while the panel is visible, and **Refresh estimate** fetches immediately. Unsynced device records are unavailable to the admin; timestamps use the admin browser timezone. Everyone shows a selection prompt instead of pooling users into a model.
+
+All model inputs remain in memory. Switching participants, leaving the panel or losing authorization clears the rendered estimate and training cache; late responses cannot replace another participant?s view. No extra database migration or storage is added. The admin renderer bypasses older installed PWA shell caches, and shell v41 includes the shared module update. Run `node tests/admin-prediction-browser.mjs` to verify user drilldown, fresh data, selection races, empty histories, mobile layout, session revocation and ordinary-user denial with isolated synthetic accounts.

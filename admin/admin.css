@@ -61,3 +61,5 @@
 .reminder-enabled-label { display:flex; align-items:center; gap:10px; margin:16px 0; }
 .reminder-enabled-label input { width:auto; min-height:0; margin:0; }
 .reminder-preview { padding:16px; border:1px solid var(--border); background:var(--panel-deep); white-space:pre-wrap; overflow-wrap:anywhere; }
+
+#prediction-selection { overflow-wrap:anywhere; } /* Long participant labels and IDs remain readable on phones. */
