@@ -1636,3 +1636,14 @@ dialog .primary {
 /* Admin-authored margin notes keep paragraph breaks and wrap long words inside their existing card. */
 #margin-note[hidden] { display:none; }
 #margin-note-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+
+/* Personal estimates share the active theme and the mobile Analysis panel. */
+.prediction-window { font-size:1.5rem; font-weight:700; margin:12px 0 4px; }
+.prediction-metrics { display:grid; gap:12px; margin:20px 0; }
+.prediction-metrics dt { font-size:.8rem; opacity:.75; }
+.prediction-metrics dd { margin:4px 0 0; overflow-wrap:anywhere; }
+.prediction-card figure { margin:20px 0; }
+.prediction-card svg { display:block; width:100%; height:auto; }
+#prediction-bars { fill:currentColor; opacity:.7; }
+.prediction-axis { display:flex; justify-content:space-between; font-size:.75rem; }
+.prediction-card .card-heading { flex-wrap:wrap; }

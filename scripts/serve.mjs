@@ -21,6 +21,7 @@ const files = new Map([
   ...stickerAssets.map(item => [item.url, item.mime]),
   ['coins/browser.js','text/javascript; charset=utf-8'],
   ['coins/index.html','text/html; charset=utf-8'], ['coins/app.js','text/javascript; charset=utf-8'], ['coins/style.css','text/css; charset=utf-8'],
+  ['lib/prediction.js', 'text/javascript; charset=utf-8'], ['lib/prediction-view.js', 'text/javascript; charset=utf-8'],
   ['lib/economy.js', 'text/javascript; charset=utf-8'],
   ['lib/reminder.js', 'text/javascript; charset=utf-8'],
   ['lib/theme.js', 'text/javascript; charset=utf-8'], ['theme-init.js', 'text/javascript; charset=utf-8'], ['themes.css', 'text/css; charset=utf-8'],

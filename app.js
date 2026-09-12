@@ -1,3 +1,4 @@
+import { renderPrediction } from './lib/prediction-view.js';
 import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
@@ -392,6 +393,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
   renderProtocol();
   renderSummary();
   renderChart();
+  renderPrediction(state.entries, state.sync.participant?.id, true);
   renderRecent();
   renderHistory();
   renderSync();
@@ -741,6 +743,7 @@ function refreshClock() { // Advances untouched live timestamps and resets autom
     if (previousDay !== today) seedDiaperChange(true);
   }
   renderCooldown();
+  renderPrediction(state.entries, state.sync.participant?.id);
 }
 $('#occurred-at').addEventListener('input', () => { $('#occurred-at').dataset.edited = 'true'; });
 $('#log-form').addEventListener('submit', () => { if ($('#occurred-at').value === localInput()) delete $('#occurred-at').dataset.edited; });

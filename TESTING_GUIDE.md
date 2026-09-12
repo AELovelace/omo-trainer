@@ -145,3 +145,7 @@ Stickerbank purchase removal: economy tests verify that rejected bank purchases 
 LiDollCoin API: `tests/coin-api.test.mjs` checks relative operations, receipts/refunds, consent, scopes, persistence, account isolation, token expiry, polling backoff, CSRF and CORS. `tests/coin-browser.mjs` checks the signed-in approval and revocation interface with actual local API requests and mobile widths.
 
 LiDollQuest browser sign-in uses the first-party wallet session described in LIDOLLCOIN_API.md: same-tab LiD0llID sign-in, first consent, automatic return and restore. Deploy the Node service plus public coins/browser.js before the rebuilt game. Browser grants and remembered permissions live only in market.sqlite (schema 4); the external bearer API and scientific-data storage remain separate.
+
+## Personal potty estimates
+
+Pattern analysis includes a per-profile next-wetting model using actual wetting intervals and, when chronological validation supports it, intake timing and a learned fluid-response delay. It runs offline from the existing scientific records and updates after changes or sync. See [PREDICTION_GUIDE.md](PREDICTION_GUIDE.md) for inputs, limits, validation, deployment and browser tests. No database migration or external model service is needed.

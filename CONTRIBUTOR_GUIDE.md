@@ -93,3 +93,7 @@ Margin notes share the notice editor and live refresh mechanism with the header,
 External wallet routes are isolated in `server/coin-api.mjs` and `server/coin-api-store.mjs`. They use app-scoped device grants and the market database only. Never introduce an absolute balance setter or accept these bearer credentials on scientific endpoints. See LIDOLLCOIN_API.md for consent, CORS, integer transactions and replay/refund contracts.
 
 LiDollQuest browser sign-in uses the first-party wallet session described in LIDOLLCOIN_API.md: same-tab LiD0llID sign-in, first consent, automatic return and restore. Deploy the Node service plus public coins/browser.js before the rebuilt game. Browser grants and remembered permissions live only in market.sqlite (schema 4); the external bearer API and scientific-data storage remain separate.
+
+## Personal potty estimates
+
+Pattern analysis includes a per-profile next-wetting model using actual wetting intervals and, when chronological validation supports it, intake timing and a learned fluid-response delay. It runs offline from the existing scientific records and updates after changes or sync. See [PREDICTION_GUIDE.md](PREDICTION_GUIDE.md) for inputs, limits, validation, deployment and browser tests. No database migration or external model service is needed.
