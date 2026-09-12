@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { validateEntry, MAX_ENTRIES } from '../lib/model.js';
 import { validateGrowthChart } from './growth-chart.mjs';
+import { createAdminStore } from './admin-store.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex'); // Stores only a digest of session secrets and retry payloads.
 export const databasePath = () => resolve(process.env.DATA_DIR ?? 'data', 'little-log.sqlite');
@@ -108,6 +109,7 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
   }
 
   function createSession(participantId) { // Issues a one-hour, server-held session; browser JavaScript never receives this credential.
+    if (admin.access(participantId).disabled) throw new ApiError(403, 'Little Log access is disabled. Contact an administrator.');
     const token = randomBytes(32).toString('base64url'), csrf = randomBytes(32).toString('base64url');
     db.prepare('DELETE FROM app_sessions WHERE expires < ?').run(Date.now());
     db.prepare('INSERT INTO app_sessions VALUES (?, ?, ?, ?)').run(hash(token), participantId, csrf, Date.now() + 3600000);
@@ -118,7 +120,8 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
     if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
     const row = db.prepare(`SELECT p.id, p.label, s.csrf FROM app_sessions s JOIN participants p ON p.id=s.participant_id
       WHERE s.token_hash = ? AND s.expires > ?`).get(hash(token), Date.now());
-    return row ? { participant: { id: row.id, label: row.label }, csrf: row.csrf } : null;
+    if (!row || admin.access(row.id).disabled) return null;
+    return { participant: { id: row.id, label: row.label }, csrf: row.csrf, role: admin.access(row.id).role };
   }
 
   function saveLogin(token, payload) { // Keeps PKCE verifier, state, and nonce off the browser and expires unfinished logins after ten minutes.
@@ -211,8 +214,9 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 
+  const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
   return {
-    ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),

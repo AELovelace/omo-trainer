@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#260b20">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin · Little Log</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./admin.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body class="admin-body">
+  <a class="skip-link" href="#admin-content">Skip to admin content</a>
+  <main class="admin-main" id="admin-content">
+    <header class="admin-header"><a class="text-link" href="../">← Little Log</a><span id="admin-identity"></span><button class="button secondary" id="refresh" hidden>Refresh data</button></header>
+    <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // RESEARCH SYSTEMS</p><h1>RESEARCH CONSOLE<span>.</span></h1><p class="subtitle">Account access. Shared records. Patterns over time.</p></div></div>
+    <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
+    <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LidollID</a></section>
+    <div id="admin-workspace" hidden>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <section class="card admin-filters" aria-label="Dataset selection">
+        <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>
+        <div><label for="date-from">Analysis from</label><input id="date-from" type="date"></div>
+        <div><label for="date-to">Analysis through</label><input id="date-to" type="date"></div>
+        <div><label for="interval">Group by</label><select id="interval"><option value="day">Day</option><option value="week">Week (Monday)</option><option value="month">Month</option></select></div>
+        <button id="all-dates" class="button secondary">All dates</button>
+      </section>
+      <section data-panel="analytics" aria-labelledby="analytics-title">
+        <h2 id="analytics-title" tabindex="-1">Advanced analytics</h2>
+        <p class="section-copy">Date filters use each record's saved local date. Graphs count recorded activity; missing records do not establish that no events occurred. Current protocol and chart counters use complete saved history. Each graph includes exact data and an SVG download.</p>
+        <div id="admin-summary" class="admin-summary"></div>
+        <div id="graphs" class="admin-graphs"></div>
+        <section class="card"><h2>What each chart line means</h2><p class="section-copy">Current labels and notes are saved per participant and row ID. Star totals respect the analysis dates; renaming a row also changes its label on older stars.</p><div id="chart-lines" class="table-scroll"></div></section>
+        <section class="card"><h2>Participant snapshots</h2><p class="section-copy">Current enrollment and chart dates, timezone, probability, refusal count and reveal status.</p><div id="participant-snapshots" class="table-scroll"></div></section>
+        <section class="card"><div class="card-heading"><h2>Underlying records</h2><select id="record-kind" aria-label="Filter underlying record type"><option value="">All record types</option><option value="observation">Observations</option><option value="wetting">Wettings</option><option value="roll">Rolls</option><option value="protocol">Protocol</option><option value="legacy">Legacy snapshots</option></select></div><p id="record-count"></p><div id="record-table" class="table-scroll"></div><button id="more-records" class="button secondary">Show more records</button></section>
+      </section>
+      <section data-panel="users" aria-labelledby="users-title" hidden>
+        <h2 id="users-title" tabindex="-1">User management</h2>
+        <p class="section-copy">Manage Little Log access for accounts that have signed in. Disabling access revokes Little Log sessions and blocks new ones. LidollID passwords and access to other apps are managed separately. At least one enabled administrator must remain.</p>
+        <label for="user-search">Find a user</label><input id="user-search" type="search" placeholder="Username or participant ID">
+        <div id="user-table" class="table-scroll card"></div>
+      </section>
+      <section data-panel="transfer" aria-labelledby="transfer-title" hidden>
+        <h2 id="transfer-title" tabindex="-1">Import & export</h2>
+        <div class="admin-transfer-grid">
+          <section class="card"><h3>Export selected participants</h3><p class="section-copy">Exports include every current record and the complete potty chart for the selected user or everyone. Analysis date filters do not limit these backups. CSV includes readable record fields and JSON cells for full chart rows and dated stars.</p><div class="admin-buttons"><button id="export-json" class="button primary">Download JSON</button><button id="export-csv" class="button secondary">Download CSV</button></div></section>
+          <section class="card"><h3>Import records and charts</h3><p class="section-copy">Choose a Little Log CSV or JSON file (up to 16 MiB). Files without participant IDs require an individual user selection. Existing user IDs are preserved; imports never create login accounts, change roles or delete missing records.</p>
+            <label for="import-file">CSV or JSON file</label><input id="import-file" type="file" accept=".csv,.json,text/csv,application/json">
+            <label for="import-mode">Existing data</label><select id="import-mode"><option value="merge">Merge new records; stop on conflicts</option><option value="replace">Replace conflicting records and charts</option></select>
+            <p class="field-help">Identical records are skipped. Replacing a chart replaces the complete chart. Old CSV exports without IDs receive repeatable IDs; identical rows in those files collapse into one record.</p>
+            <button id="preview-import" class="button secondary">Preview import</button><div id="import-preview" role="status"></div><button id="apply-import" class="button primary" hidden>Apply reviewed import</button>
+          </section>
+        </div>
+      </section>
+      <section data-panel="audit" aria-labelledby="audit-title" hidden><h2 id="audit-title" tabindex="-1">Administrator activity</h2><p class="section-copy">Latest 100 access changes and imports. Record contents and credentials are excluded.</p><div id="audit-table" class="table-scroll card"></div></section>
+    </div>
+  </main>
+</body>
+</html>

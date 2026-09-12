@@ -5,13 +5,13 @@ function send(response, status, body) { // Keeps every authenticated response ou
   response.end(JSON.stringify(body));
 }
 
-async function body(request) { // Bounds uploads before parsing and rejects content types that could be submitted by an ordinary cross-site form.
+async function body(request, limit = 256 * 1024) { // Bounds uploads before parsing and rejects content types that could be submitted by an ordinary cross-site form.
   if (!/^application\/json(?:;|$)/i.test(request.headers['content-type'] ?? '')) throw new ApiError(415, 'Send application/json.');
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 256 * 1024) throw new ApiError(413, 'Sync request is too large.');
+    if (size > limit) throw new ApiError(413, 'Sync request is too large.');
     chunks.push(chunk);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
@@ -28,9 +28,19 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if (route.startsWith('admin/')) {
+        database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
+        const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';
+        if (route === 'admin/users' && request.method === 'GET') return send(response, 200, { users: database.admin.users(participant.id), csrf, participant });
+        if (route === 'admin/data' && request.method === 'GET') return send(response, 200, database.admin.dataset(participant.id, scope));
+        if (route === 'admin/audit' && request.method === 'GET') return send(response, 200, { audit: database.admin.auditList(participant.id) });
+        if (route === 'admin/user' && request.method === 'POST') return send(response, 200, database.admin.updateUser(participant.id, await body(request)));
+        if (route === 'admin/import-preview' && request.method === 'POST') return send(response, 200, database.admin.previewImport(participant.id, await body(request, 24 * 1024 * 1024)));
+        if (route === 'admin/import' && request.method === 'POST') return send(response, 200, database.admin.importData(participant.id, await body(request, 24 * 1024 * 1024)));
+      }
       if (route === 'growth-chart' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.growthChart(participant.id) });
       if (route === 'growth-chart' && request.method === 'POST') return send(response, 200, { participant, ...database.saveGrowthChart(participant.id, await body(request)) });
-      if (route === 'session' && request.method === 'GET') return send(response, 200, { participant, csrf, records: database.records(participant.id) });
+      if (route === 'session' && request.method === 'GET') return send(response, 200, { participant, csrf, role: session.role, records: database.records(participant.id) });
       if (route === 'logout' && request.method === 'POST') { login.logout(request, response); return send(response, 200, { ok: true }); }
       if (route === 'sync' && request.method === 'POST') {
         const input = await body(request);

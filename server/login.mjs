@@ -39,7 +39,8 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
           const config = await configured();
           const attempt = randomBytes(32).toString('base64url');
           const verifier = oidc.randomPKCECodeVerifier(), state = oidc.randomState(), nonce = oidc.randomNonce();
-          const returnTo = new URL(request.url, origin).searchParams.get('returnTo') === 'growth-chart' ? 'growth-chart' : 'settings';
+          const destination = new URL(request.url, origin).searchParams.get('returnTo');
+          const returnTo = ['growth-chart', 'admin'].includes(destination) ? destination : 'settings';
           database.saveLogin(attempt, { verifier, state, nonce, returnTo }); // Keep an allowlisted destination server-side, never an arbitrary redirect URL.
           const location = oidc.buildAuthorizationUrl(config, { redirect_uri: `${origin}${base}auth/callback`, scope: 'openid profile', code_challenge: await oidc.calculatePKCECodeChallenge(verifier), code_challenge_method: 'S256', state, nonce,
             ...(route === 'register' ? { screen_hint: 'signup', prompt: 'login' } : new URL(request.url, origin).searchParams.get('reauth') === '1' ? { prompt: 'login' } : {}), // Registration keeps the same PKCE, state, nonce, and exact callback protections as sign-in.
@@ -56,7 +57,7 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
           const profile = await oidc.fetchUserInfo(config, tokens.access_token, claims.sub);
           const account = database.ensureParticipant(claims.iss, claims.sub, profile.preferred_username);
           database.deleteSession(cookie(request, sessionName));
-          return redirect(response, attempt.returnTo === 'growth-chart' ? `${base}potty_chart/` : `${base}#settings`, [setCookie(sessionName, database.createSession(account.id), 3600), setCookie(loginName, '', 0)]);
+          return redirect(response, attempt.returnTo === 'growth-chart' ? `${base}potty_chart/` : attempt.returnTo === 'admin' ? `${base}admin/` : `${base}#settings`, [setCookie(sessionName, database.createSession(account.id), 3600), setCookie(loginName, '', 0)]);
         }
         response.writeHead(404); response.end();
       } catch (error) {

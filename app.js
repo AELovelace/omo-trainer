@@ -90,6 +90,7 @@ function commit(nextState, fromServer = false) { // Atomically saves records and
 }
 
 function renderSync() { // Separates local saving, pending uploads, conflicts, and confirmed server persistence.
+  $('#admin-nav').hidden = serverSession?.role !== 'admin'; // Navigation follows the server role; admin APIs independently enforce access.
   const sync = state.sync ?? emptySync();
   let status = 'On this device only';
   if (sync.participant) status = sync.conflicts.length ? `${sync.conflicts.length} conflicts need review` : sync.queue.length ? `${sync.queue.length} changes waiting to sync` : sync.lastSyncedAt ? 'Saved to central database' : 'Waiting for first sync';
