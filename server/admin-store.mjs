@@ -39,23 +39,26 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
       db.exec('COMMIT'); return access(id);
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
-  function reminder() { // A single app-wide notice contains no participant data or administrator identity.
-    const row=db.prepare("SELECT value FROM admin_settings WHERE key='reminder'").get();
-    return row?JSON.parse(row.value):{text:'',enabled:false,version:0,updatedAt:null};
+  function reminder(key='reminder') { // Site notices have independent versions and contain no participant data or editor identity.
+    if(!['reminder','margin-note'].includes(key))throw new ApiError(404,'Notice not found.');
+    const row=db.prepare('SELECT value FROM admin_settings WHERE key=?').get(key);
+    return row?JSON.parse(row.value):{text:key==='margin-note'?'\u201cThey kept the records.\nSomeone kept a copy.\u201d':'',enabled:key==='margin-note',version:0,updatedAt:null};
   }
-  function saveReminder(actor,input) { // Version checks protect another administrator's edit; an identical retry does not republish or duplicate its audit entry.
+  function saveReminder(actor,input,key='reminder') { // Version checks protect another administrator's edit; an identical retry does not republish or duplicate its audit entry.
     requireAdmin(actor);
-    if(!input||typeof input.text!=='string'||input.text.length>500||typeof input.enabled!=='boolean'||!Number.isSafeInteger(input.version)||input.version<0)throw new ApiError(400,'Use a reminder of at most 500 characters and a valid version.');
-    const text=input.text.trim().replace(/\s+/g,' ');
-    if(input.enabled&&!text)throw new ApiError(400,'Enter a reminder before showing the banner.');
+    reminder(key); // Validate the internal notice key before using it in a write.
+    const limit=key==='margin-note'?2000:500;
+    if(!input||typeof input.text!=='string'||input.text.length>limit||typeof input.enabled!=='boolean'||!Number.isSafeInteger(input.version)||input.version<0)throw new ApiError(400,'Use text of at most '+limit+' characters and a valid version.');
+    const text=key==='margin-note'?input.text.trim().replace(/\r\n?/g,'\n'):input.text.trim().replace(/\s+/g,' ');
+    if(input.enabled&&!text)throw new ApiError(400,'Enter some text before showing this notice.');
     db.exec('BEGIN IMMEDIATE');
     try {
-      requireAdmin(actor);const current=reminder();
+      requireAdmin(actor);const current=reminder(key);
       if(current.text===text&&current.enabled===input.enabled) {db.exec('COMMIT');return current;}
-      if(current.version!==input.version)throw new ApiError(409,'Another administrator changed the reminder. Load the latest reminder before saving again.');
+      if(current.version!==input.version)throw new ApiError(409,'Another administrator changed this notice. Load the latest text before saving again.');
       const value={text,enabled:input.enabled,version:current.version+1,updatedAt:new Date().toISOString()};
-      db.prepare("INSERT INTO admin_settings VALUES ('reminder',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(value));
-      audit(actor,'update-reminder',null,{version:value.version,enabled:value.enabled,length:text.length});
+      db.prepare('INSERT INTO admin_settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));
+      audit(actor,'update-'+key,null,{version:value.version,enabled:value.enabled,length:text.length});
       db.exec('COMMIT');return value;
     }catch(error){db.exec('ROLLBACK');throw error;}
   }

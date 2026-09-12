@@ -30,7 +30,11 @@
         <section class="card"><h2 id="reminder-editor-title">Admin reminder</h2><p class="section-copy">Publish a reminder in the scrolling header on Little Log's home page. Published text is visible to everyone, including signed-out visitors. Changes reach open pages within 30 seconds.</p>
           <form id="reminder-form"><label for="reminder-message">Reminder text (up to 500 characters)</label><textarea id="reminder-message" rows="4" maxlength="500"></textarea><label class="reminder-enabled-label"><input id="reminder-enabled" type="checkbox"> Show this reminder</label><p class="field-help">Preview</p><p id="reminder-preview" class="reminder-preview"></p><div class="admin-buttons"><button id="reminder-save" class="button primary" type="submit" disabled>Save reminder</button><button id="reminder-reload" class="button secondary" type="button">Load latest reminder</button></div></form>
           <p id="reminder-editor-status" class="field-help" role="status"></p>
+          <section class="card"><h2 id="margin-note-editor-title">Margin note</h2><p class="section-copy">Add tips or reminders to the margin note on the home page. Published text is visible to everyone, including signed-out visitors, and updates within 30 seconds. Line breaks are preserved.</p>
+          <form id="margin-note-form"><label for="margin-note-message">Note text (up to 2,000 characters)</label><textarea id="margin-note-message" rows="6" maxlength="2000"></textarea><label class="reminder-enabled-label"><input id="margin-note-enabled" type="checkbox"> Show this margin note</label><p class="field-help">Preview</p><p id="margin-note-preview" class="reminder-preview"></p><div class="admin-buttons"><button id="margin-note-save" class="button primary" type="submit" disabled>Save margin note</button><button id="margin-note-reload" class="button secondary" type="button">Load latest margin note</button></div></form>
+          <p id="margin-note-editor-status" class="field-help" role="status"></p>
         </section>
+      </section>
       </section>
       <section data-panel="analytics" aria-labelledby="analytics-title">
         <h2 id="analytics-title" tabindex="-1">Advanced analytics</h2>

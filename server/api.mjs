@@ -24,8 +24,8 @@ export function createApi(database, login) { // Resolves each app session to an 
       const origin = request.headers.origin;
       if (request.headers['sec-fetch-site'] === 'cross-site' || (origin && origin !== login.origin)) throw new ApiError(403, 'This origin is not allowed.');
       if (!['GET', 'POST'].includes(request.method)) throw new ApiError(405, 'Method not allowed.');
-      if (route === 'reminder' && request.method === 'GET') {
-        const value=database.admin.reminder();
+      if (['reminder','margin-note'].includes(route) && request.method === 'GET') {
+        const value=database.admin.reminder(route);
         return send(response,200,{text:value.enabled?value.text:'',enabled:value.enabled,version:value.version}); // Only the published notice is public; disabled drafts and editor metadata remain private.
       }
       const session = login.session(request);
@@ -35,8 +35,11 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
         const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';
-        if (route === 'admin/reminder' && request.method === 'GET') return send(response,200,database.admin.reminder());
-        if (route === 'admin/reminder' && request.method === 'POST') return send(response,200,database.admin.saveReminder(participant.id,await body(request,4096)));
+        if (['admin/reminder','admin/margin-note'].includes(route)) {
+          const key=route.slice('admin/'.length);
+          if (request.method === 'GET') return send(response,200,database.admin.reminder(key));
+          if (request.method === 'POST') return send(response,200,database.admin.saveReminder(participant.id,await body(request,16384),key));
+        }
         if (route === 'admin/users' && request.method === 'GET') return send(response, 200, { users: database.admin.users(participant.id), csrf, participant });
         if (route === 'admin/charts' && request.method === 'GET') return send(response, 200, database.admin.charts(participant.id));
         if (route === 'admin/data' && request.method === 'GET') return send(response, 200, database.admin.dataset(participant.id, scope));

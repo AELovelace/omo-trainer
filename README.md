@@ -103,7 +103,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v36-auto-wetting-diaper. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v37-admin-margin-note. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
@@ -129,3 +129,5 @@ Open **Stickers & market** in Little Log. Synced observations, wettings and diap
 Settings ? Theme offers **Little Tracker**, the default pastel design, and **Caregiver Tracker**, the original dark Chrysalis design. The choice is saved on this device and works offline. Both themes retain the same records, chart, ledger and market controls.
 
 Administrators can edit the scrolling home reminder in **Admin console > Reminders**. Save text with **Show this reminder** enabled to publish it to everyone, including signed-out visitors; disable and save to hide it. Notices start hidden, support up to 500 characters, and update visible online pages within 30 seconds.
+
+**Admin console > Reminders > Margin note** controls the separate home-page tips card. Notes support 2,000 characters with line breaks, preview, and a show/hide toggle. They update open online pages automatically, like the scrolling header.

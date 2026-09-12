@@ -1632,3 +1632,7 @@ dialog .primary {
   .reminder-copy { display:block; min-width:0; padding:0; white-space:normal; overflow-wrap:anywhere; }
   #reminder-repeat,#reminder-pause { display:none; }
 }
+
+/* Admin-authored margin notes keep paragraph breaks and wrap long words inside their existing card. */
+#margin-note[hidden] { display:none; }
+#margin-note-text { white-space:pre-wrap; overflow-wrap:anywhere; }

@@ -18,10 +18,19 @@ try {
   for(const page of [editor,home])page.on('pageerror',e=>errors.push(e.message));
   await home.goto(origin+'/tracker/',{waitUntil:'networkidle0'});assert.equal(await home.$eval('#admin-reminder',el=>el.hidden),true);
   await editor.goto(origin+'/tracker/admin/#reminders',{waitUntil:'networkidle0'});await editor.bringToFront();await editor.waitForFunction(()=>!document.querySelector('#reminder-save').disabled);
+  await editor.waitForFunction(()=>!document.querySelector('#margin-note-save').disabled);
+  const tip='A little tip for today.\n\nTake a moment to write your notes. <b>Literal text</b> '+'x'.repeat(180);
+  await editor.$eval('#margin-note-message',(el,text)=>{el.value=text;el.dispatchEvent(new Event('input',{bubbles:true}));},tip);
   const notice='Remember to record your observations! <img src=x onerror="window.injected=true">';
   await editor.$eval('#reminder-message',(el,text)=>{el.value=text;el.dispatchEvent(new Event('input',{bubbles:true}));},notice);
   await editor.click('#reminder-enabled');await editor.click('#reminder-save');await editor.waitForFunction(()=>document.querySelector('#reminder-editor-status').textContent==='Reminder published.');
-  await home.bringToFront();await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
+  assert.equal(await editor.$eval('#margin-note-message',el=>el.value),tip,'Saving the header preserves the margin-note draft');
+  await editor.click('#margin-note-save');await editor.waitForFunction(()=>document.querySelector('#margin-note-editor-status').textContent==='Margin note published.');
+  await home.bringToFront();await home.waitForFunction(()=>document.querySelector('#margin-note-text').textContent.startsWith('A little tip'));
+  assert.equal(await home.$eval('#margin-note-text',el=>el.textContent),tip);
+  assert.equal(await home.$('#margin-note-text b'),null,'Note markup is shown literally');
+  assert.equal(await home.$eval('#margin-note-text',el=>getComputedStyle(el).whiteSpace),'pre-wrap');
+  await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
   assert.equal(await home.$eval('#reminder-text',el=>el.textContent),notice);assert.equal(await home.$('#reminder-text img'),null);assert.equal(await home.evaluate(()=>window.injected),undefined);
   await home.click('#reminder-pause');assert.equal(await home.$eval('.reminder-track',el=>getComputedStyle(el).animationPlayState),'paused');
   assert.equal(await home.$eval('#reminder-pause',el=>el.getAttribute('aria-pressed')),'true');
@@ -51,5 +60,16 @@ try {
   await home.setOfflineMode(false);await home.evaluate(()=>window.dispatchEvent(new Event('online')));await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
   await editor.bringToFront();await editor.reload({waitUntil:'networkidle0'});await editor.waitForFunction(()=>!document.querySelector('#reminder-save').disabled);
   assert.equal(await editor.$eval('#reminder-message',el=>el.value),'Another admin update');assert.equal(await editor.$eval('#reminder-enabled',el=>el.checked),true);
-  assert.deepEqual(errors,[]);console.log('Reminder browser passed: publish/hide, live updates, signed-out access, conflicts, persistence, literal text, pause, reduced motion, offline recovery, two themes and five widths. Screenshots: '+directory);
+  assert.equal(await editor.$eval('#margin-note-message',el=>el.value),tip,'Note survives editor reload');
+  await editor.$eval('#reminder-message',el=>{el.value='Unsaved header draft';});
+  await editor.click('#margin-note-enabled');await editor.click('#margin-note-save');await editor.waitForFunction(()=>document.querySelector('#margin-note-editor-status').textContent==='Margin note hidden. Text saved for later.');
+  assert.equal(await editor.$eval('#reminder-message',el=>el.value),'Unsaved header draft');
+  await home.bringToFront();await home.waitForFunction(()=>document.querySelector('#margin-note').hidden);
+  assert.equal(await home.$eval('#admin-reminder',el=>el.hidden),false,'Hiding the note preserves the scrolling header');
+  await guest.reload({waitUntil:'networkidle0'});assert.equal(await guest.$eval('#margin-note-text',el=>el.textContent),'');
+  await editor.bringToFront();await editor.click('#margin-note-enabled');await editor.click('#margin-note-save');await editor.waitForFunction(()=>document.querySelector('#margin-note-editor-status').textContent==='Margin note published.');
+  await home.bringToFront();await home.waitForFunction(()=>!document.querySelector('#margin-note').hidden);
+  await home.setOfflineMode(true);await home.evaluate(()=>window.dispatchEvent(new Event('offline')));assert.equal(await home.$eval('#margin-note',el=>el.hidden),true);
+  await home.setOfflineMode(false);await home.evaluate(()=>window.dispatchEvent(new Event('online')));await home.waitForFunction(()=>!document.querySelector('#margin-note').hidden);
+  assert.deepEqual(errors,[]);console.log('Reminder browser passed: independent header and margin-note drafts, multiline plain text, publish/hide, live updates, signed-out access, conflicts, persistence, literal text, pause, reduced motion, offline recovery, two themes and five widths. Screenshots: '+directory);
 }finally{await browser?.close();db?.close();if(server)await new Promise(done=>server.close(done));}

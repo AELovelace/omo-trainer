@@ -8,13 +8,13 @@ const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
 let chartUserId='',chartWeek='',chartRequest=0,chartRefreshing=false;
-let reminderVersion=null,reminderBusy=false;
+const noticeEditors=[createNoticeEditor('reminder','Reminder'),createNoticeEditor('margin-note','Margin note')];
 const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('little-log-chart-updates'):null; // Keep drilldown state only in memory alongside the authorized dataset.
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
-  reminderVersion=null;$('#reminder-message').value='';$('#reminder-preview').textContent='';$('#reminder-save').disabled=true;
+  for(const editor of noticeEditors)editor.clear();
   accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
   for(const selector of ['#potty-graphs','#potty-summary','#potty-users','#potty-detail-content','#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
   $('#participant-filter').innerHTML='<option value="">Everyone</option>';
@@ -199,7 +199,7 @@ function navigate() {
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
   $('.admin-filters').hidden=route==='reminders';
-  if(route==='reminders'&&actor&&reminderVersion===null)void loadReminder();
+  if(route==='reminders'&&actor)for(const editor of noticeEditors)editor.loadInitial();
   if(route==='potty-charts') void refreshCharts();
   if(route==='audit' && actor) void renderAudit().catch(error=>status(error.message));
 }
@@ -329,32 +329,31 @@ $('#date-from').value=date(start);$('#date-to').value=date(today);
 navigate(); void refresh();
 
 
-function reminderControls(busy) { // Lock the draft during requests so a response cannot erase edits made while saving.
-  reminderBusy=busy;
-  for(const id of ['#reminder-message','#reminder-enabled','#reminder-reload'])$(id).disabled=busy||!actor;
-  $('#reminder-save').disabled=busy||!actor||reminderVersion===null;
+function createNoticeEditor(key,label) { // Each notice owns its draft, request state and version, so saving one cannot overwrite the other.
+  const field=suffix=>$('#'+key+'-'+suffix);let version=null,busy=false;
+  function controls(value) { // Disable edits during a request to preserve text typed before saving.
+    busy=value;
+    for(const suffix of ['message','enabled','reload'])field(suffix).disabled=busy||!actor;
+    field('save').disabled=busy||!actor||version===null;
+  }
+  function preview() {field('preview').textContent=field('message').value.trim()||'No text yet.';} // Render all authored text literally.
+  function render(value) {version=value.version;field('message').value=value.text;field('enabled').checked=value.enabled;preview();}
+  async function load() { // Only the explicit reload button replaces an existing unsaved draft.
+    if(!actor||busy)return;controls(true);
+    try {render(await request(key));field('editor-status').textContent='Loaded current '+label.toLowerCase()+'. Version '+version+'.';}
+    catch(error){field('editor-status').textContent=error.message;}
+    finally{controls(false);}
+  }
+  field('message').addEventListener('input',preview);
+  field('reload').addEventListener('click',()=>void load());
+  field('form').addEventListener('submit',async event=>{ // The shared request helper checks the live admin session and includes CSRF protection.
+    event.preventDefault();if(!actor||busy||version===null)return;controls(true);
+    try {
+      render(await request(key,{text:field('message').value,enabled:field('enabled').checked,version}));
+      field('editor-status').textContent=field('enabled').checked?label+' published.':label+' hidden. Text saved for later.';
+      if(typeof BroadcastChannel==='function'){const channel=new BroadcastChannel('little-log-reminder');channel.postMessage('updated');channel.close();}
+    }catch(error){field('editor-status').textContent=error.message;}
+    finally{controls(false);}
+  });
+  return {loadInitial(){if(version===null)void load();},clear(){version=null;field('message').value='';field('preview').textContent='';field('enabled').checked=false;field('editor-status').textContent='';field('save').disabled=true;}};
 }
-function reminderPreview() { // Render administrator-authored text literally, never as executable HTML.
-  $('#reminder-preview').textContent=$('#reminder-message').value.trim()||'No reminder text yet.';
-}
-function renderReminder(value) {
-  reminderVersion=value.version;$('#reminder-message').value=value.text;$('#reminder-enabled').checked=value.enabled;reminderPreview();
-}
-async function loadReminder() { // Loading is explicit once a draft exists, so tab changes cannot overwrite unsaved text.
-  if(!actor||reminderBusy)return;reminderControls(true);
-  try {renderReminder(await request('reminder'));$('#reminder-editor-status').textContent='Loaded current reminder. '+(reminderVersion?'Version '+reminderVersion+'.':'Nothing published yet.');}
-  catch(error){$('#reminder-editor-status').textContent=error.message;}
-  finally{reminderControls(false);}
-}
-$('#reminder-message').addEventListener('input',reminderPreview);
-$('#reminder-reload').addEventListener('click',()=>void loadReminder());
-$('#reminder-form').addEventListener('submit',async event=>{ // Save the displayed version with the same live admin authorization and CSRF token as user management.
-  event.preventDefault();if(!actor||reminderBusy||reminderVersion===null)return;
-  reminderControls(true);
-  try {
-    const value=await request('reminder',{text:$('#reminder-message').value,enabled:$('#reminder-enabled').checked,version:reminderVersion});renderReminder(value);
-    $('#reminder-editor-status').textContent=value.enabled?'Reminder published.':'Reminder hidden. Text saved for later.';
-    if(typeof BroadcastChannel==='function'){const channel=new BroadcastChannel('little-log-reminder');channel.postMessage('updated');channel.close();}
-  }catch(error){$('#reminder-editor-status').textContent=error.message;}
-  finally{reminderControls(false);}
-});
