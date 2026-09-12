@@ -1615,3 +1615,20 @@ dialog .primary {
 #market-close { flex-shrink:0; }
 #market-dialog-status:empty { display:none; }
 #market-retry { margin-top:16px; }
+
+/* The two equal copies loop horizontally without widening the page. */
+.admin-reminder { display:flex; align-items:center; gap:12px; min-width:0; padding:12px; margin-bottom:24px; border:1px solid var(--border); background:var(--panel); }
+.admin-reminder[hidden] { display:none; }
+.reminder-label { flex:none; font-family:var(--mono); font-size:12px; color:var(--gold); }
+.reminder-viewport { flex:1; min-width:0; overflow:hidden; }
+.reminder-track { display:flex; width:max-content; animation:reminder-scroll var(--reminder-duration,25s) linear infinite; }
+.reminder-copy { box-sizing:border-box; flex:none; min-width:var(--reminder-width,0px); padding-right:48px; white-space:nowrap; font-size:14px; line-height:1.6; }
+#reminder-pause { flex:none; min-height:36px; padding:6px 10px; }
+.admin-reminder.is-paused .reminder-track { animation-play-state:paused; }
+@media(hover:hover) { .admin-reminder:hover .reminder-track { animation-play-state:paused; } }
+@keyframes reminder-scroll { to { transform:translateX(-50%); } }
+@media(prefers-reduced-motion:reduce) {
+  .reminder-track { width:100%; animation:none; display:block; }
+  .reminder-copy { display:block; min-width:0; padding:0; white-space:normal; overflow-wrap:anywhere; }
+  #reminder-repeat,#reminder-pause { display:none; }
+}

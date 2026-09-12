@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateEntry,emptyState,validateState,toCsv,daySummary } from '../lib/model.js';
-import { diaperSummary,suggestedDiaperWettings } from '../lib/diapers.js';
+import { diaperSummary,diaperAtTime,suggestedDiaperWettings } from '../lib/diapers.js';
 import { trainingState,cooldownRemaining } from '../lib/training.js';
 import { openDatabase } from '../server/database.mjs';
 import { deviceState,connectAccount } from '../lib/sync.js';
@@ -60,4 +60,14 @@ test('change events persist through sync, participant isolation, correction, del
     db.sync(alice.id,[{id:'dry',mutationId:'delete',baseVersion:1,entry:null}]);
     assert.equal(diaperSummary(db.records(alice.id).map(row=>row.entry).filter(Boolean),'2026-09-12').changes,1);
   }finally{db.close();}
+});
+
+ test('automatic wetting assignment follows event-time changes and resets on a new day',()=>{
+  const entries=[change(),{...change('second','2026-09-12',2,2),occurredAt:'2026-09-12T10:01:47+00:00'}];
+  assert.equal(diaperAtTime(entries,'2026-09-12T09:59:59+00:00'),1,'Backdated wettings precede later changes');
+  assert.equal(diaperAtTime(entries,'2026-09-12T10:00:01+00:00'),2);
+  assert.equal(diaperAtTime(entries,'2026-09-12T10:01:46+00:00'),2,'Seconds distinguish events within a minute');
+  assert.equal(diaperAtTime(entries,'2026-09-12T10:01:47+00:00'),3);
+  assert.equal(diaperAtTime(entries,'2026-09-13T00:00:00+00:00'),1);
+  assert.equal(diaperAtTime([wetting('historical',4)],'2026-09-12T09:30:00+00:00'),4,'Existing numbered records remain compatible');
 });

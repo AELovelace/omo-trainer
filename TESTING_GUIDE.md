@@ -135,3 +135,5 @@ The market browser workflow opens sales from a gallery sticker, verifies its pre
 ## Theme selector
 
 Run `node tests/theme-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH configured. It checks the pastel default, both themes across five widths and five pages, saved selection, unchanged form drafts, cross-tab updates, offline reload, and graceful behavior when preference storage is blocked. Screenshots of both themes and the mobile chart/settings pages are written to an isolated artifacts/themes directory. The existing CRT browser regression selects Caregiver Tracker before checking its original default-on behavior.
+
+Admin reminders: `npm test` includes persistence, input validation, stale-edit protection, retry auditing, public draft redaction and admin/CSRF checks. Run `node tests/reminder-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH configured to check publishing, updates, hiding, literal text rendering, mobile layout, pause and reduced motion in both themes against a temporary local database.

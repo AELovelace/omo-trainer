@@ -18,13 +18,19 @@
     <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
     <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LiD0llID</a></section>
     <div id="admin-workspace" hidden>
-      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#audit" data-tab="audit">Activity log</a></nav>
       <section class="card admin-filters" aria-label="Dataset selection">
         <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>
         <div><label for="date-from">Analysis from</label><input id="date-from" type="date"></div>
         <div><label for="date-to">Analysis through</label><input id="date-to" type="date"></div>
         <div><label for="interval">Group by</label><select id="interval"><option value="day">Day</option><option value="week">Week (Monday)</option><option value="month">Month</option></select></div>
         <button id="all-dates" class="button secondary">All dates</button>
+      </section>
+      <section data-panel="reminders" aria-labelledby="reminder-editor-title" hidden>
+        <section class="card"><h2 id="reminder-editor-title">Admin reminder</h2><p class="section-copy">Publish a reminder in the scrolling header on Little Log's home page. Published text is visible to everyone, including signed-out visitors. Changes reach open pages within 30 seconds.</p>
+          <form id="reminder-form"><label for="reminder-message">Reminder text (up to 500 characters)</label><textarea id="reminder-message" rows="4" maxlength="500"></textarea><label class="reminder-enabled-label"><input id="reminder-enabled" type="checkbox"> Show this reminder</label><p class="field-help">Preview</p><p id="reminder-preview" class="reminder-preview"></p><div class="admin-buttons"><button id="reminder-save" class="button primary" type="submit" disabled>Save reminder</button><button id="reminder-reload" class="button secondary" type="button">Load latest reminder</button></div></form>
+          <p id="reminder-editor-status" class="field-help" role="status"></p>
+        </section>
       </section>
       <section data-panel="analytics" aria-labelledby="analytics-title">
         <h2 id="analytics-title" tabindex="-1">Advanced analytics</h2>

@@ -54,7 +54,7 @@ try {
   assert.equal((await saved(page)).entries[0].kind, 'observation');
   assert.equal((await saved(page)).entries[0].wettingsCount, undefined);
   await page.click('#diaper-change-form button[type="submit"]');
-  assert.equal(await page.$eval('#wetting-diaper', element => element.value), '2');
+  assert.equal(await page.$('#wetting-diaper'), null, 'The wetting form assigns diaper numbers automatically');
   await fill(page, '#diaper', 2);
   assert.equal(await page.$eval('#diaper-change-wettings', element => element.value), '0');
   await fill(page, '#liquids', 600);

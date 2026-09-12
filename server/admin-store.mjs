@@ -39,6 +39,26 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
       db.exec('COMMIT'); return access(id);
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
+  function reminder() { // A single app-wide notice contains no participant data or administrator identity.
+    const row=db.prepare("SELECT value FROM admin_settings WHERE key='reminder'").get();
+    return row?JSON.parse(row.value):{text:'',enabled:false,version:0,updatedAt:null};
+  }
+  function saveReminder(actor,input) { // Version checks protect another administrator's edit; an identical retry does not republish or duplicate its audit entry.
+    requireAdmin(actor);
+    if(!input||typeof input.text!=='string'||input.text.length>500||typeof input.enabled!=='boolean'||!Number.isSafeInteger(input.version)||input.version<0)throw new ApiError(400,'Use a reminder of at most 500 characters and a valid version.');
+    const text=input.text.trim().replace(/\s+/g,' ');
+    if(input.enabled&&!text)throw new ApiError(400,'Enter a reminder before showing the banner.');
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      requireAdmin(actor);const current=reminder();
+      if(current.text===text&&current.enabled===input.enabled) {db.exec('COMMIT');return current;}
+      if(current.version!==input.version)throw new ApiError(409,'Another administrator changed the reminder. Load the latest reminder before saving again.');
+      const value={text,enabled:input.enabled,version:current.version+1,updatedAt:new Date().toISOString()};
+      db.prepare("INSERT INTO admin_settings VALUES ('reminder',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(value));
+      audit(actor,'update-reminder',null,{version:value.version,enabled:value.enabled,length:text.length});
+      db.exec('COMMIT');return value;
+    }catch(error){db.exec('ROLLBACK');throw error;}
+  }
   function users(actor) { // Counts distinguish live entries from tombstones; identity-service secrets are never queried.
     requireAdmin(actor);
     return db.prepare(`SELECT p.id,p.label,p.issuer,p.subject,p.created_at AS createdAt,
@@ -140,6 +160,6 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
       db.exec('COMMIT'); return result.summary;
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
-  return {access,requireAdmin,bootstrap,users,updateUser,dataset,charts,previewImport,importData,
+  return {access,requireAdmin,bootstrap,reminder,saveReminder,users,updateUser,dataset,charts,previewImport,importData,
     auditList(actor) { requireAdmin(actor); return db.prepare('SELECT * FROM admin_audit ORDER BY created_at DESC,rowid DESC LIMIT 100').all(); }};
 }

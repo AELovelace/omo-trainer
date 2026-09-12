@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {mkdir,mkdtemp} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createServer} from 'node:net';
+import {openDatabase} from '../server/database.mjs';
+const puppeteer=(await import(pathToFileURL(process.env.PUPPETEER_MODULE).href)).default;
+const listener=createServer();await new Promise(done=>listener.listen(0,'127.0.0.1',done));const port=listener.address().port;await new Promise(done=>listener.close(done));
+await mkdir('artifacts',{recursive:true});const directory=await mkdtemp(resolve('artifacts/reminder-browser-')),origin='http://127.0.0.1:'+port;
+Object.assign(process.env,{NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,OIDC_ISSUER:'http://127.0.0.1:4174',BASE_PATH:'/tracker/',DATA_DIR:directory});
+let browser,server,db;const errors=[];
+try {
+  ({server}=await import('../scripts/serve.mjs'));db=openDatabase(resolve(directory,'little-log.sqlite'));
+  const admin=db.ensureParticipant('test','admin','Test admin');db.admin.bootstrap(admin.id);
+  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH,headless:true,pipe:true});
+  const context=await browser.createBrowserContext();await context.setCookie({name:'little_log',value:db.createSession(admin.id),url:origin+'/tracker/',path:'/tracker/',httpOnly:true,sameSite:'Lax'});
+  const editor=await context.newPage(),home=await context.newPage();
+  for(const page of [editor,home])page.on('pageerror',e=>errors.push(e.message));
+  await home.goto(origin+'/tracker/',{waitUntil:'networkidle0'});assert.equal(await home.$eval('#admin-reminder',el=>el.hidden),true);
+  await editor.goto(origin+'/tracker/admin/#reminders',{waitUntil:'networkidle0'});await editor.bringToFront();await editor.waitForFunction(()=>!document.querySelector('#reminder-save').disabled);
+  const notice='Remember to record your observations! <img src=x onerror="window.injected=true">';
+  await editor.$eval('#reminder-message',(el,text)=>{el.value=text;el.dispatchEvent(new Event('input',{bubbles:true}));},notice);
+  await editor.click('#reminder-enabled');await editor.click('#reminder-save');await editor.waitForFunction(()=>document.querySelector('#reminder-editor-status').textContent==='Reminder published.');
+  await home.bringToFront();await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
+  assert.equal(await home.$eval('#reminder-text',el=>el.textContent),notice);assert.equal(await home.$('#reminder-text img'),null);assert.equal(await home.evaluate(()=>window.injected),undefined);
+  await home.click('#reminder-pause');assert.equal(await home.$eval('.reminder-track',el=>getComputedStyle(el).animationPlayState),'paused');
+  assert.equal(await home.$eval('#reminder-pause',el=>el.getAttribute('aria-pressed')),'true');
+  await home.click('#reminder-pause');await home.mouse.move(0,0);await home.evaluate(()=>document.activeElement.blur());
+  assert.equal(await home.$eval('.reminder-track',el=>getComputedStyle(el).animationPlayState),'running');
+  for(const theme of ['little-tracker','caregiver-tracker']) {
+    await home.click('[data-page="settings"]');await home.select('#theme-selector',theme);await home.click('[data-page="overview"]');
+    for(const width of [320,390,680,1024,1440]) {await home.setViewport({width,height:900});assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' overflow '+width);}
+    await home.setViewport({width:390,height:844});await home.screenshot({path:resolve(directory,theme+'-mobile.png')});
+  }
+  await home.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  assert.equal(await home.$eval('.reminder-track',el=>getComputedStyle(el).animationName),'none');assert.equal(await home.$eval('#reminder-repeat',el=>getComputedStyle(el).display),'none');
+  assert.equal(await home.$eval('#reminder-text',el=>getComputedStyle(el).whiteSpace),'normal');
+  const guestContext=await browser.createBrowserContext(),guest=await guestContext.newPage();await guest.goto(origin+'/tracker/',{waitUntil:'networkidle0'});
+  assert.equal(await guest.$eval('#reminder-text',el=>el.textContent),notice,'Signed-out visitors receive the notice');
+  // A competing update must leave the current unsaved draft intact and offer an explicit reload.
+  await editor.bringToFront();await editor.$eval('#reminder-message',el=>{el.value='My unsaved draft';});
+  db.admin.saveReminder(admin.id,{text:'Another admin update',enabled:true,version:1});
+  await editor.click('#reminder-save');await editor.waitForFunction(()=>document.querySelector('#reminder-editor-status').textContent.includes('Another administrator'));
+  assert.equal(await editor.$eval('#reminder-message',el=>el.value),'My unsaved draft');
+  await editor.click('#reminder-reload');await editor.waitForFunction(()=>document.querySelector('#reminder-message').value==='Another admin update');
+  await editor.click('#reminder-enabled');await editor.click('#reminder-save');await editor.waitForFunction(()=>document.querySelector('#reminder-editor-status').textContent==='Reminder hidden. Text saved for later.');
+  await home.bringToFront();await home.waitForFunction(()=>document.querySelector('#admin-reminder').hidden);
+  await editor.bringToFront();await editor.click('#reminder-enabled');await editor.click('#reminder-save');await editor.waitForFunction(()=>document.querySelector('#reminder-editor-status').textContent==='Reminder published.');
+  await home.bringToFront();await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
+  await home.setOfflineMode(true);await home.evaluate(()=>window.dispatchEvent(new Event('offline')));await home.waitForFunction(()=>document.querySelector('#admin-reminder').hidden);
+  await home.setOfflineMode(false);await home.evaluate(()=>window.dispatchEvent(new Event('online')));await home.waitForFunction(()=>!document.querySelector('#admin-reminder').hidden);
+  await editor.bringToFront();await editor.reload({waitUntil:'networkidle0'});await editor.waitForFunction(()=>!document.querySelector('#reminder-save').disabled);
+  assert.equal(await editor.$eval('#reminder-message',el=>el.value),'Another admin update');assert.equal(await editor.$eval('#reminder-enabled',el=>el.checked),true);
+  assert.deepEqual(errors,[]);console.log('Reminder browser passed: publish/hide, live updates, signed-out access, conflicts, persistence, literal text, pause, reduced motion, offline recovery, two themes and five widths. Screenshots: '+directory);
+}finally{await browser?.close();db?.close();if(server)await new Promise(done=>server.close(done));}

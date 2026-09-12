@@ -66,7 +66,7 @@ try {
   await page.click('#diaper-change-form button[type="submit"]');
   assert.equal((await saved(page)).entries.find(entry => entry.kind === 'diaper-change').wettingsCount, 3);
   assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '1');
-  assert.equal(await page.$eval('#wetting-diaper', input => input.value), '2');
+  assert.equal(await page.$('#wetting-diaper'), null, 'The wetting form assigns diaper numbers automatically');
   assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '0');
   await page.click('#diaper-change-form button[type="submit"]');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2);

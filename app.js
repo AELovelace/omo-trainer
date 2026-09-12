@@ -2,9 +2,10 @@ import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, valida
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
 import { isRoll, isObservation } from './lib/model.js';
-import { diaperSummary, suggestedDiaperWettings } from './lib/diapers.js';
+import { diaperSummary, diaperAtTime, suggestedDiaperWettings } from './lib/diapers.js';
 import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
+import './lib/reminder.js';
 import './lib/theme.js';
 import './lib/economy.js';
 import './potty_chart/merge.js';
@@ -492,14 +493,14 @@ $('#wetting-form').addEventListener('submit', event => { // Saves one classified
   try {
     refreshStoredState();
     const values = new FormData(event.currentTarget);
-    const entry = validateEntry({ id: crypto.randomUUID(), kind: 'wetting', occurredAt: timestampFromInput(values.get('occurredAt')),
-      category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')) });
+    const occurredAt = $('#wetting-time').dataset.edited ? timestampFromInput(values.get('occurredAt')) : instantTimestamp(); // Keep seconds for a new event immediately after a recorded change.
+    const entry = validateEntry({ id: crypto.randomUUID(), kind: 'wetting', occurredAt,
+      category: values.get('category'), position: values.get('position'), diaperNumber: diaperAtTime(state.entries, occurredAt) });
     if (Date.parse(entry.occurredAt) > Date.now()) throw new Error('A wetting must describe an event that has already happened.');
     commit({ ...state, entries: [...enroll(state.entries), entry] });
     $('#wetting-category').value = '';
     $('#wetting-time').value = localInput();
     delete $('#wetting-time').dataset.edited;
-    seedWetting();
     notify('Wetting saved. One event added to the daily classification totals.');
   } catch (error) { notify(error.message); }
 });
@@ -519,10 +520,6 @@ $('#wetting-edit-form').addEventListener('submit', event => { // Corrects event 
     notify('Wetting corrected. Daily probability recalculated.');
   } catch (error) { notify(error.message); }
 });
-function seedWetting(resetDiaper = false) { // Suggest the current diaper without attaching a cumulative wetting total to individual events.
-  const day = $('#wetting-time').value.slice(0, 10) || localDay();
-  if (resetDiaper) $('#wetting-diaper').value = diaperSummary(state.entries, day).currentDiaper;
-}
 function seedDiaperChange(reset = false) { // Preserve typed totals while refreshing the day's saved change count and untouched suggestions.
   if (reset) for (const selector of ['#diaper-change-number', '#diaper-change-wettings']) delete $(selector).dataset.edited;
   const input = $('#diaper-change-time'), day = input.value.slice(0, 10) || localDay();
@@ -531,12 +528,11 @@ function seedDiaperChange(reset = false) { // Preserve typed totals while refres
   if (reset || !$('#diaper-change-number').dataset.edited) $('#diaper-change-number').value = summary.currentDiaper;
   if (reset || !$('#diaper-change-wettings').dataset.edited) {
     let before = null;
-    try { if (input.value) before = timestampFromInput(input.value); }
+    try { if (input.value) before = input.dataset.edited ? timestampFromInput(input.value) : instantTimestamp(); }
     catch { $('#diaper-change-summary').textContent = 'Choose a valid date and time for this change.'; return; } // An invalid change draft must not interrupt other forms or sync rendering.
     $('#diaper-change-wettings').value = suggestedDiaperWettings(state.entries, day, Number($('#diaper-change-number').value), before);
   }
 }
-$('#wetting-time').addEventListener('change', () => seedWetting(true));
 $('#diaper-change-time').addEventListener('input', event => { event.target.dataset.edited = 'true'; });
 $('#diaper-change-time').addEventListener('change', () => {
   delete $('#diaper-change-number').dataset.edited; delete $('#diaper-change-wettings').dataset.edited; seedDiaperChange(true);
@@ -557,7 +553,7 @@ $('#diaper-change-form').addEventListener('submit', event => { // Record one com
     commit({ ...state, entries: [...enroll(state.entries), entry] });
     $('#diaper-change-time').value = localInput();
     for (const selector of ['#diaper-change-time', '#diaper-change-number', '#diaper-change-wettings']) delete $(selector).dataset.edited;
-    seedDiaperChange(true); seedWetting(true);
+    seedDiaperChange(true);
     $('#diaper').value = diaperSummary(state.entries, $('#occurred-at').value.slice(0, 10) || localDay()).currentDiaper;
     notify('Diaper change saved with its final wetting count.');
   } catch (error) { notify(error.message); }
@@ -676,7 +672,7 @@ $('#import-file').addEventListener('change', async event => { // Rejects oversiz
 $('#delete-all').addEventListener('click', () => { // Removes only this app's namespace after explicit confirmation, leaving other lidoll.dev data alone.
   if (state.sync?.participant) {
     if (!confirm('Delete every check-in for this account? Deletions will sync to the central database and your other devices. Export a backup first if you want to keep them.')) return;
-    try { commit({ ...state, entries: [], settings: emptyState().settings }); setDefaults(); seedForm(); seedWetting(true); notify('Deletions saved on this device and queued for the server.'); }
+    try { commit({ ...state, entries: [], settings: emptyState().settings }); setDefaults(); seedForm(); notify('Deletions saved on this device and queued for the server.'); }
     catch (error) { notify(error.message); }
     return;
   }
@@ -693,7 +689,6 @@ $('#delete-all').addEventListener('click', () => { // Removes only this app's na
     $('#roll-result').hidden = true;
     setDefaults();
     seedForm();
-    seedWetting(true);
     render();
     notify('Local entries and settings deleted.');
   } catch (error) { notify(`Could not delete data: ${error.message}`); }
@@ -737,9 +732,7 @@ function refreshClock() { // Advances untouched live timestamps and resets autom
   if (changedDay || (protocolView && protocolView.today !== protocolDay(new Date(), protocolView.timeZone))) { activeDay = today; render(); }
   const wettingTime = $('#wetting-time');
   if (!wettingTime.dataset.edited && document.activeElement !== wettingTime) {
-    const previousDay = wettingTime.value.slice(0, 10);
     wettingTime.value = localInput();
-    if (previousDay !== today) seedWetting(true);
   }
   const changeTime = $('#diaper-change-time');
   if (!changeTime.dataset.edited && document.activeElement !== changeTime) {
@@ -797,7 +790,7 @@ $('#disconnect-account').addEventListener('click', async () => { // Clears this 
     serverSession = null;
     syncMessage = '';
     sessionStorage.removeItem('little-log.connect');
-    setDefaults(); seedForm(); seedWetting(true); render();
+    setDefaults(); seedForm(); render();
     notify('Signed out of Little Log. Your central records were kept.');
   } catch (error) { notify(error.message); }
 });
@@ -808,7 +801,6 @@ $('#wetting-time').value = localInput();
 $('#occurred-at').value = localInput();
 setDefaults();
 seedForm();
-seedWetting(true);
 render();
 navigate();
 void checkSession();

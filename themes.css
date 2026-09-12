@@ -41,8 +41,8 @@
 :root[data-theme="little-tracker"] h1 { font-size:clamp(28px,3.6vw,48px); line-height:1.15; }
 :root[data-theme="little-tracker"] .dossier-heading h1 { font-size:clamp(36px,5vw,64px); letter-spacing:-1.5px; }
 :root[data-theme="little-tracker"] .dossier-seal { color:#88629c; background:#f6eaff; border-radius:50%; padding:10px; transform:rotate(5deg); }
-:root[data-theme="little-tracker"] :is(.archive-strip,.privacy-note,.archive-note) { background:#fffaf0; border:1px dashed #d3b982; border-radius:16px; box-shadow:none; }
-:root[data-theme="little-tracker"] .archive-strip { padding:12px; }
+:root[data-theme="little-tracker"] :is(.admin-reminder,.privacy-note,.archive-note) { background:#fffaf0; border:1px dashed #d3b982; border-radius:16px; box-shadow:none; }
+:root[data-theme="little-tracker"] .admin-reminder { padding:12px; }
 :root[data-theme="little-tracker"] .archive-note p { font-family:var(--display); }
 :root[data-theme="little-tracker"] .redacted { background:#bfa4c8; }
 :root[data-theme="little-tracker"] :is(label,legend,.pill,.stat-top,.stat-foot,.eyebrow,.subtitle,.prompt-note,.field-help,.section-copy) { font-family:"Trebuchet MS","Segoe UI",sans-serif; }
@@ -84,5 +84,5 @@
   :root[data-theme="little-tracker"] .sidebar { box-shadow:0 2px 0 #e9d7ea; }
   :root[data-theme="little-tracker"] .brand > span { font-size:21px; }
   :root[data-theme="little-tracker"] .nav-item { border-radius:12px; }
-  :root[data-theme="little-tracker"] .archive-strip { padding:9px; }
+  :root[data-theme="little-tracker"] .admin-reminder { padding:9px; }
 }

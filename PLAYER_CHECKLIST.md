@@ -7,7 +7,7 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - You can also choose **Sign in to sync** beside the save status at the top of any page. After signing in, **Connect device** opens Settings so you can review and approve uploading this device's entries. The header button disappears once this device is connected and signed in.
 - If you need an account, choose **Create account**, enter a username and a password twice, then review the app's identity access. Back in the tracker, choose **Connect & upload my entries** when ready to sync your local records.
 - Check the time and enter liquids consumed since your previous saved check-in in mL. Choose **Save observation** to record it; the intake field then resets to zero.
-- Choose the check-in diaper number. Select **Your position** in the roll card before rolling. In **Record a wetting**, classify one actual event and select its diaper number.
+- Choose the check-in diaper number. Select **Your position** in the roll card before rolling. In **Record a wetting**, classify one actual event; its diaper number is assigned automatically from records at the event time.
 - Use **Record a diaper change** below the wetting form to save each change and the number of wettings that diaper received. Correct the suggestion for unlogged or overnight wettings; 0 records a dry change. The next diaper number is suggested after saving.
 - The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for ten minutes; **Save observation** and wetting logging stay available.
 - In **Record a wetting**, classify each actual event once as Forced, Semi-Forced (SF), Voluntary, Semi-involuntary, or Involuntary, including events without a roll. Each save adds one classified event. The per-diaper total is recorded separately when changing it.
@@ -71,3 +71,6 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 ## Choose your theme
 
 Open Settings and choose **Little Tracker** for soft pastels or **Caregiver Tracker** for the original dark look. Little Tracker is the default. Changes apply immediately and save on this device; forms stay filled while you switch.
+
+- Home reminders scroll horizontally; use Pause to stop them. Reduced-motion settings display the full text without scrolling.
+- Administrators: open Admin console > Reminders, enter up to 500 characters, enable Show this reminder, then Save reminder. Turn Show off and save to hide it while retaining the text. Published reminders are visible to signed-out visitors too.
