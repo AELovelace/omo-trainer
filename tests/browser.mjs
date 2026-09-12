@@ -33,6 +33,7 @@ try {
   await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   await page.goto(origin, { waitUntil: 'networkidle0' });
   await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.click('[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');await page.click('[data-page="overview"]');
   await page.click('#crt-toggle');
   assert.equal(await page.$eval('#crt-toggle', element => element.getAttribute('aria-pressed')), 'false');
   await page.reload({ waitUntil: 'networkidle0' });

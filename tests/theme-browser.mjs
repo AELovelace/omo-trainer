@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {mkdir,mkdtemp} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const puppeteer=(await import(pathToFileURL(process.env.PUPPETEER_MODULE).href)).default;
+await mkdir('artifacts',{recursive:true});const directory=await mkdtemp(resolve('artifacts/themes-'));
+Object.assign(process.env,{NODE_ENV:'test',HOST:'127.0.0.1',PORT:'0',PUBLIC_ORIGIN:'http://127.0.0.1:4173',OIDC_ISSUER:'http://127.0.0.1:4174',BASE_PATH:'/tracker/',DATA_DIR:directory});
+const {server}=await import('../scripts/serve.mjs');if(!server.listening)await new Promise(done=>server.once('listening',done));
+const origin='http://127.0.0.1:'+server.address().port+'/tracker/';let browser;const errors=[];
+try {
+  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH,headless:true,pipe:true});
+  const context=await browser.createBrowserContext(),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+  await page.setViewport({width:1440,height:1100});await page.goto(origin,{waitUntil:'networkidle0'});
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'little-tracker');
+  assert.equal(await page.$eval('#crt-toggle',el=>el.getAttribute('aria-pressed')),'false');
+  await page.screenshot({path:resolve(directory,'little-tracker-desktop.png'),fullPage:true});
+  await page.$eval('#liquids',el=>{el.value='321';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.click('[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(26, 6, 17)');
+  assert.equal(await page.$eval('#crt-toggle',el=>el.getAttribute('aria-pressed')),'true');
+  assert.equal(await page.$eval('#liquids',el=>el.value),'321','Switching themes retains unfinished forms');
+  await page.reload({waitUntil:'networkidle0'});assert.equal(await page.$eval('#theme-selector',el=>el.value),'caregiver-tracker');
+  await page.click('[data-page="overview"]');await page.screenshot({path:resolve(directory,'caregiver-tracker-desktop.png'),fullPage:true});
+  for(const theme of ['little-tracker','caregiver-tracker']) {
+    await page.click('[data-page="settings"]');await page.select('#theme-selector',theme);
+    for(const width of [320,390,680,1024,1440]) {
+      await page.setViewport({width,height:900});
+      for(const route of ['settings','overview','history','potty-chart','stickers']) {
+        await page.evaluate(route=>{location.hash='#'+route;},route);await page.waitForFunction(route=>!document.querySelector('#page-'+route).hidden,{},route);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' '+route+' overflows '+width);
+      }
+    }
+  }
+  await page.setViewport({width:390,height:844});await page.click('[data-page="settings"]');await page.select('#theme-selector','little-tracker');
+  await page.screenshot({path:resolve(directory,'little-tracker-settings-mobile.png'),fullPage:true});
+  await page.click('[data-page="overview"]');await page.screenshot({path:resolve(directory,'little-tracker-mobile.png'),fullPage:true});
+  await page.click('[data-page="potty-chart"]');await page.screenshot({path:resolve(directory,'little-tracker-chart.png'),fullPage:true});
+  const second=await context.newPage();await second.goto(origin+'#settings',{waitUntil:'networkidle0'});
+  await second.select('#theme-selector','caregiver-tracker');await page.waitForFunction(()=>document.documentElement.dataset.theme==='caregiver-tracker',{polling:100});
+  await second.close();await page.bringToFront();await page.click('[data-page="settings"]');
+  await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+  await page.setOfflineMode(true);await page.select('#theme-selector','little-tracker');await page.reload({waitUntil:'networkidle0'});
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'little-tracker');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(255, 245, 250)');
+  await page.select('#theme-selector','caregiver-tracker');assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(26, 6, 17)');
+  const isolated=await browser.createBrowserContext(),blocked=await isolated.newPage();blocked.on('pageerror',error=>errors.push(error.message));
+  await blocked.evaluateOnNewDocument(()=>{const save=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='little-log.theme')throw new Error('Storage blocked');return save.call(this,key,value);};});
+  await blocked.goto(origin+'#settings',{waitUntil:'networkidle0'});await blocked.select('#theme-selector','caregiver-tracker');
+  assert.equal(await blocked.evaluate(()=>document.documentElement.dataset.theme),'caregiver-tracker');assert.match(await blocked.$eval('#theme-status',el=>el.textContent),/could not save/);
+  assert.deepEqual(errors,[]);console.log('Theme browser passed: default, both designs, persistent selection, draft preservation, five widths and routes, cross-tab updates, offline reload and blocked storage. Screenshots: '+directory);
+}finally{await browser?.close();await new Promise(done=>server.close(done));}

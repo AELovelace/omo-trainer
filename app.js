@@ -5,6 +5,7 @@ import { isRoll, isObservation } from './lib/model.js';
 import { diaperSummary, suggestedDiaperWettings } from './lib/diapers.js';
 import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
+import './lib/theme.js';
 import './lib/economy.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
@@ -44,7 +45,8 @@ let crtPreference = null;
 try { crtPreference = localStorage.getItem('ldq-crt-effect'); } catch { /* The display still works when browser storage is unavailable. */ }
 
 function renderCrt() { // Matches the main site's saved display preference and always respects reduced motion.
-  const enabled = crtPreference !== 'off' && !reducedMotion.matches;
+  const defaultCrt=document.documentElement.dataset.theme==='caregiver-tracker'?'on':'off';
+  const enabled = (crtPreference??defaultCrt) !== 'off' && !reducedMotion.matches;
   document.documentElement.classList.toggle('crt-enabled', enabled);
   $('#crt-toggle').setAttribute('aria-pressed', String(enabled));
   $('#crt-toggle').textContent = `CRT FX // ${enabled ? 'ON' : 'OFF'}`;
@@ -58,6 +60,7 @@ $('#crt-toggle').addEventListener('click', () => { // Saves a cosmetic preferenc
   try { localStorage.setItem('ldq-crt-effect', crtPreference); }
   catch { notify('Display changed for this visit. Your browser could not save the preference.'); }
 });
+window.addEventListener('little-log-theme-changed',renderCrt);
 reducedMotion.addEventListener('change', renderCrt);
 renderCrt();
 

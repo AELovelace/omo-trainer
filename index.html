@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="little-tracker">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1a0611">
+  <meta name="theme-color" content="#fff5fa">
+  <script src="./theme-init.js"></script>
   <meta name="description" content="Little Log. A recovered Chrysalis observation terminal for daily check-ins, classified wettings, and adaptive roll probabilities.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
@@ -11,6 +12,7 @@
   <meta name="tracker-base" content="./">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./potty_chart/embedded.css">
+  <link rel="stylesheet" href="./themes.css">
   <title>Little Log · lidoll.dev</title>
   <script type="module" src="./app.js"></script>
 </head>
@@ -32,7 +34,7 @@
   </svg>
   <div class="app-shell">
     <aside class="sidebar">
-      <a class="brand" href="#overview" aria-label="Little Log home"><svg class="brand-sigil"><use href="#i-sigil"/></svg><span>CHRYSALIS<span class="brand-sub">RESEARCH SYSTEMS DIVISION</span></span></a>
+      <a class="brand" href="#overview" aria-label="Little Log home"><svg class="brand-sigil"><use href="#i-sigil"/></svg><span><span class="caregiver-brand-name">CHRYSALIS</span><span class="little-brand-name">Little Tracker</span><span class="brand-sub"><span class="caregiver-brand-name">RESEARCH SYSTEMS DIVISION</span><span class="little-brand-name">little steps, lovely days</span></span></span></a>
       <div class="sidebar-code"><span>TERMINAL / LL-01</span><span>◆</span></div><span class="nav-label">OBSERVATION DIRECTORY</span>
       <nav aria-label="Main navigation">
         <a href="#overview" data-page="overview" class="nav-item active" aria-current="page"><svg class="icon"><use href="#i-grid"/></svg><span>Home</span><small>01</small></a>
@@ -215,6 +217,7 @@
       <section id="page-settings" class="page" hidden>
         <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // TERMINAL CONFIGURATION</p><h1>SETTINGS & DATA<span>.</span></h1><p class="subtitle">Account access, local defaults, and your records.</p></div></div>
         <div class="settings-grid">
+          <section class="card theme-card"><h2>Make yourself at home</h2><p class="section-copy">Choose a look for your tracker. Your choice is saved on this device.</p><label for="theme-selector">Theme</label><select id="theme-selector"><option value="little-tracker">Little Tracker</option><option value="caregiver-tracker">Caregiver Tracker</option></select><div class="theme-palette" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p id="theme-description" class="section-copy"></p><p id="theme-status" class="field-help" role="status"></p></section>
           <section class="card sync-card">
             <h2>Your LiD0llID account</h2>
             <p class="section-copy" id="account-status">Sign in to connect this device.</p>

@@ -67,3 +67,7 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 - Sell to the stickerbank, buy available bank stock, list a coin sale or offer a sticker swap. Check the displayed whole-number total.
 - Cancel your own listing to release its reserved stickers. Retry an unconfirmed exchange with Retry pending exchange.
 - Chart progress remains intact; each dated row cell earns its separate star once. Star spending will arrive later.
+
+## Choose your theme
+
+Open Settings and choose **Little Tracker** for soft pastels or **Caregiver Tracker** for the original dark look. Little Tracker is the default. Changes apply immediately and save on this device; forms stay filled while you switch.

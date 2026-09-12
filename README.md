@@ -58,7 +58,7 @@ Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](dep
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
 2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.sadgirlsclub.wtf** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, sprites/ (active images 1.png-12.png only; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, sprites/ (active images 1.png-12.png only; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 
@@ -103,7 +103,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v32-monospace-ledger. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v33-tracker-themes. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
@@ -123,3 +123,7 @@ The GameMaker runtime and game_editor_gui.py remain in the separate lidollquest 
 ## Sticker collection and market
 
 Open **Stickers & market** in Little Log. Synced observations, wettings and diaper changes earn random stickers; chart cells earn separate spendable stars. Bank exchanges and participant listings use whole-number LiDollCoins. Scientific data stays in `little-log.sqlite`; all market balances and trades live in the separate `market.sqlite`. See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md) for assets, pricing, recovery and backups.
+
+## Tracker themes
+
+Settings ? Theme offers **Little Tracker**, the default pastel design, and **Caregiver Tracker**, the original dark Chrysalis design. The choice is saved on this device and works offline. Both themes retain the same records, chart, ledger and market controls.

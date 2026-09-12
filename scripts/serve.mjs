@@ -20,6 +20,7 @@ const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
   ...stickerAssets.map(item => [item.url, item.mime]),
   ['lib/economy.js', 'text/javascript; charset=utf-8'],
+  ['lib/theme.js', 'text/javascript; charset=utf-8'], ['theme-init.js', 'text/javascript; charset=utf-8'], ['themes.css', 'text/css; charset=utf-8'],
   ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
   ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
   ['lib/training.js', 'text/javascript; charset=utf-8'], ['lib/diapers.js', 'text/javascript; charset=utf-8'],

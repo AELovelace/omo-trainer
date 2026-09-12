@@ -79,3 +79,7 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 `server/reward-bridge.mjs` delivers the scientific database outbox to a separate `market.sqlite`. `server/economy.mjs` owns all integer balances, reward receipts, escrow and transfer transactions. `server/sticker-catalog.mjs` allowlists images from `sprites/`; `lib/economy.js` mounts the gallery and market. Keep health payloads out of the market database and preserve request IDs across uncertain network results. See ECONOMY_GUIDE.md before changing currency rules or backups.
 
 The six mobile header destinations use one-word labels (Home, History, Settings, Chart, Stickers, About) in a fixed six-column grid. Keep `#admin-nav` outside that grid: it is a role-controlled shortcut fixed at the bottom right, above the mobile recording bar. Its visibility still comes from the server session role.
+
+## Themes
+
+`theme-init.js` applies the allowlisted `little-log.theme` preference before CSS paints. `lib/theme.js` handles the Settings selector, cross-tab updates, storage failures and theme-color metadata. `themes.css` scopes all Little Tracker overrides to the root data-theme attribute, including the embedded chart palette; the original `styles.css` remains Caregiver Tracker. Keep both theme assets in the server allowlist and service-worker shell, and keep the ledger monospace. Avoid regenerating embedded chart CSS just to change its theme. The pastel theme starts with CRT off unless the user explicitly saved a CRT preference; Caregiver retains its original default-on behavior.

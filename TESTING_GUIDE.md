@@ -131,3 +131,7 @@ With PUPPETEER_MODULE and CHROME_PATH configured, run `node tests/economy-browse
 Duplicate-design coverage verifies 13-16 merge into 1-4 while preserving player and bank holdings, earned counts, open sale listings, requested swap types, unchanged coins, historical trades and old request receipts. It also checks automatic same-design swap cancellation, repeat migration safety, and rollback when combined holdings would exceed the integer balance limit.
 
 The market browser workflow opens sales from a gallery sticker, verifies its preselected type and five modal widths, checks Escape and Close without a transaction, opens bank purchases, and verifies successful sales close the dialog while uncertain results keep a retry available.
+
+## Theme selector
+
+Run `node tests/theme-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH configured. It checks the pastel default, both themes across five widths and five pages, saved selection, unchanged form drafts, cross-tab updates, offline reload, and graceful behavior when preference storage is blocked. Screenshots of both themes and the mobile chart/settings pages are written to an isolated artifacts/themes directory. The existing CRT browser regression selects Caregiver Tracker before checking its original default-on behavior.

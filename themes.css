@@ -1,0 +1,88 @@
+/* Caregiver Tracker uses the original styles unchanged; pastel overrides apply only to Little Tracker. */
+.little-brand-name { display:none; }
+.theme-palette { display:flex; gap:10px; margin-top:18px; }
+.theme-palette span { width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--pink); }
+.theme-palette span:nth-child(2) { background:var(--orchid); }
+.theme-palette span:nth-child(3) { background:var(--panel); }
+.theme-palette span:nth-child(4) { background:var(--gold); }
+:root[data-theme="little-tracker"] {
+  color-scheme:light; color:#563b68; background:#fff5fa;
+  font-family:"Trebuchet MS","Segoe UI",sans-serif;
+  --page:#fff5fa; --panel:#fce7f1; --panel-deep:#fffdfd; --ink:#563b68; --muted:#786080;
+  --pink:#ad3c79; --orchid:#8060af; --rail:#654774; --gold:#866211; --border:#dac4df;
+  --chart-grid:#e4d6e9; --chart-pee:#b94782; --chart-hold:#8060af; --chart-liquid:#297e87;
+  --display:"Comic Sans MS","Chalkboard SE","Trebuchet MS",sans-serif;
+  --frame:0 0 0 1px #e7d1e8; --pastel-pink:#f9cddd; --pastel-lilac:#e9ddfa; --pastel-mint:#d9f0e8; --pastel-yellow:#fff0bc;
+}
+:root[data-theme="little-tracker"] .caregiver-brand-name { display:none; }
+:root[data-theme="little-tracker"] .little-brand-name { display:inline; }
+:root[data-theme="little-tracker"] main {
+  background:radial-gradient(circle at 1px 1px,#e5cee566 1.5px,transparent 2px),linear-gradient(135deg,#fff6fa,#f6f2ff 55%,#f0faf6);
+  background-size:24px 24px,auto;
+}
+:root[data-theme="little-tracker"] .sidebar { background:linear-gradient(155deg,#ffedf5,#f0e8fc 60%,#e9f7ef); border-color:#dac4df; box-shadow:inset -1px 0 #fff; }
+:root[data-theme="little-tracker"] .brand > span { font-family:var(--display); line-height:1.2; letter-spacing:-.4px; }
+:root[data-theme="little-tracker"] .brand-sigil { color:#ad3c79; filter:drop-shadow(2px 2px 0 #fff); }
+:root[data-theme="little-tracker"] .brand-sigil use { fill:#e8add0; }
+:root[data-theme="little-tracker"] .brand-sub { font-family:inherit; letter-spacing:.3px; }
+:root[data-theme="little-tracker"] .nav-item { color:#705777; border-radius:16px; font-weight:700; }
+:root[data-theme="little-tracker"] .nav-item.active { background:#fff7fc; color:#963367; border-color:#d9acce; box-shadow:0 3px 0 #e8cfe7; }
+:root[data-theme="little-tracker"] .nav-item:hover { background:#ffffffb3; }
+:root[data-theme="little-tracker"] :is(.card,.stat-card,dialog) { background:#fffdfdf2; border:1px solid #dac4df; border-radius:24px; box-shadow:0 5px 0 #e7d6ed70,0 10px 28px #9671a012; }
+:root[data-theme="little-tracker"] .log-card { border-top:5px solid var(--pastel-pink); }
+:root[data-theme="little-tracker"] .wetting-card { border-top-color:var(--pastel-lilac); }
+:root[data-theme="little-tracker"] .diaper-change-card { border-top-color:var(--pastel-mint); }
+:root[data-theme="little-tracker"] .roll-card { border-top-color:var(--pastel-yellow); }
+:root[data-theme="little-tracker"] .stat-card:nth-child(3n+1) { background:#fff0f6; }
+:root[data-theme="little-tracker"] .stat-card:nth-child(3n+2) { background:#f1ebff; }
+:root[data-theme="little-tracker"] .stat-card:nth-child(3n) { background:#e9f7ef; }
+:root[data-theme="little-tracker"] .stat-card::before { color:#987b9e; }
+:root[data-theme="little-tracker"] :is(h1,h2,h3) { font-family:var(--display); font-style:normal; letter-spacing:-.5px; text-shadow:none; }
+:root[data-theme="little-tracker"] h1 { font-size:clamp(28px,3.6vw,48px); line-height:1.15; }
+:root[data-theme="little-tracker"] .dossier-heading h1 { font-size:clamp(36px,5vw,64px); letter-spacing:-1.5px; }
+:root[data-theme="little-tracker"] .dossier-seal { color:#88629c; background:#f6eaff; border-radius:50%; padding:10px; transform:rotate(5deg); }
+:root[data-theme="little-tracker"] :is(.archive-strip,.privacy-note,.archive-note) { background:#fffaf0; border:1px dashed #d3b982; border-radius:16px; box-shadow:none; }
+:root[data-theme="little-tracker"] .archive-strip { padding:12px; }
+:root[data-theme="little-tracker"] .archive-note p { font-family:var(--display); }
+:root[data-theme="little-tracker"] .redacted { background:#bfa4c8; }
+:root[data-theme="little-tracker"] :is(label,legend,.pill,.stat-top,.stat-foot,.eyebrow,.subtitle,.prompt-note,.field-help,.section-copy) { font-family:"Trebuchet MS","Segoe UI",sans-serif; }
+:root[data-theme="little-tracker"] :is(input:not([type="radio"]):not([type="range"]),select,textarea) { background:#fff; color:var(--ink); color-scheme:light; border-color:#c8afcf; border-radius:12px; }
+:root[data-theme="little-tracker"] :is(input,select,textarea):hover { border-color:#ab77ac; }
+:root[data-theme="little-tracker"] :is(.segmented,.probability-box) { background:#f8f0fc; border:1px solid #dac4df; border-radius:16px; }
+:root[data-theme="little-tracker"] .position-options span { border-radius:11px; }
+:root[data-theme="little-tracker"] .position-options input:checked + span { background:#ecd9f5; color:#59336f; box-shadow:inset 0 -2px #bb8dd0; }
+:root[data-theme="little-tracker"] :is(.button,.icon-button) { border-radius:14px; font-family:inherit; font-weight:700; }
+:root[data-theme="little-tracker"] .primary { background:#f6c8dd; color:#66334e; border-color:#cf8db0; box-shadow:0 3px 0 #e7accb; }
+:root[data-theme="little-tracker"] .primary:hover { background:#f9dce9; }
+:root[data-theme="little-tracker"] .secondary { background:#f4ecfc; color:#624270; border-color:#c9afd9; }
+:root[data-theme="little-tracker"] .secondary:hover { background:#e9ddf7; }
+:root[data-theme="little-tracker"] .roll-button { box-shadow:0 4px 0 #e2b9cf; }
+:root[data-theme="little-tracker"] :is(.pill,.result-pill,.entry-icon) { background:#fce6f1; border-color:#d9b1c8; color:#87345f; border-radius:12px; }
+:root[data-theme="little-tracker"] :is(.result-pill.hold,.entry-icon.hold) { background:#eee5fb; color:#644587; border-color:#c3aedc; }
+:root[data-theme="little-tracker"] :is(.recent-entry,td) { border-color:#e8d9ec; }
+:root[data-theme="little-tracker"] .chart-tabs button { border-radius:10px; }
+:root[data-theme="little-tracker"] .chart-tabs button.active { background:#e9ddf7; color:#59366e; }
+:root[data-theme="little-tracker"] .notice { background:#fff0ed; border-color:#d4a298; color:#833e3e; border-radius:14px; }
+:root[data-theme="little-tracker"] .danger { color:#984349; background:#fff0f1; border-color:#d9aaae; }
+:root[data-theme="little-tracker"] dialog::backdrop { background:#59456770; }
+:root[data-theme="little-tracker"] .toast { color:#563b68; background:#fff4cd; border-color:#ceb16c; border-radius:14px; box-shadow:0 5px 18px #79618a26; }
+:root[data-theme="little-tracker"] .mobile-actions { background:#fff9fd; border-color:#dac4df; box-shadow:0 -3px 16px #9874a01c; }
+:root[data-theme="little-tracker"] .mobile-actions a { color:#786080; }
+:root[data-theme="little-tracker"] .mobile-actions a[aria-current="page"] { color:#8b3564; background:#fce7f1; box-shadow:inset 0 3px #d197bb; }
+:root[data-theme="little-tracker"] .admin-shortcut { box-shadow:0 3px 14px #97719d33; }
+:root[data-theme="little-tracker"] .sticker-item { background:linear-gradient(145deg,#fff8fc,#f6f0fe); border-color:#dfcce7; border-radius:20px; }
+:root[data-theme="little-tracker"] .theme-palette span:nth-child(1) { background:var(--pastel-pink); }
+:root[data-theme="little-tracker"] .theme-palette span:nth-child(2) { background:var(--pastel-lilac); }
+:root[data-theme="little-tracker"] .theme-palette span:nth-child(3) { background:var(--pastel-mint); }
+:root[data-theme="little-tracker"] .theme-palette span:nth-child(4) { background:var(--pastel-yellow); }
+/* The embedded chart defines its own palette, so override that scope as well. */
+:root[data-theme="little-tracker"] #page-potty-chart { color-scheme:light; --page:#fff5fa; --panel:#fce7f1; --ink:#563b68; --muted:#786080; --pink:#ad3c79; --orchid:#8060af; --rail:#654774; --line:#dac4df; --gold:#a87b00; }
+:root[data-theme="little-tracker"] #page-potty-chart :is(.chart-card,.account-card) { border-color:#dac4df; border-radius:24px; box-shadow:0 6px 24px #9671a026; }
+:root[data-theme="little-tracker"] #page-potty-chart .action { background:#f4ecfc; color:#624270; border-color:#c9afd9; border-radius:12px; font-family:inherit; letter-spacing:.02em; }
+:root[data-theme="little-tracker"] #page-potty-chart .friend-photo { box-shadow:0 5px 18px #9671a026; }
+@media (max-width:680px) {
+  :root[data-theme="little-tracker"] .sidebar { box-shadow:0 2px 0 #e9d7ea; }
+  :root[data-theme="little-tracker"] .brand > span { font-size:21px; }
+  :root[data-theme="little-tracker"] .nav-item { border-radius:12px; }
+  :root[data-theme="little-tracker"] .archive-strip { padding:9px; }
+}
