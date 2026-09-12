@@ -7,6 +7,8 @@ import { resolve } from 'node:path';
 const derive = promisify(scrypt);
 export const authDirectory = () => resolve(process.env.AUTH_DATA_DIR ?? 'data/auth');
 
+export class AccountInputError extends Error {} // Marks safe account-validation messages that registration may show without exposing database errors.
+
 async function passwordHash(password, salt) { // Uses a memory-hard password KDF; passwords never enter SQLite or application logs.
   return Buffer.from(await derive(password, salt, 64, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }));
 }
@@ -29,11 +31,15 @@ export function openAuthStore(directory = authDirectory()) { // Keeps the shared
   }
 
   async function setPassword(username, password, create = false) { // Creates an account or resets its password while keeping the stable OIDC subject unchanged.
-    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username)) throw new Error('Usernames must use 3–40 lowercase letters, numbers, dots, underscores, or hyphens.');
-    if (typeof password !== 'string' || password.length < 12 || password.length > 128) throw new Error('Passwords must have 12–128 characters.');
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username)) throw new AccountInputError('Use 3–40 lowercase letters, numbers, dots, underscores, or hyphens. Start with a letter or number.');
+    if (typeof password !== 'string' || password.length < 12 || password.length > 128) throw new AccountInputError('Passwords must have 12–128 characters.');
     const salt = randomBytes(32).toString('base64url');
     const digest = (await passwordHash(password, salt)).toString('base64url');
-    if (create) db.prepare('INSERT INTO accounts (id,username,salt,hash,created_at) VALUES (?,?,?,?,?)').run(randomUUID(), username, salt, digest, new Date().toISOString());
+    if (create) {
+      const account = db.prepare('INSERT INTO accounts (id,username,salt,hash,created_at) VALUES (?,?,?,?,?) ON CONFLICT(username) DO NOTHING RETURNING id,username').get(randomUUID(), username, salt, digest, new Date().toISOString());
+      if (!account) throw new AccountInputError('That username is unavailable. Choose another or sign in.');
+      return account; // A duplicate or racing registration can never reset an existing account's password.
+    }
     else {
       const account = db.prepare('SELECT id FROM accounts WHERE username=?').get(username);
       if (!account) throw new Error('Account not found.');

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { openAuthStore } from '../auth/store.mjs';
+import { openAuthStore, AccountInputError } from '../auth/store.mjs';
 import { checkedUrl } from '../auth/config.mjs';
 
 test('shared passwords verify securely, reset preserves identity, and disabled users cannot sign in', async () => {
@@ -44,4 +44,22 @@ test('authentication URLs require HTTPS except for explicit loopback development
   assert.equal(checkedUrl('https://auth.lidoll.dev').origin, 'https://auth.lidoll.dev');
   assert.equal(checkedUrl('http://127.0.0.1:4180').protocol, 'http:');
   for (const url of ['http://auth.lidoll.dev', 'https://user:secret@auth.lidoll.dev', 'javascript:alert(1)', 'https://lidoll.dev/#fragment']) assert.throws(() => checkedUrl(url));
+});
+
+test('racing registrations create one identity and never overwrite its password, including disabled accounts', async () => {
+  const directory = await mkdtemp(resolve('artifacts/register-race-'));
+  const store = openAuthStore(directory);
+  try {
+    const passwords = ['first-unique-password', 'second-unique-password'];
+    const results = await Promise.allSettled(passwords.map(password => store.setPassword('new-user', password, true)));
+    const winner = results.findIndex(result => result.status === 'fulfilled');
+    assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+    assert.ok(results[1 - winner].reason instanceof AccountInputError);
+    assert.equal((await store.verify('new-user', passwords[winner])).id, results[winner].value.id);
+    assert.equal(await store.verify('new-user', passwords[1 - winner]), null);
+    store.disable('new-user');
+    await assert.rejects(store.setPassword('new-user', 'another-unique-password', true), AccountInputError);
+    assert.equal(store.list().length, 1);
+    assert.equal(store.list()[0].disabled, 1);
+  } finally { store.close(); }
 });

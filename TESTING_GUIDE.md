@@ -8,6 +8,8 @@ node --test tests/*.test.mjs
 
 These cover all 101 probability settings, rejection sampling, cumulative snapshots, calendar boundaries, schema/import validation, CSV fields, SQLite persistence and backups, participant isolation, idempotent retries, transaction rollback, version conflicts, deletion tombstones, app sessions, password hashing/reset/disable, OIDC adapter persistence, and login throttling. HTTP checks verify public assets, redirects, headers, and rejection of unauthenticated or cross-origin data access. Databases use isolated directories under ignored `artifacts/`.
 
+`tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
+
 ## Deployment regression checks
 
 `node --test tests/deploy.test.mjs` exercises activation sequencing, rollback, backup failures, first-deploy failures, environment validation, firewall source restrictions, and systemd isolation without touching host services. A real temporary Git repository also verifies fetch, detached staging, unchanged-commit detection, and preservation of the previous release. Git must be installed for this test. Run `bash -n deploy/fedora-deploy.sh` and `bash -n deploy/fedora-update.sh`, plus `node --check deploy/fedora.mjs`, for script syntax. The Fedora installer runs the complete `.test.mjs` suite before stopping the live services; it does not launch browser tests.
@@ -39,6 +41,10 @@ node tests/connected-browser.mjs
 ```
 
 This runner starts its own isolated tracker and identity services on ports 43173 and 43180, creates synthetic Alice/Bob accounts, and stops only its own processes afterward. It exercises the full OIDC authorization-code/PKCE login and consent flow, migration of local entries, HttpOnly cookies and CSRF checks, another device restoring the same account, offline reload and reconnect, participant isolation, conflicting edits, central analysis export, sign-out, and narrow-screen settings. A separate registered future-app client verifies shared sign-on with the same stable subject and rejects authorization-code replay.
+
+Alice is created through the web registration form, while Bob uses administrator provisioning. The browser verifies password-confirmation errors, duplicate-name rejection, 320/390px layout, consent after signup, explicit local-record upload, and subsequent sign-in on another device. Registration screenshots are saved alongside the other synthetic artifacts before entering passwords.
+
+The second device signs in using the header button from Record archive. The suite confirms that authenticated but unconnected users see **Connect device**, that it opens and focuses the Settings connection action, and that the header button disappears once connected.
 
 ## Release checks on the target host
 

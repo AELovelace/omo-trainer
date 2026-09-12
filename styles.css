@@ -291,6 +291,14 @@ main > * {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.sync-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* Keeps the real save status beside the sign-in action on narrow screens. */
 }
 .local-badge {
   display: flex;

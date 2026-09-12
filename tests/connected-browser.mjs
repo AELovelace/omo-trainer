@@ -17,9 +17,8 @@ const origin = 'http://127.0.0.1:43173';
 const issuer = 'http://127.0.0.1:43180';
 const password = 'synthetic-test-password-12345';
 const store = openAuthStore(authDirectory);
-await store.setPassword('alice', password, true);
 await store.setPassword('bob', password, true);
-const aliceSubject = (await store.verify('alice', password)).id;
+let aliceSubject; // Alice is created through the public registration UI; Bob exercises the existing administrator-created account path.
 store.close();
 await writeFile(resolve(authDirectory, 'clients.json'), JSON.stringify(['little-log', 'future-app'].map(id => ({
   client_id: id, client_name: id, redirect_uris: [`${origin}/${id === 'little-log' ? 'tracker/auth/callback' : 'future/callback'}`],
@@ -51,9 +50,9 @@ async function settled(page, count) { // Waits for both the expected local count
     return state?.sync.participant && state.entries.length === expected && state.sync.queue.length === 0 && state.sync.conflicts.length === 0;
   }, { timeout: 20000 }, count).catch(async error => { throw new Error(`${error.message}: ${await page.$eval('#sync-status', element => element.textContent)}; ${JSON.stringify(await saved(page))}`); });
 }
-async function signIn(page, username) { // Exercises a real authorization-code + PKCE redirect, shared login, consent, and callback.
-  await page.click('[data-page="settings"]');
-  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#connect-account')]);
+async function signIn(page, username, fromHeader = false) { // Exercises both sign-in entry points through the real shared identity and callback flow.
+  await page.click(`[data-page="${fromHeader ? 'history' : 'settings'}"]`);
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click(fromHeader ? '#topbar-sign-in' : '#connect-account')]);
   await page.waitForSelector('#username');
   await page.screenshot({ path: resolve(directory, 'auth-signin.png'), fullPage: true }); // Captures the shared identity theme before any synthetic password is entered.
   await fill(page, '#username', username);
@@ -65,6 +64,15 @@ async function signIn(page, username) { // Exercises a real authorization-code +
     await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('button[type="submit"]')]);
   }
   assert.match(page.url(), /\/tracker\/#settings$/, await page.$eval('body', element => element.innerText));
+  if (fromHeader) {
+    await page.waitForFunction(() => document.querySelector('#topbar-sign-in').textContent === 'Connect device');
+    assert.equal((await saved(page))?.sync.participant ?? null, null, 'Header sign-in must not silently approve uploading records');
+    await page.click('[data-page="overview"]');
+    await page.click('#topbar-sign-in');
+    await page.waitForFunction(() => !document.querySelector('#page-settings').hidden && document.activeElement.id === 'connect-account');
+    await page.click('#connect-account');
+    await page.waitForFunction(() => document.querySelector('#topbar-sign-in').hidden);
+  }
 }
 
 try {
@@ -78,9 +86,44 @@ try {
   await fill(alice, '#liquids', 400);
   await fill(alice, '#probability', 100);
   await alice.click('.roll-button');
-  await signIn(alice, 'alice');
+  await alice.click('[data-page="settings"]');
+  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
+  await alice.waitForSelector('#confirm-password');
+  await alice.setViewport({ width: 1280, height: 1100 });
+  await alice.screenshot({ path: resolve(directory, 'registration-desktop.png'), fullPage: true });
+  for (const width of [320, 390]) {
+    await alice.setViewport({ width, height: 844 });
+    assert.equal(await alice.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Registration must fit ${width}px`);
+  }
+  await alice.screenshot({ path: resolve(directory, 'registration-mobile.png'), fullPage: true });
+  await fill(alice, '#username', 'alice');
+  await fill(alice, '#password', password);
+  await fill(alice, '#confirm-password', 'mismatched-password-value');
+  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
+  assert.match(await alice.$eval('#form-error', element => element.textContent), /Passwords do not match/);
+  assert.equal(await alice.$eval('#password', element => element.value), '', 'Validation must not echo passwords');
+  await fill(alice, '#username', 'bob');
+  await fill(alice, '#password', password);
+  await fill(alice, '#confirm-password', password);
+  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
+  assert.match(await alice.$eval('#form-error', element => element.textContent), /username is unavailable/);
+  await fill(alice, '#username', 'Alice');
+  await fill(alice, '#password', password);
+  await fill(alice, '#confirm-password', password);
+  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
+  assert.equal(await alice.$('#password'), null, 'Successful registration must proceed to app consent');
+  assert.match(await alice.$eval('h1', element => element.textContent), /Authorize access/);
+  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
+  assert.match(alice.url(), /\/tracker\/#settings$/);
+  await alice.waitForFunction(() => document.querySelector('#connect-account').textContent === 'Connect & upload my entries');
+  assert.equal((await saved(alice)).sync.participant, null, 'Registration must leave uploading local records as an explicit choice');
+  const registeredStore = openAuthStore(authDirectory);
+  aliceSubject = (await registeredStore.verify('alice', password)).id;
+  registeredStore.close();
+  await alice.click('#connect-account');
   await settled(alice, 1);
-  console.log('PASS: OIDC login and migration of existing local entries');
+  await alice.setViewport({ width: 1280, height: 1000 });
+  console.log('PASS: registration validation, consent, stable identity, and explicit upload of existing local entries');
 
   const csrfBlocked = await alice.evaluate(async () => (await fetch('./api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"changes":[]}' })).status);
   assert.equal(csrfBlocked, 403);
@@ -91,7 +134,7 @@ try {
   const second = await secondContext.newPage();
   second.on('pageerror', error => errors.push(error.message));
   await second.goto(`${origin}/tracker/`, { waitUntil: 'networkidle0' });
-  await signIn(second, 'alice');
+  await signIn(second, 'alice', true);
   await settled(second, 1);
   assert.equal((await saved(second)).entries[0].liquidsMl, 400);
   await second.evaluate(() => navigator.serviceWorker.ready);

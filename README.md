@@ -8,6 +8,8 @@ Each check-in stores timestamp with timezone offset, cumulative daily liquids in
 
 The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
 
+New participants can choose **Settings & data → Create account**, or register from the shared sign-in page. Registration uses a username and password, then returns through app consent. The account works across registered lidoll.dev apps. Email is not collected; password resets are handled by the administrator. [AUTH_GUIDE.md](AUTH_GUIDE.md) describes registration and its request limits.
+
 ## Run locally
 
 Install Node 24 or newer, then:
@@ -18,7 +20,7 @@ node scripts/auth-admin.mjs init
 node scripts/auth-admin.mjs create alice
 ~~~
 
-The create command generates a password and displays it once. Run these in separate terminals:
+The administrator create command is optional; it generates a password and displays it once. Participants can also register through the web app after both services start. Run these in separate terminals:
 
 ~~~sh
 node scripts/auth-server.mjs

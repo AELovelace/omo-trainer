@@ -86,7 +86,7 @@ function commit(nextState, fromServer = false) { // Atomically saves records and
 
 function renderSync() { // Separates local saving, pending uploads, conflicts, and confirmed server persistence.
   const sync = state.sync ?? emptySync();
-  let status = 'On this device only · sign in to sync';
+  let status = 'On this device only';
   if (sync.participant) status = sync.conflicts.length ? `${sync.conflicts.length} conflicts need review` : sync.queue.length ? `${sync.queue.length} changes waiting to sync` : sync.lastSyncedAt ? 'Saved to central database' : 'Waiting for first sync';
   if (syncRunning) status = 'Syncing with lidoll.dev…';
   if (!storageBlocked) $('.local-badge').lastChild.textContent = ` ${status}`;
@@ -94,6 +94,9 @@ function renderSync() { // Separates local saving, pending uploads, conflicts, a
   $('#account-status').textContent = sync.participant ? `Connected as ${sync.participant.label}. Participant ID: ${sync.participant.id}` : serverSession ? `Signed in as ${serverSession.participant.label}. Connect this device to upload its entries.` : 'Sign in with your shared lidoll.dev account to save entries centrally.';
   $('#connect-account').textContent = sync.participant ? 'Sign in again' : serverSession ? 'Connect & upload my entries' : 'Sign in with lidoll.dev';
   $('#connect-account').hidden = Boolean(sync.participant && serverSession);
+  $('#register-account').hidden = Boolean(sync.participant || serverSession);
+  $('#topbar-sign-in').hidden = Boolean(sync.participant && serverSession);
+  $('#topbar-sign-in').textContent = serverSession ? 'Connect device' : sync.participant ? 'Sign in again' : 'Sign in to sync';
   $('#sync-now').hidden = !sync.participant;
   $('#disconnect-account').hidden = !sync.participant && !serverSession;
   $('#sync-now').disabled = syncRunning;
@@ -495,6 +498,20 @@ $('#connect-account').addEventListener('click', async () => { // Makes migration
   } catch (error) { notify(error.message); }
 });
 $('#sync-now').addEventListener('click', () => { void syncNow(); });
+$('#register-account').addEventListener('click', () => { // Creates a shared identity before returning through the existing explicit upload/connection flow.
+  try { sessionStorage.removeItem('little-log.connect'); } catch { /* Registration itself does not require browser session storage. */ }
+  location.assign('./auth/register');
+});
+$('#topbar-sign-in').addEventListener('click', () => { // Opens shared sign-in from any page; first-time uploads still require the Settings disclosure and connection choice.
+  if (serverSession) {
+    location.hash = 'settings';
+    navigate(); // Reveal Settings before focusing its connection button; hashchange may run after the next animation frame.
+    $('#connect-account').focus();
+    return;
+  }
+  try { sessionStorage.removeItem('little-log.connect'); } catch { /* Shared sign-in can still proceed without a saved upload preference. */ }
+  location.assign('./auth/login');
+});
 $('#disconnect-account').addEventListener('click', async () => { // Clears this device only after ending its app session; centralized records remain available on the next sign-in.
   if (syncRunning) return notify('Wait for the current sync to finish before signing out.');
   if (!confirm('Sign out of Little Log and clear its device copy? Server records stay saved. Any unsynced changes on this device will be lost; export a backup first to keep them.')) return;

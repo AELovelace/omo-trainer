@@ -4,6 +4,8 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 
 - Open `/tracker/` in your browser. Optional: install it from your browser menu, or Safari's Share → Add to Home Screen.
 - In Settings, sign in with your shared lidoll.dev account to connect this device. Connecting uploads existing entries and future changes; the organizer can use synced records for analysis.
+- You can also choose **Sign in to sync** beside the save status at the top of any page. After signing in, **Connect device** opens Settings so you can review and approve uploading this device's entries. The header button disappears once this device is connected and signed in.
+- If you need an account, choose **Create account**, enter a username and a password twice, then review the app's identity access. Back in the tracker, choose **Connect & upload my entries** when ready to sync your local records.
 - Check the time and enter total liquids consumed so far that day in mL.
 - Choose your position, diaper number for that day, and wettings in that diaper.
 - **New diaper** increases the selected number and resets its wettings to zero; save a check-in to record the change.
@@ -18,6 +20,6 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 
 Daily defaults reset when the selected local date changes. Today's liquid summary shows the highest cumulative snapshot, not the sum of all entries. Historical timestamps retain their recorded local day and timezone offset.
 
-Defaults are device-specific; entry records sync. Accounts are currently created and password resets handled by the lidoll.dev administrator.
+Defaults are device-specific; entry records sync. You can register yourself or use an account created by the lidoll.dev administrator. No email address is collected; contact the administrator for password resets.
 
 During a server update, offline check-ins remain on the device and retry afterward. After a frontend update, close old Little Log tabs and reopen to let the new app version activate.

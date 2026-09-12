@@ -38,7 +38,7 @@
       <div class="sidebar-bottom"><div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><strong>RECORD ACCESS</strong><p>Sign in to sync with lidoll.dev. The organizer can access synced records for analysis.</p></div><a class="site-link" href="https://lidoll.dev">RETURN TO LIDOLL.DEV <span>↗</span></a></div>
     </aside>
     <main id="main-content" tabindex="-1">
-      <header class="topbar"><span class="breadcrumb">CHRYSALIS <span>/</span> INTERNAL ARCHIVE</span><div class="topbar-actions"><button id="crt-toggle" class="button small secondary" type="button" aria-pressed="false">CRT FX // OFF</button><span class="local-badge"><span></span> Saved on this device</span><button id="install-button" class="button small secondary" hidden>Install app <span>↓</span></button></div></header>
+      <header class="topbar"><span class="breadcrumb">CHRYSALIS <span>/</span> INTERNAL ARCHIVE</span><div class="topbar-actions"><button id="crt-toggle" class="button small secondary" type="button" aria-pressed="false">CRT FX // OFF</button><div class="sync-summary"><span class="local-badge"><span></span> Saved on this device</span><button id="topbar-sign-in" class="button small primary" type="button">Sign in to sync</button></div><button id="install-button" class="button small secondary" hidden>Install app <span>↓</span></button></div></header>
       <div id="storage-warning" class="notice error" role="alert" hidden></div>
       <section id="page-overview" class="page">
         <div class="archive-strip"><span><i></i> RECOVERED INTERFACE</span><span>LL-01 / OBSERVATION PROGRAM</span></div>
@@ -78,7 +78,8 @@
             <h2>Your lidoll.dev account</h2>
             <p class="section-copy" id="account-status">Sign in to connect this device.</p>
             <p class="section-copy">Connecting uploads existing entries and future changes to lidoll.dev's central database. The organizer can view and export synced records for later analysis. Other participants cannot see your history.</p>
-            <div class="settings-actions"><button id="connect-account" class="button primary">Sign in with lidoll.dev</button><button id="sync-now" class="button secondary" hidden>Sync now</button><button id="disconnect-account" class="button secondary" hidden>Sign out & clear device</button></div>
+            <div class="settings-actions"><button id="connect-account" class="button primary">Sign in with lidoll.dev</button><button id="register-account" class="button secondary">Create account</button><button id="sync-now" class="button secondary" hidden>Sync now</button><button id="disconnect-account" class="button secondary" hidden>Sign out & clear device</button></div>
+            <p class="field-help">New here? Create a shared lidoll.dev account with a username and password, then connect this device to sync your entries.</p>
             <p id="sync-status" class="field-help" role="status">Entries are on this device until connected.</p>
             <p class="field-help">A shared account works across lidoll.dev apps. Each app keeps its own data and permissions. Signing out here ends the Little Log session; your shared lidoll.dev sign-in may still be active.</p>
             <div id="sync-conflicts"></div>

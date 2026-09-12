@@ -4,7 +4,7 @@ The identity service is a separate Node process intended for **https://auth.lido
 
 All applications use the same issuer and stable account subject. Each application has its own registered client ID, exact callback URLs, session cookies, database, and authorization rules. Logging in to a second registered app reuses the auth server's existing login session. Signing in does not grant an app access to another app's records.
 
-Sign-in and consent screens use the Chrysalis identity-gateway theme. The client name, requested identity access, account instructions, and errors remain explicit; the visual theme does not change issuer URLs, account IDs, or client registrations.
+Registration, sign-in, and consent screens use the Chrysalis identity-gateway theme. The client name, requested identity access, account instructions, and errors remain explicit; the visual theme does not change issuer URLs, account IDs, or client registrations.
 
 ## Start locally
 
@@ -19,6 +19,16 @@ node scripts/auth-server.mjs
 The create command generates a strong password and displays it once. Share credentials privately; passwords are never accepted as shell arguments. Run `node scripts/serve.mjs` in another terminal and open **http://127.0.0.1:4173/tracker/**. Choose **Settings & data → Sign in with lidoll.dev**.
 
 Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Default callback: `http://127.0.0.1:4173/tracker/auth/callback`. Use these exact hostnames consistently: `localhost` and `127.0.0.1` are different cookie origins.
+
+## Self-service registration
+
+Choose **Settings & data → Create account** in Little Log, or **Create an account** on the shared sign-in page. Registration asks for a username, password, and password confirmation. Usernames are normalized to lowercase and must contain 3–40 letters, numbers, dots, underscores, or hyphens, starting with a letter or number. Passwords must contain 12–128 characters. No email address is collected or email verification performed; password resets remain administrator-managed.
+
+Little Log starts registration at `/tracker/auth/register`. This creates a normal server-side OIDC login attempt with PKCE, state, and nonce, using `screen_hint=signup` and `prompt=login` to request the auth service's registration screen. The form lives at `/interaction/<uid>/register` and requires the matching, unexpired interaction cookie. Do not bookmark or publish an interaction URL. Future registered apps can request the same signup hint using their own client and callback.
+
+Successful registration signs into the shared identity service and proceeds through app consent. From Little Log's **Create account** button, existing local entries remain on the device until **Connect & upload my entries** is selected. Someone who follows **Create an account** during an already-started sign-in/connect flow continues that original connection request. Account creation itself never grants access to another participant's records.
+
+Registration is enabled for visitors after deploying this version; no new environment variables, ports, Nginx locations, or schema migration are required. Deploy both Node services and the frontend together. Duplicate usernames, including disabled accounts, cannot be overwritten. Registration POSTs require a matching Origin, interaction cookie, and action-bound CSRF token. Responses are not cached and never redisplay submitted passwords. Attempts are limited to 10 per source IP and 60 globally per 15 minutes, persisted in SQLite, with at most four concurrent registration password hashes per auth process. The proxy must supply the real client IP using the existing trusted-proxy configuration.
 
 ## Production configuration
 
@@ -74,6 +84,6 @@ The auth directory contains `auth.sqlite`, persistent signing/cookie keys in `se
 
 Passwords use salted scrypt. Login attempts are limited per username and source IP, with counters stored in SQLite. The provider persists sessions, authorization grants, tokens, code consumption, and expiry. PKCE, callback validation, state, nonce, and signed ID tokens are handled through the OIDC libraries.
 
-This release uses administrator-provisioned username/password accounts and administrator password resets. It does not yet include self-registration, email delivery/recovery, MFA/passkeys, or a web admin console. Shared login sessions last up to seven days. Little Log sessions expire after one hour and can reauthenticate through shared login. Disabling an account or resetting its password removes auth-service sessions; existing application sessions expire on their own schedule (up to one hour for Little Log).
+This release supports self-registration and administrator-provisioned username/password accounts. Password resets remain administrator-managed; email delivery/recovery, MFA/passkeys, and a web admin console are not implemented. Shared login sessions last up to seven days. Little Log sessions expire after one hour and can reauthenticate through shared login. Disabling an account or resetting its password removes auth-service sessions; existing application sessions expire on their own schedule (up to one hour for Little Log).
 
 **Sign out & clear device** ends Little Log's session and clears its browser records; it does not sign out every other application or end the shared auth login. Global app-session revocation/back-channel logout is not implemented. Treat these lifetime and logout semantics as part of the contract when integrating future apps.

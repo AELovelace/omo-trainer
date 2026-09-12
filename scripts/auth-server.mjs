@@ -1,8 +1,9 @@
 import http from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import Provider from 'oidc-provider';
-import { openAuthStore } from '../auth/store.mjs';
+import { openAuthStore, AccountInputError } from '../auth/store.mjs';
 import { loadAuthConfig } from '../auth/config.mjs';
+import { authPage } from '../auth/views.mjs';
 
 const config = loadAuthConfig();
 const store = openAuthStore();
@@ -12,9 +13,10 @@ export const provider = new Provider(config.issuer, {
   cookies: { keys: config.cookieKeys, long: { secure, sameSite: 'lax' }, short: { secure, sameSite: 'lax' } },
   features: { devInteractions: { enabled: false } },
   pkce: { required: () => true },
+  extraParams: ['screen_hint'], // Lets registered apps request the signup screen while retaining the normal OIDC interaction.
   claims: { openid: ['sub'], profile: ['preferred_username'] },
   ttl: { Session: 7 * 86400, Grant: 7 * 86400, AccessToken: 600, IdToken: 600, AuthorizationCode: 60, Interaction: 600 },
-  interactions: { url: (_context, interaction) => `/interaction/${interaction.uid}` },
+  interactions: { url: (_context, interaction) => `/interaction/${interaction.uid}${interaction.prompt.name === 'login' && interaction.params.screen_hint === 'signup' ? '/register' : ''}` },
   async findAccount(_context, id) { // Returns only shared identity claims; the auth service has no access to tracker records.
     const account = store.account(id);
     if (!account) return undefined;
@@ -23,14 +25,13 @@ export const provider = new Provider(config.issuer, {
 });
 provider.proxy = process.env.AUTH_TRUST_PROXY === '1'; // Enable only behind the trusted reverse proxy, with the private service port firewalled.
 const callback = provider.callback();
-const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-const csrfFor = uid => createHmac('sha256', config.cookieKeys[0]).update(`login:${uid}`).digest('base64url');
+const csrfFor = (uid, action = 'login') => createHmac('sha256', config.cookieKeys[0]).update(`${action}:${uid}`).digest('base64url');
+const registrationsInFlight = new Set(); // Bounds concurrent password hashing and blocks double submissions within one interaction.
 const formOrigins = [...new Set(config.clients.flatMap(client => client.redirect_uris.map(uri => new URL(uri).origin)))].join(' '); // Browser form redirects must be allowed to return to explicitly registered apps.
 
-function view(response, uid, prompt, clientName, error = '') { // Renders a shared sign-in/consent screen without third-party scripts or user HTML interpolation.
-  const login = prompt === 'login';
-  response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${formOrigins}; base-uri 'none'; frame-ancestors 'none'`, 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' });
-  response.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · lidoll.dev</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#50193755,transparent 65%),#1a0611;color:#fff0f4;font:16px 'Segoe UI',system-ui,sans-serif;display:grid;min-height:100dvh;place-items:center;padding:24px 0}main{background:linear-gradient(135deg,#ff96c809,transparent),#260b20;border:1px solid #fadadd;box-shadow:inset 0 0 0 2px #370f2d,inset 0 0 0 3px #d89aab,7px 7px 0 #ff96c819;padding:36px;width:min(460px,calc(100% - 32px))}h1{font:italic 900 32px/1.1 'Arial Black','Segoe UI Black',sans-serif;letter-spacing:-1px;margin:24px 0 15px}p{line-height:1.8;color:#cca9bd;font-size:14px}label{display:block;margin:18px 0 8px;font:12px Consolas,monospace;color:#fadadd}input,button{width:100%;font:inherit;border:1px solid #895571;border-radius:0;padding:13px;min-height:46px}input{background:#1a0611;color:#fff0f4}button{margin-top:24px;background:#ff96c8;border-color:#ff96c8;color:#1a0611;cursor:pointer;font:700 13px Consolas,monospace}button:hover{background:#fadadd}input:focus-visible,button:focus-visible{outline:2px solid #ffe66f;outline-offset:4px}.brand{color:#ff96c8;font:700 13px Consolas,monospace;letter-spacing:1.8px}.brand span{display:block;margin-top:8px;color:#cca9bd;font-size:10px;letter-spacing:.7px}.error{color:#ffabbc;border-left:2px solid #ffabbc;padding-left:12px}small{display:block;margin-top:24px;line-height:1.7;color:#cca9bd;font-size:12px}@media(max-width:400px){main{padding:28px 24px}h1{font-size:28px}}</style><main><div class="brand">✦ CHRYSALIS<span>IDENTITY GATEWAY // lidoll.dev accounts</span></div><h1>${login ? 'Identify yourself.' : 'Authorize access.'}</h1><p>${login ? `Sign in to ${escape(clientName)} with your shared lidoll.dev account.` : `${escape(clientName)} will receive your account ID and username. Your password stays with lidoll.dev accounts.`}</p>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<form method="post" action="/interaction/${escape(uid)}"><input type="hidden" name="csrf" value="${csrfFor(uid)}">${login ? '<label for="username">Username</label><input id="username" name="username" autocomplete="username" required maxlength="40"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128">' : ''}<button type="submit">${login ? 'Sign in' : 'Continue'}</button></form><small>${login ? 'Need an account or a password reset? Contact the lidoll.dev administrator.' : 'Each app manages access to its own data.'}</small></main></html>`);
+function view(response, uid, mode, clientName, error = '', username = '', status = 200) { // Keeps every identity form uncached and protected by the same response policy.
+  response.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${formOrigins}; base-uri 'none'; frame-ancestors 'none'`, 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' });
+  response.end(authPage({ uid, mode, clientName, csrf: csrfFor(uid, mode === 'register' ? 'register' : 'login'), error, username }));
 }
 
 async function formBody(request) { // Limits login form size before buffering secrets in memory.
@@ -43,21 +44,42 @@ async function formBody(request) { // Limits login form size before buffering se
 
 export const authServer = http.createServer(async (request, response) => { // Delegates protocol validation and token issuance to the maintained OIDC provider.
   const path = new URL(request.url, config.issuer).pathname;
-  const match = /^\/interaction\/([A-Za-z0-9_-]+)$/.exec(path);
+  const match = /^\/interaction\/([A-Za-z0-9_-]+)(\/register)?$/.exec(path);
   if (!match) return callback(request, response);
   try {
     const details = await provider.interactionDetails(request, response);
     if (details.uid !== match[1]) throw new Error('Invalid interaction.');
     const client = config.clients.find(item => item.client_id === details.params.client_id);
     if (!client || !['login', 'consent'].includes(details.prompt.name)) throw new Error('Unsupported interaction.');
-    if (request.method === 'GET') return view(response, details.uid, details.prompt.name, client.client_name ?? client.client_id);
+    const register = Boolean(match[2]);
+    if (details.result || (register && details.prompt.name !== 'login')) throw new Error('Interaction already completed or unsupported.');
+    const clientName = client.client_name ?? client.client_id;
+    if (request.method === 'GET') return view(response, details.uid, register ? 'register' : details.prompt.name, clientName);
     if (request.method !== 'POST' || request.headers.origin !== config.issuer) throw new Error('Invalid origin.');
     const form = await formBody(request);
-    const supplied = Buffer.from(form.get('csrf') ?? ''), expected = Buffer.from(csrfFor(details.uid));
+    const supplied = Buffer.from(form.get('csrf') ?? ''), expected = Buffer.from(csrfFor(details.uid, register ? 'register' : 'login'));
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw new Error('Invalid form token.');
     if (details.prompt.name === 'login') {
       const username = (form.get('username') ?? '').trim().toLowerCase(), password = form.get('password') ?? '';
       const address = provider.proxy ? String(request.headers['x-real-ip'] ?? request.socket.remoteAddress) : request.socket.remoteAddress;
+      if (register) {
+        const ipAllowed = store.rateLimit(`registration:ip:${address}`, 10), globalAllowed = store.rateLimit('registration:global', 60);
+        if (!ipAllowed || !globalAllowed || registrationsInFlight.size >= 4) {
+          response.setHeader('Retry-After', '900');
+          return view(response, details.uid, 'register', clientName, 'Registration is busy or has had too many attempts. Try again in 15 minutes.', username.slice(0, 40), 429);
+        }
+        if (registrationsInFlight.has(details.uid)) return view(response, details.uid, 'register', clientName, 'Your registration is already being processed.', username.slice(0, 40), 409);
+        if (password !== form.get('confirmPassword')) return view(response, details.uid, 'register', clientName, 'Passwords do not match. Enter them again.', username.slice(0, 40), 400);
+        registrationsInFlight.add(details.uid);
+        try {
+          const account = await store.setPassword(username, password, true);
+          response.setHeader('Cache-Control', 'no-store');
+          return await provider.interactionFinished(request, response, { login: { accountId: account.id } }, { mergeWithLastSubmission: false });
+        } catch (error) {
+          if (error instanceof AccountInputError) return view(response, details.uid, 'register', clientName, error.message, username.slice(0, 40), 400);
+          throw error;
+        } finally { registrationsInFlight.delete(details.uid); }
+      }
       const ipAllowed = store.rateLimit(`ip:${address}`, 50), userAllowed = store.rateLimit(`user:${username}`, 10);
       if (!ipAllowed || !userAllowed) return view(response, details.uid, 'login', client.client_name, 'Too many attempts. Try again in 15 minutes.');
       if (username.length > 40 || password.length > 128) throw new Error('Invalid input length.');

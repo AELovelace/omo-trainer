@@ -70,6 +70,8 @@ The scripts assume the complete app is served through the Node proxy. If you use
 
 ## Create accounts and export data
 
+Participants can create their own account through **Settings & data → Create account** or the shared sign-in page. The commands below remain available for administrator provisioning, password management, and exports. Registration uses the existing auth listener and SQLite database; deploy both services and the frontend to enable it. See [AUTH_GUIDE.md](AUTH_GUIDE.md) for account rules and throttling.
+
 Use each service's Unix user for its administrative tools so SQLite sidecar files retain the correct ownership:
 
 ```bash

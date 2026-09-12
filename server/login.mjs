@@ -35,12 +35,14 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
     async route(request, response, route) {
       try {
         if (request.method !== 'GET') { response.writeHead(405); return response.end(); }
-        if (route === 'login') {
+        if (route === 'login' || route === 'register') {
           const config = await configured();
           const attempt = randomBytes(32).toString('base64url');
           const verifier = oidc.randomPKCECodeVerifier(), state = oidc.randomState(), nonce = oidc.randomNonce();
           database.saveLogin(attempt, { verifier, state, nonce });
-          const location = oidc.buildAuthorizationUrl(config, { redirect_uri: `${origin}${base}auth/callback`, scope: 'openid profile', code_challenge: await oidc.calculatePKCECodeChallenge(verifier), code_challenge_method: 'S256', state, nonce });
+          const location = oidc.buildAuthorizationUrl(config, { redirect_uri: `${origin}${base}auth/callback`, scope: 'openid profile', code_challenge: await oidc.calculatePKCECodeChallenge(verifier), code_challenge_method: 'S256', state, nonce,
+            ...(route === 'register' ? { screen_hint: 'signup', prompt: 'login' } : {}), // Registration keeps the same PKCE, state, nonce, and exact callback protections as sign-in.
+          });
           return redirect(response, location.href, [setCookie(loginName, attempt, 600)]);
         }
         if (route === 'callback') {
