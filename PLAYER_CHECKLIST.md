@@ -64,7 +64,7 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 
 - Connect your device in Settings so saved observations, wettings and diaper changes can earn account stickers. Offline records earn when they sync.
 - Open Stickers & market to see each type owned, listed and earned, plus LiDollCoins and separate spendable stars.
-- Sell to the stickerbank, buy available bank stock, list a coin sale or offer a sticker swap. Check the displayed whole-number total.
+- Sell to the stickerbank, buy from other users, list a coin sale or offer a sticker swap. Check the displayed whole-number total.
 - Cancel your own listing to release its reserved stickers. Retry an unconfirmed exchange with Retry pending exchange.
 - Chart progress remains intact; each dated row cell earns its separate star once. Star spending will arrive later.
 

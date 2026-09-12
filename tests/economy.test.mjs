@@ -57,11 +57,13 @@ test('bank conversion tracks stock, issuance, whole-number balances and demand f
     assert.equal(db.economy.snapshot(a.id).wallet.coins,10);sell(db,a);
     let state=db.economy.snapshot(a.id);assert.equal(state.types[0].price,11);assert.equal(state.types[0].traders,1);assert.equal(state.bank.issuedCoins,21);assert.equal(state.types[0].bankQuantity,2);
     sell(db,b);state=db.economy.snapshot(b.id);assert.equal(state.types[0].price,12);assert.equal(state.types[0].traders,2);
-    assert.throws(()=>action(db,b,{action:'bank-buy',sticker:'rose',quantity:1,expectedPrice:11}),error=>error.status===409);
-    action(db,a,{action:'bank-buy',sticker:'rose',quantity:1,expectedPrice:12});state=db.economy.snapshot(a.id);
-    assert.equal(state.wallet.coins,9);assert.equal(state.types[0].quantity,1);assert.equal(state.types[0].bankQuantity,2);assert.equal(state.bank.coins,12);
+    const before=db.economy.snapshot(a.id);
+    assert.throws(()=>action(db,a,{action:'bank-buy',sticker:'rose',quantity:1,expectedPrice:12}),error=>error.status===400 && /no longer available/.test(error.message));
+    assert.deepEqual(db.economy.snapshot(a.id),before,'Rejected bank purchases cannot change balances, inventory, demand or history');
+    state=db.economy.snapshot(a.id);
+    assert.equal(state.wallet.coins,21);assert.equal(state.types[0].quantity,0);assert.equal(state.types[0].bankQuantity,3);assert.equal(state.bank.coins,0);
     for(const quantity of [0,-1,1.2,'1',Infinity,10001])assert.throws(()=>action(db,a,{action:'bank-sell',sticker:'rose',quantity,expectedPrice:12}),error=>error.status===400);
-    assert.equal(db.economy.snapshot(a.id).wallet.coins,9);
+    assert.equal(db.economy.snapshot(a.id).wallet.coins,21);
   }finally{db.close();}
 });
 

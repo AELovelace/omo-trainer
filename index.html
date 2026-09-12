@@ -210,7 +210,7 @@
         <div id="economy-content" hidden>
           <section class="card"><h2>Your wallet</h2><div class="economy-balances"><p><strong id="economy-coins">0</strong> LiDollCoins</p><p><strong id="economy-stars">0</strong> stars</p><p><strong id="economy-total">0</strong> stickers</p></div><p>Stars earn separately from chart progress and are saved for future spending. Each chart cell earns once. Stickers arrive after your records sync; connect your device in <a href="#settings">Settings & data</a>.</p><p id="economy-pending"></p><button id="economy-retry" class="button secondary" type="button" hidden>Retry pending exchange</button></section>
           <section class="card"><h2>Community market</h2><p>Listings exchange the full bundle. Your offered stickers are reserved until someone accepts or you cancel. No log records or account names are shared here. Showing up to 500 recent listings plus all of yours.</p><div id="market-listings" class="market-listings"></div></section>
-          <section class="card"><h2>Stickerbank</h2><p id="bank-balances"></p><button id="market-bank-open" class="button secondary" type="button">Browse bank stickers</button><p>The bank keeps every purchased sticker in its inventory. Choose Browse bank stickers to see stock and buy a sticker. It issues whole-number virtual coins when needed to buy your stickers; coins paid to the bank stay in its wallet.</p></section>
+          <section class="card"><h2>Stickerbank</h2><p id="bank-balances"></p><p>Sell stickers from your collection to the bank for whole-number LiDollCoins at the current market rate. The bank keeps the stickers it buys. Buy stickers from other users in the community market.</p></section>
           <section class="card"><h2>Sticker gallery</h2><p>Your collection includes available stickers and stickers reserved in your open listings. Earned counts remember every reward, even after you trade it.</p><div id="sticker-gallery" class="sticker-gallery"></div></section>
           <section class="card"><h2>Recent wallet activity</h2><p>Your latest 100 ledger entries.</p><ol id="economy-history"></ol></section>
         </div>
@@ -263,7 +263,7 @@
             <form id="economy-form" class="economy-form">
               <label>Sticker<select id="market-sticker" required></select></label>
               <label>Quantity<input id="market-quantity" type="number" min="1" max="10000" step="1" value="1" required></label>
-              <label>Action<select id="market-action"><option value="bank-sell">Sell to stickerbank</option><option value="bank-buy">Buy from stickerbank</option><option value="list-coins">List for LiDollCoins</option><option value="list-swap">List a sticker swap</option></select></label>
+              <label>Action<select id="market-action"><option value="bank-sell">Sell to stickerbank</option><option value="list-coins">List for LiDollCoins</option><option value="list-swap">List a sticker swap</option></select></label>
               <label id="market-want-wrap" hidden>Sticker wanted<select id="market-want"></select></label>
               <label id="market-price-wrap" hidden><span id="market-price-label">Total coins wanted</span><input id="market-price" type="number" min="1" max="2147483647" step="1" value="10"></label>
               <p id="market-quote" class="economy-wide" aria-live="polite"></p><button id="market-submit" type="submit" class="button primary">Sell to stickerbank</button>

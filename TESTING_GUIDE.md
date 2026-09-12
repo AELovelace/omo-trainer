@@ -139,3 +139,5 @@ Run `node tests/theme-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH configu
 Admin reminders: `npm test` includes persistence, input validation, stale-edit protection, retry auditing, public draft redaction and admin/CSRF checks. Run `node tests/reminder-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH configured to check publishing, updates, hiding, literal text rendering, mobile layout, pause and reduced motion in both themes against a temporary local database.
 
 The reminder suites also cover margin-note publishing, independent versions and drafts, preserved line breaks, hidden-draft redaction, authorization, reload persistence and text wrapping in both themes.
+
+Stickerbank purchase removal: economy tests verify that rejected bank purchases leave balances, stock, demand and history unchanged. The economy browser check confirms purchase controls are absent while bank sales and peer purchases still work.

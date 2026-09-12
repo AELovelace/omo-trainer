@@ -48,9 +48,9 @@ try {
   await a.setViewport({width:390,height:844});await a.screenshot({path:resolve(directory,'sale-modal-mobile.png')});
   await a.keyboard.press('Escape');await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);
   assert.equal(db.economy.snapshot(alice.id).wallet.coins,0,'Escape cancels without a transaction');
-  await a.click('#market-bank-open');await a.waitForFunction(()=>document.querySelector('#market-dialog').open);
-  assert.equal(await a.$eval('#market-action',select=>select.value),'bank-buy');
-  await a.click('#market-close');
+  assert.equal(await a.$('#market-bank-open'),null,'Bank browsing is removed');
+  assert.equal(await a.$('#market-action option[value="bank-buy"]'),null,'Bank purchases are removed from the sale dialog');
+  await a.$eval('#sticker-gallery button',button=>button.scrollIntoView({block:'center'})); // Keep the target above the fixed mobile navigation after closing the dialog.
   await a.click('#sticker-gallery button');
   await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='10');
   await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);await a.click('#sticker-gallery button');

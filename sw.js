@@ -1,4 +1,4 @@
-const CACHE = `little-log-v37-admin-margin-note-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
+const CACHE = `little-log-v38-bank-sales-only-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
 const SHELL = ['./', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 SHELL.push(...['embedded.css', 'app.js', 'merge.js', 'account.js'].map(name => `./potty_chart/${name}`)); // Keep the complete chart available inside the installed PWA.
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));

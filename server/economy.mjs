@@ -94,10 +94,11 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
         if(receipt.hash!==fingerprint) fail(409,'This request ID was already used for a different exchange.');
         db.exec('COMMIT');return JSON.parse(receipt.result);
       }
+      if(input.action==='bank-buy') fail(400,'Buying from the stickerbank is no longer available. Buy from other users in the community market.'); // Older clients cannot create purchases; completed receipts above still resolve safely.
       const canonical=asset=>typeof asset==='string'?(db.prepare('SELECT canonical FROM sticker_aliases WHERE alias=?').get(asset)?.canonical??asset):asset;
       input={...input,sticker:canonical(input.sticker),wantSticker:canonical(input.wantSticker)}; // Old clients retain retry receipts while new actions use the merged design.
       const operation=randomUUID();let result={ok:true,operation};
-      if(['bank-buy','bank-sell','list'].includes(input.action)) {
+      if(['bank-sell','list'].includes(input.action)) {
         if(typeof input.sticker!=='string') fail(400,'Choose a sticker.');
         const type=db.prepare('SELECT * FROM sticker_types WHERE id=?').get(input.sticker);
         if(!type) fail(400,'Unknown sticker.');
@@ -112,18 +113,17 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
         } else {
           const quote=price(input.sticker).price;
           if(input.expectedPrice!==quote) fail(409,'The market rate changed. Review the refreshed price before trading.');
-          const total=integer(quote*quantity),sell=input.action==='bank-sell';
-          const from=sell?owner:BANK,to=sell?BANK:owner;
-          if(balance(from,input.sticker)<quantity) fail(409,sell?'You do not own enough available stickers.':'The stickerbank does not have enough stock.');
-          if(sell && balance(BANK,'coins')<total) {
+          const total=integer(quote*quantity);
+          if(balance(owner,input.sticker)<quantity) fail(409,'You do not own enough available stickers.');
+          if(balance(BANK,'coins')<total) {
             const issued=db.prepare("SELECT COALESCE(SUM(delta),0) AS n FROM economy_ledger WHERE owner=? AND reason='bank coin issuance'").get(BANK).n;
             const mint=total-balance(BANK,'coins');
             if(!Number.isSafeInteger(issued+mint)) fail(409,'The market coin issuance limit has been reached.');
             adjust(BANK,'coins',mint,operation,'bank coin issuance');
           }
-          adjust(from,input.sticker,-quantity,operation,'bank exchange');adjust(to,input.sticker,quantity,operation,'bank exchange');
-          adjust(to,'coins',-total,operation,'bank exchange');adjust(from,'coins',total,operation,'bank exchange');
-          trade(operation,input.sticker,from,to,quantity,total);result.coins=total;
+          adjust(owner,input.sticker,-quantity,operation,'bank exchange');adjust(BANK,input.sticker,quantity,operation,'bank exchange');
+          adjust(BANK,'coins',-total,operation,'bank exchange');adjust(owner,'coins',total,operation,'bank exchange');
+          trade(operation,input.sticker,owner,BANK,quantity,total);result.coins=total;
         }
       } else if(input.action==='cancel'||input.action==='accept') {
         if(typeof input.listingId!=='string') fail(400,'Choose a listing.');
