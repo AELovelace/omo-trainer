@@ -46,11 +46,20 @@ try {
     assert.deepEqual(await page.$$eval(selector + ' option', options => options.filter(option => option.value).map(option => option.textContent)), ['Forced (F)', 'Semi-Forced (SF)', 'Voluntary (V)', 'Semi-involuntary (SI)', 'Involuntary (I)']);
   }
   await fill(page, '#wetting-category', 'semi-forced');
-  await fill(page, '#wettings', '3');
   await page.click('#wetting-form button[type="submit"]');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'wetting').length, 1);
-  assert.equal((await saved(page)).entries.find(entry => entry.kind === 'wetting').wettingsCount, 3);
-  assert.equal(await page.$eval('#wettings', input => input.value), '4');
+  assert.equal((await saved(page)).entries.find(entry => entry.kind === 'wetting').wettingsCount, undefined);
+  assert.equal(await page.$('#wettings'), null, 'Per-diaper totals belong to the change card');
+  assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '1');
+  await fill(page, '#diaper-change-wettings', '3');
+  await page.click('#diaper-change-form button[type="submit"]');
+  assert.equal((await saved(page)).entries.find(entry => entry.kind === 'diaper-change').wettingsCount, 3);
+  assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '1');
+  assert.equal(await page.$eval('#wetting-diaper', input => input.value), '2');
+  assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '0');
+  await page.click('#diaper-change-form button[type="submit"]');
+  assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2);
+  assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '2');
   await fill(page, '#liquids', '250');
   await page.click('#save-observation');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'roll').length, 1, 'Saving an observation must not create a roll');
@@ -66,6 +75,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('.roll-button').disabled);
   await clock(page, '2026-09-21T00:00:00Z');
   await chance(page, 45);
+  assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '0', 'Daily change count resets on the next day');
   await clock(page, '2026-09-22T00:00:00Z');
   await chance(page, 50);
   await fill(page, '#wetting-category', 'involuntary');
@@ -79,10 +89,10 @@ try {
   await page.click(`[data-edit="${first.id}"]`);
   assert.equal(await page.$eval('#wetting-edit-category', element => element.value), 'semi-forced');
   await fill(page, '#wetting-edit-category', 'involuntary');
-  await fill(page, '#wetting-edit-count', '5');
+  assert.equal(await page.$eval('#legacy-wetting-count', element => element.hidden), true);
   await page.click('#wetting-edit-form button[type="submit"]');
   await chance(page, 65);
-  assert.equal((await saved(page)).entries.find(entry => entry.id === first.id).wettingsCount, 5);
+  assert.equal((await saved(page)).entries.find(entry => entry.id === first.id).wettingsCount, undefined);
   assert.equal((await saved(page)).entries.find(entry => entry.rolledAt).probability, 50, 'Corrections must not rewrite historical roll probabilities');
   await fill(page, '#filter-result', 'wetting');
   await page.$eval('#filter-result', input => input.dispatchEvent(new Event('change', { bubbles: true })));
@@ -192,6 +202,22 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Intake toggle fits a narrow phone');
   await page.screenshot({ path: resolve('artifacts/intake-unit-mobile.png') });
   await page.setOfflineMode(false);
+
+
+  await page.click('[data-page="history"]');
+  const completed = (await saved(page)).entries.find(entry => entry.kind === 'diaper-change');
+  await page.click('[data-edit="' + completed.id + '"]');
+  await fill(page, '#diaper-change-edit-wettings', '5');
+  await page.click('#diaper-change-edit-form button[type="submit"]');
+  assert.equal((await saved(page)).entries.find(entry => entry.id === completed.id).wettingsCount, 5);
+  await page.select('#filter-result', 'diaper-change');
+  assert.equal(await page.$$eval('#history-body tr', rows => rows.length), 2);
+  page.once('dialog', dialog => dialog.accept());
+  await page.click('[data-delete="' + completed.id + '"]');
+  assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 1);
+  await selectAction('wetting');
+  assert.equal(await page.evaluate(() => document.querySelector('.diaper-change-card').getBoundingClientRect().top > document.querySelector('.wetting-card').getBoundingClientRect().bottom), true, 'Change card stays directly beneath wetting on mobile');
+  await page.screenshot({ path: resolve('artifacts/diaper-change-mobile.png'), fullPage: true });
 
   assert.deepEqual(errors, []);
   console.log('Protocol browser checks passed: cooldown boundary, offline reload, manual and wetting logging, midnight rules, corrections, history and six viewport widths.');

@@ -17,13 +17,16 @@
 .admin-graph { min-width: 0; }
 .admin-graph h3 { margin-top: 0; font-size: 19px; }
 .admin-graph p { color: var(--muted); font-size: 12px; line-height: 1.65; min-height: 40px; }
-.admin-graph svg { display: block; width: 100%; height: auto; margin: 16px 0; }
-.admin-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; margin: 10px 0; }
-.admin-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; }
+.admin-graph > svg { display: block; width: 100%; height: auto; margin: 16px 0; }
+/* Keep each legend label beside its small color key, including on narrow screens. */
+.admin-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--ink); font-size: 12px; line-height: 1.5; margin: 10px 0; }
+.admin-legend > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.admin-legend svg { display: block; flex: 0 0 9px; width: 9px; height: 9px; margin: 0; }
+.admin-legend-label { overflow-wrap: anywhere; }
 .admin-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .admin-main [data-panel] > .card { margin: 24px 0; }
 .admin-main th, .admin-main td { padding: 12px; white-space: nowrap; vertical-align: top; }
-.admin-main td.wrap { white-space: normal; min-width: 180px; overflow-wrap: anywhere; }
+.admin-main td.wrap, .admin-main th.wrap { white-space: normal; min-width: 180px; overflow-wrap: anywhere; }
 .admin-main td select { min-width: 125px; }
 .admin-main .table-scroll { max-height: 650px; }
 .admin-main details .table-scroll { max-height: 300px; }
@@ -42,3 +45,14 @@
   .admin-filters > div { min-width: 120px; }
   .admin-main .card { padding: 18px; }
 }
+
+/* The saved chart scrolls inside its card while row meanings wrap on phones. */
+.potty-week { align-items: end; margin-bottom: 20px; }
+.potty-week input { margin-bottom: 0; }
+.potty-grid caption { text-align: left; padding: 12px; color: var(--muted); }
+.potty-grid td { text-align: center; }
+.potty-star { color: var(--gold); font-size: 24px; }
+.potty-row-details details { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.potty-row-details summary, .potty-row-details dd, #potty-detail-title { overflow-wrap: anywhere; }
+.potty-row-details dt { font-weight: bold; margin-top: 12px; }
+.potty-row-details dd { margin: 4px 0 0; white-space: pre-wrap; }

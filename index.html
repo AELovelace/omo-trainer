@@ -50,7 +50,7 @@
         <div class="stats-grid" aria-label="Today's summary">
           <article class="stat-card"><div class="stat-top"><span>Check-ins today</span><span class="stat-icon lavender"><svg class="icon"><use href="#i-dice"/></svg></span></div><div class="stat-value" id="stat-rolls">0</div><span class="stat-foot" id="stat-results">Awaiting first entry</span></article>
           <article class="stat-card"><div class="stat-top"><span>Liquids today</span><span class="stat-icon blue"><svg class="icon"><use href="#i-drop"/></svg></span></div><div class="stat-value"><span id="stat-liquids">0</span> <small>mL</small></div><span class="stat-foot">Intake logged on this date</span></article>
-          <article class="stat-card"><div class="stat-top"><span>Latest diaper today</span><span class="stat-icon peach"><svg class="icon"><use href="#i-heart"/></svg></span></div><div class="stat-value" id="stat-diaper">—</div><span class="stat-foot" id="stat-wettings">No check-ins yet</span></article>
+          <article class="stat-card"><div class="stat-top"><span>Diaper changes today</span><span class="stat-icon peach"><svg class="icon"><use href="#i-heart"/></svg></span></div><div class="stat-value" id="stat-diaper">—</div><span class="stat-foot" id="stat-wettings">No check-ins yet</span></article>
         </div>
         <div class="dashboard-grid">
           <div class="left-column">
@@ -62,15 +62,27 @@
               <button class="button primary" id="save-observation" type="submit">Save observation</button>
             </form>
           </section>
-            <section class="card wetting-card" data-mobile-panel="wetting" aria-labelledby="wetting-title"><div class="card-heading"><div><h2 id="wetting-title" tabindex="-1">Record a wetting</h2><p>One event. One classification. Independent of rolls.</p></div><span class="pill lavender">FORM 02</span></div>
+            <div class="wetting-panels" data-mobile-panel="wetting">
+            <section class="card wetting-card" aria-labelledby="wetting-title"><div class="card-heading"><div><h2 id="wetting-title" tabindex="-1">Record a wetting</h2><p>One event. One classification. Independent of rolls.</p></div><span class="pill lavender">FORM 02</span></div>
               <form id="wetting-form"><label for="wetting-time">Date &amp; time</label><input id="wetting-time" name="occurredAt" type="datetime-local" required>
                 <label for="wetting-category">Classification</label><select id="wetting-category" name="category" required><option value="" disabled selected>Choose a classification</option><option value="forced">Forced (F)</option><option value="semi-forced">Semi-Forced (SF)</option><option value="voluntary">Voluntary (V)</option><option value="semi-involuntary">Semi-involuntary (SI)</option><option value="involuntary">Involuntary (I)</option></select>
                 <div class="field-pair"><div><label for="wetting-diaper">Diaper number that day</label><input id="wetting-diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required></div><div><label for="wetting-position">Position</label><select id="wetting-position" name="position"><option value="standing">Standing</option><option value="sitting" selected>Sitting</option><option value="laying-down">Laying down</option></select></div></div>
-              <div class="field-pair wetting-row"><div><label for="wettings">Wettings in this diaper</label><input id="wettings" name="wettingsCount" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"></div><button class="button secondary new-diaper" id="new-diaper" type="button">＋ New diaper</button></div>
-                <p class="field-help">Include this event in the diaper total above. Saving still records one classified event.</p>
+                <p class="field-help">Record the diaper’s final wetting count in the diaper change card below.</p>
                 <p class="field-help">Record each actual wetting once, including events without a roll. Roll snapshots and their cumulative wetting counts do not add classified events.</p><button class="button primary" type="submit">Save wetting</button>
               </form>
             </section>
+            <section class="card diaper-change-card" aria-labelledby="diaper-change-title">
+              <div class="card-heading"><div><h2 id="diaper-change-title">Record a diaper change</h2><p>One completed diaper. Its final wetting count.</p></div><span class="pill lavender">FORM 03</span></div>
+              <p id="diaper-change-summary" class="field-help" role="status"></p>
+              <form id="diaper-change-form">
+                <label for="diaper-change-time">Date &amp; time of change</label><input id="diaper-change-time" name="occurredAt" type="datetime-local" required>
+                <div class="field-pair"><div><label for="diaper-change-number">Diaper being changed (number that day)</label><input id="diaper-change-number" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"></div>
+                <div><label for="diaper-change-wettings">Wettings received before changing</label><input id="diaper-change-wettings" name="wettingsCount" type="number" min="0" max="10000" step="1" value="0" required inputmode="numeric" aria-describedby="diaper-change-help"></div></div>
+                <p id="diaper-change-help" class="field-help">Suggested from records for this diaper on the selected day. Adjust for unlogged or overnight wettings. Use 0 for a dry change.</p>
+                <button class="button primary" type="submit">Save diaper change</button>
+              </form>
+            </section>
+            </div>
           </div>
           <div class="right-column">
             <section class="card roll-card" data-mobile-panel="roll" aria-labelledby="roll-title"><div class="card-heading"><div><h2 id="roll-title" tabindex="-1">Roll for a result</h2><p>Uses your daily chance. Saves only the roll.</p></div><svg class="icon"><use href="#i-dice"/></svg></div>
@@ -87,7 +99,7 @@
           </div>
         </div>
       </section>
-      <section id="page-history" class="page" hidden><div class="page-heading"><div><p class="eyebrow">CHRYSALIS // RECORD RETRIEVAL</p><h1>RECORD ARCHIVE<span>.</span></h1><p class="subtitle">Every check-in, with room to make corrections.</p></div><button id="export-csv" class="button secondary"><svg class="icon"><use href="#i-download"/></svg>Export CSV</button></div><section class="card"><div class="history-filters"><div><label for="filter-from">From</label><input id="filter-from" type="date"></div><div><label for="filter-to">To</label><input id="filter-to" type="date"></div><div><label for="filter-result">Result</label><select id="filter-result"><option value="all">All observations</option><option value="wetting">Wettings</option><option value="observation">Check-ins</option><option value="pee">Pee</option><option value="hold">Hold</option></select></div><button id="clear-filters" class="text-button">Clear filters</button></div><p id="history-count" class="field-help" role="status"></p><div class="table-scroll"><table class="history-table"><thead><tr><th scope="col">Date & time</th><th scope="col">Liquids</th><th scope="col">Position</th><th scope="col">Diaper</th><th scope="col">Wettings</th><th scope="col">Chance</th><th scope="col">Result</th><th scope="col">Actions</th></tr></thead><tbody id="history-body"></tbody></table></div><div id="history-empty" class="empty-state" hidden>No observations match this view. Save a check-in or adjust the filters.</div><button id="load-more" class="button secondary" hidden>Show more</button></section></section>
+      <section id="page-history" class="page" hidden><div class="page-heading"><div><p class="eyebrow">CHRYSALIS // RECORD RETRIEVAL</p><h1>RECORD ARCHIVE<span>.</span></h1><p class="subtitle">Every check-in, with room to make corrections.</p></div><button id="export-csv" class="button secondary"><svg class="icon"><use href="#i-download"/></svg>Export CSV</button></div><section class="card"><div class="history-filters"><div><label for="filter-from">From</label><input id="filter-from" type="date"></div><div><label for="filter-to">To</label><input id="filter-to" type="date"></div><div><label for="filter-result">Result</label><select id="filter-result"><option value="all">All observations</option><option value="wetting">Wettings</option><option value="diaper-change">Diaper changes</option><option value="observation">Check-ins</option><option value="pee">Pee</option><option value="hold">Hold</option></select></div><button id="clear-filters" class="text-button">Clear filters</button></div><p id="history-count" class="field-help" role="status"></p><div class="table-scroll"><table class="history-table"><thead><tr><th scope="col">Date & time</th><th scope="col">Liquids</th><th scope="col">Position</th><th scope="col">Diaper</th><th scope="col">Wettings</th><th scope="col">Chance</th><th scope="col">Result</th><th scope="col">Actions</th></tr></thead><tbody id="history-body"></tbody></table></div><div id="history-empty" class="empty-state" hidden>No observations match this view. Save a check-in or adjust the filters.</div><button id="load-more" class="button secondary" hidden>Show more</button></section></section>
       <section id="page-settings" class="page" hidden>
         <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // TERMINAL CONFIGURATION</p><h1>SETTINGS & DATA<span>.</span></h1><p class="subtitle">Account access, local defaults, and your records.</p></div></div>
         <div class="settings-grid">
@@ -131,8 +143,13 @@
     <label for="wetting-edit-time">Date &amp; time</label><input id="wetting-edit-time" name="occurredAt" type="datetime-local" required>
     <label for="wetting-edit-category">Classification</label><select id="wetting-edit-category" name="category"><option value="forced">Forced (F)</option><option value="semi-forced">Semi-Forced (SF)</option><option value="voluntary">Voluntary (V)</option><option value="semi-involuntary">Semi-involuntary (SI)</option><option value="involuntary">Involuntary (I)</option></select>
     <label for="wetting-edit-diaper">Diaper number</label><input id="wetting-edit-diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" required>
-    <label for="wetting-edit-count">Wettings in this diaper</label><input id="wetting-edit-count" name="wettingsCount" type="number" min="0" max="10000" step="1"><p class="field-help">Includes this event. Older records may not have a saved total.</p>
+    <div id="legacy-wetting-count"><label for="wetting-edit-count">Historical per-diaper wetting total</label><input id="wetting-edit-count" name="wettingsCount" type="number" min="0" max="10000" step="1"><p class="field-help">Retained from an older record. New totals are recorded when changing a diaper.</p></div>
     <label for="wetting-edit-position">Position</label><select id="wetting-edit-position" name="position"><option value="standing">Standing</option><option value="sitting">Sitting</option><option value="laying-down">Laying down</option></select><p class="field-help">Correcting an earlier day recalculates the current chance. Historical rolls retain their recorded chance.</p><button class="button primary" type="submit">Save changes</button></form></dialog>
+  <dialog id="diaper-change-edit-dialog"><form id="diaper-change-edit-form"><div class="card-heading"><h2>Edit diaper change</h2><button id="close-diaper-change-edit" type="button" class="icon-button" aria-label="Close diaper change editor">&times;</button></div>
+    <label for="diaper-change-edit-time">Date &amp; time</label><input id="diaper-change-edit-time" name="occurredAt" type="datetime-local" required>
+    <label for="diaper-change-edit-number">Diaper being changed (number that day)</label><input id="diaper-change-edit-number" name="diaperNumber" type="number" min="1" max="10000" step="1" required>
+    <label for="diaper-change-edit-wettings">Wettings received before changing</label><input id="diaper-change-edit-wettings" name="wettingsCount" type="number" min="0" max="10000" step="1" required>
+    <p class="field-help">Correcting this record updates the day's change count and completed-diaper totals.</p><button class="button primary" type="submit">Save changes</button></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><div class="noscript">Little Log needs JavaScript to save entries and show charts. Please enable it in your browser.</div></noscript>
 </body>

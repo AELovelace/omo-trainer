@@ -53,10 +53,45 @@ try {
   if(page.url().startsWith(issuer))await Promise.all([page.waitForNavigation({waitUntil:'networkidle0'}),page.click('button[type="submit"]')]);
   assert.equal(page.url(),origin+'/tracker/admin/');
   await page.waitForSelector('#graphs .admin-graph');
-  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),21);
+  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),19);
+  assert.equal(await page.$$eval('#potty-graphs .admin-graph',nodes=>nodes.length),4);
   assert.match(await page.$eval('#chart-lines',node=>node.textContent),/A custom line/);
   assert.equal(await page.evaluate(()=>localStorage.length),0,'The admin console must not cache everyone’s data in localStorage');
 
+  await page.click('[data-tab="potty-charts"]');
+  await page.waitForFunction(()=>!document.querySelector('[data-panel="potty-charts"]').hidden);
+  assert.match(await page.$eval('#potty-summary',node=>node.textContent),/Linked charts/);
+  await page.click('[data-chart-user="'+alice.id+'"]');
+  assert.match(await page.$eval('#potty-detail-content',node=>node.textContent),/Meaning, with "quotes"/);
+  assert.match(await page.$eval('#potty-detail-content',node=>node.textContent),/A custom line/);
+  assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),1);
+  await page.click('[data-chart-week="-7"]');
+  assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),0);
+  assert.match(await page.$eval('.potty-row-details',node=>node.textContent),new RegExp(day));
+  await page.click('[data-chart-week="7"]');
+  assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),1);
+  await page.select('#participant-filter',firstAdmin.participantId);
+  assert.match(await page.$eval('#potty-detail-content',node=>node.textContent),/no saved linked potty chart/);
+  assert.doesNotMatch(await page.$eval('#potty-detail-content',node=>node.textContent),/A custom line/);
+  await page.select('#participant-filter',alice.id);
+  assert.match(await page.$eval('#potty-detail-title',node=>node.textContent),/Alice/);
+  await page.$eval('#date-from',node=>{node.value='2000-01-01';node.dispatchEvent(new Event('change',{bubbles:true}));});
+  await page.$eval('#date-to',node=>{node.value='2000-01-02';node.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.equal(await page.$$eval('#graph-stars svg[role="img"]',nodes=>nodes.length),0);
+  assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),1,'Drilldown retains history outside statistics dates');
+  await page.click('#all-dates');
+  for(const width of [320,390,768,1440]) {
+    await page.setViewport({width,height:1000});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'Chart tab overflows at '+width);
+    assert.equal(await page.$$eval('#potty-graphs .admin-legend',nodes=>nodes.filter(node=>node.textContent.trim()).length),4);
+  }
+  await page.screenshot({path:resolve(directory,'potty-charts-desktop.png'),fullPage:true});
+  await page.setViewport({width:390,height:844});
+  await page.$eval('#potty-detail',node=>node.scrollIntoView());
+  await page.screenshot({path:resolve(directory,'potty-chart-phone.png')});
+  await page.setViewport({width:1440,height:1000});
+  await page.select('#participant-filter','');
+  await page.click('[data-tab="analytics"]');
   const downloadDirectory=resolve(directory,'downloads');await mkdir(downloadDirectory);
   const cdp=await page.createCDPSession();await cdp.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:downloadDirectory});
   await page.click('[data-tab="transfer"]');
@@ -94,7 +129,7 @@ try {
 
   for(const width of [320,390,768,1440]) {
     await page.setViewport({width,height:1000});
-    for(const route of ['analytics','users','transfer','audit']) {
+    for(const route of ['analytics','potty-charts','users','transfer','audit']) {
       await page.click('[data-tab="'+route+'"]');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,route+' overflows at '+width);
     }
@@ -118,7 +153,7 @@ try {
   assert.equal(await ordinary.$$eval('#graphs .admin-graph',nodes=>nodes.length),0,'Ordinary users must not receive shared analytics');
   assert.equal(await ordinary.evaluate(async()=> (await fetch('../api/admin/data')).status),403);
   assert.deepEqual(errors,[]);
-  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 21 graphs, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
+  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 23 graphs, potty chart drilldown, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
   console.log('Screenshots: '+directory);
 }finally{
   if(browser)await browser.close();db.close();

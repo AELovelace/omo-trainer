@@ -1522,6 +1522,8 @@ dialog .primary {
 .protocol-card { margin-bottom: 24px; }
 .protocol-card .stat-value { color: var(--pink, #ff96c8); }
 .wetting-card { padding: 24px; }
+.wetting-panels { display: grid; gap: 22px; } /* Keep the change card immediately below its wetting form in both layouts. */
+.diaper-change-card .button { width: 100%; margin-top: 18px; }
 .wetting-card .button { margin-top: 18px; width: 100%; }
 .probability-number input[readonly] { cursor: default; }
 .roll-button:disabled { opacity: .6; cursor: wait; }

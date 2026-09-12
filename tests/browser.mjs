@@ -47,15 +47,15 @@ try {
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '0');
 
   await fill(page, '#liquids', 250);
-  await fill(page, '#wettings', 2);
+  await fill(page, '#diaper-change-wettings', 2);
 
   await page.click('#save-observation');
   assert.equal((await saved(page)).entries[0].kind, 'observation');
   assert.equal((await saved(page)).entries[0].wettingsCount, undefined);
-  await page.click('#new-diaper');
+  await page.click('#diaper-change-form button[type="submit"]');
   assert.equal(await page.$eval('#wetting-diaper', element => element.value), '2');
   await fill(page, '#diaper', 2);
-  assert.equal(await page.$eval('#wettings', element => element.value), '1');
+  assert.equal(await page.$eval('#diaper-change-wettings', element => element.value), '0');
   await fill(page, '#liquids', 600);
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await page.click('#save-observation');
@@ -90,7 +90,7 @@ try {
   await fill(page, '#chart-days', 30);
   assert.equal(await page.$$eval('#chart-data tr', elements => elements.length), 30);
   await page.click('[data-page="history"]');
-  assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 3);
+  assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 4);
   await fill(page, '#filter-result', 'observation');
   assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 3);
   await page.click(`[data-edit="${state.entries[1].id}"]`);
@@ -115,7 +115,7 @@ try {
   }
   const backupPath = resolve(downloadDirectory, downloads.find(name => /^little-log-.*\.json$/.test(name)));
   const backup = JSON.parse(await readFile(backupPath, 'utf8'));
-  assert.equal(backup.entries.length, 4);
+  assert.equal(backup.entries.length, 5);
   const csvPath = resolve(downloadDirectory, downloads.find(name => /^little-log-.*\.csv$/.test(name)));
   assert.match(await readFile(csvPath, 'utf8'), /"liquidsMl"/);
   await (await page.$('#import-file')).uploadFile(backupPath);

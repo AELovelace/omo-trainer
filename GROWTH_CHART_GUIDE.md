@@ -103,3 +103,5 @@ environment files are deliberately preserved, so updating code alone does not
 change a running issuer. Follow the issuer migration section in AUTH_GUIDE
 before changing an existing installation. No live DNS, proxy or service has
 been changed by this implementation.
+
+Admin Potty charts tab: the four chart graphs and row-meaning table live beside participant drilldowns. Statistics respect cohort/date filters; the read-only weekly chart and expandable row histories show the complete current saved chart. Missing charts are explicit, and authorization loss clears chart details from memory and the page. `tests/admin-browser.mjs` checks chart navigation, weekly stars, participant switching, date-filter separation and phone layouts.

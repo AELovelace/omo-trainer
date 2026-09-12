@@ -18,7 +18,7 @@
     <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
     <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LiD0llID</a></section>
     <div id="admin-workspace" hidden>
-      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#audit" data-tab="audit">Activity log</a></nav>
       <section class="card admin-filters" aria-label="Dataset selection">
         <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>
         <div><label for="date-from">Analysis from</label><input id="date-from" type="date"></div>
@@ -31,9 +31,20 @@
         <p class="section-copy">Date filters use each record's saved local date. Graphs count recorded activity; missing records do not establish that no events occurred. Current protocol and chart counters use complete saved history. Each graph includes exact data and an SVG download.</p>
         <div id="admin-summary" class="admin-summary"></div>
         <div id="graphs" class="admin-graphs"></div>
-        <section class="card"><h2>What each chart line means</h2><p class="section-copy">Current labels and notes are saved per participant and row ID. Star totals respect the analysis dates; renaming a row also changes its label on older stars.</p><div id="chart-lines" class="table-scroll"></div></section>
         <section class="card"><h2>Participant snapshots</h2><p class="section-copy">Current enrollment and chart dates, timezone, probability, refusal count and reveal status.</p><div id="participant-snapshots" class="table-scroll"></div></section>
-        <section class="card"><div class="card-heading"><h2>Underlying records</h2><select id="record-kind" aria-label="Filter underlying record type"><option value="">All record types</option><option value="observation">Observations</option><option value="wetting">Wettings</option><option value="roll">Rolls</option><option value="protocol">Protocol</option><option value="legacy">Legacy snapshots</option></select></div><p id="record-count"></p><div id="record-table" class="table-scroll"></div><button id="more-records" class="button secondary">Show more records</button></section>
+        <section class="card"><div class="card-heading"><h2>Underlying records</h2><select id="record-kind" aria-label="Filter underlying record type"><option value="">All record types</option><option value="observation">Observations</option><option value="wetting">Wettings</option><option value="diaper-change">Diaper changes</option><option value="roll">Rolls</option><option value="protocol">Protocol</option><option value="legacy">Legacy snapshots</option></select></div><p id="record-count"></p><div id="record-table" class="table-scroll"></div><button id="more-records" class="button secondary">Show more records</button></section>
+      </section>
+      <section data-panel="potty-charts" aria-labelledby="potty-charts-title" hidden>
+        <h2 id="potty-charts-title" tabindex="-1">Potty chart statistics</h2>
+        <p class="section-copy">Stars follow the participant and analysis date filters. Linked charts, row counts, refusals and reveal status describe the current saved charts. Choose View chart to explore a participant's complete saved chart.</p>
+        <div id="potty-summary" class="admin-summary"></div>
+        <div id="potty-graphs" class="admin-graphs"></div>
+        <section class="card"><h2>Charts by participant</h2><div id="potty-users" class="table-scroll"></div></section>
+        <section id="potty-detail" class="card" aria-labelledby="potty-detail-title" hidden>
+          <h2 id="potty-detail-title" tabindex="-1">Participant chart</h2>
+          <div id="potty-detail-content"></div>
+        </section>
+        <section class="card"><h2>What each chart line means</h2><p class="section-copy">Current labels and notes are saved per participant and row ID. Star totals respect the analysis dates; renaming a row also changes its label on older stars.</p><div id="chart-lines" class="table-scroll"></div></section>
       </section>
       <section data-panel="users" aria-labelledby="users-title" hidden>
         <h2 id="users-title" tabindex="-1">User management</h2>

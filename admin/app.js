@@ -6,12 +6,14 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'
 const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
+const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
+let chartUserId='',chartWeek=''; // Keep drilldown state only in memory alongside the authorized dataset.
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
-  accessEpoch++; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
-  for(const selector of ['#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
+  accessEpoch++; chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
+  for(const selector of ['#potty-graphs','#potty-summary','#potty-users','#potty-detail-content','#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
   $('#participant-filter').innerHTML='<option value="">Everyone</option>';
   $('#admin-workspace').hidden=true; $('#admin-gate').hidden=false; $('#refresh').hidden=true; $('#admin-identity').textContent='';
 }
@@ -79,17 +81,74 @@ function renderAnalytics() { // Date and participant filters recompute charts lo
   if(from && to && from>to) { status('Analysis start must be on or before its end.'); return; }
   analysis=analyzeDataset(cohort(),{from,to,interval:$('#interval').value});
   const t=analysis.totals;
-  $('#admin-summary').innerHTML=[['Participants',t.users],['Observations',t.observations],['Classified wettings',t.wettings],['Random rolls',t.randomRolls],['Logged intake (mL)',t.liquids],['Chart stars',t.stars]].map(([label,n])=>'<article><strong>'+escape(fmt(n))+'</strong><span>'+label+'</span></article>').join('');
-  $('#graphs').innerHTML=analysis.graphs.map(graph=>{
+  $('#admin-summary').innerHTML=[['Participants',t.users],['Observations',t.observations],['Classified wettings',t.wettings],['Diaper changes',t.changes],['Random rolls',t.randomRolls],['Logged intake (mL)',t.liquids],['Chart stars',t.stars]].map(([label,n])=>'<article><strong>'+escape(fmt(n))+'</strong><span>'+label+'</span></article>').join('');
+  const graphCard=graph=>{
     const cols=graph.plotColumns??graph.columns.slice(1).map((_,i)=>i+1);
+    const labels=graph.type==='scatter'?['One point per participant-day (X: '+graph.columns[1]+'; Y: '+graph.columns[2]+')']:cols.map(i=>graph.columns[i]); // Describe every plotted color and explain both scatter axes.
     return '<article class="card admin-graph" id="graph-'+graph.id+'"><h3>'+escape(graph.title)+'</h3><p>'+escape(graph.description)+'</p>'+plot(graph)+
-      '<div class="admin-legend">'+(graph.type==='scatter'?'':cols.map((i,n)=>'<span><svg width="9" height="9" aria-hidden="true"><rect width="9" height="9" fill="'+colors[n%colors.length]+'"/></svg> '+escape(graph.columns[i])+'</span>').join(''))+'</div>'+
+      '<div class="admin-legend" role="group" aria-label="Chart legend">'+labels.map((label,n)=>'<span><svg width="9" height="9" aria-hidden="true"><rect width="9" height="9" fill="'+colors[n%colors.length]+'"/></svg><span class="admin-legend-label">'+escape(label)+'</span></span>').join('')+'</div>'+
       '<details><summary>Exact data ('+graph.rows.length+' rows)</summary><div class="table-scroll">'+table(graph.columns,graph.rows)+'</div></details><div class="admin-buttons"><button class="button secondary small" data-svg="'+graph.id+'">Download SVG</button><button class="button secondary small" data-graph-csv="'+graph.id+'">Data CSV</button></div></article>';
-  }).join('');
+  };
+  $('#graphs').innerHTML=analysis.graphs.filter(graph=>!pottyGraphIds.has(graph.id)).map(graphCard).join('');
+  $('#potty-graphs').innerHTML=analysis.graphs.filter(graph=>pottyGraphIds.has(graph.id)).map(graphCard).join('');
+  renderPottyCharts();
   $('#chart-lines').innerHTML=table(['Participant','Participant ID','Row ID','Label','Note','Stars','Status'],analysis.chartRows);
   $('#participant-snapshots').innerHTML=table(['Participant','ID','Enrolled','Timezone','Current chance (%)','Chart since','Chart saved','Refusals','Revealed'],analysis.summaries.map(u=>[u.label,u.id,u.enrolled,u.timezone,u.probability,u.chartSince,u.chartUpdated,u.refusals,u.revealed]));
   recordLimit=100; renderRecords();
 }
+function renderPottyCharts() { // Summarize only the selected cohort; distinguish absent charts from saved charts with zero stars.
+  const selected=cohort().users, linked=selected.filter(user=>user.growthChart?.chart);
+  const items=[['Linked charts',linked.length],['Without a saved chart',selected.length-linked.length],['Chart rows',linked.reduce((n,user)=>n+user.growthChart.chart.rows.length,0)],['Stars in selected dates',analysis.totals.stars]];
+  $('#potty-summary').innerHTML=items.map(([label,n])=>'<article><strong>'+escape(fmt(n))+'</strong><span>'+label+'</span></article>').join('');
+  $('#potty-users').innerHTML='<table><thead><tr><th>Participant</th><th>Chart name</th><th>Rows</th><th>Stars in selected dates</th><th>Last saved</th><th>Chart</th></tr></thead><tbody>'+selected.map(user=>{
+    const chart=user.growthChart?.chart;
+    return '<tr><td>'+escape(user.label)+'<br><small>'+escape(user.id)+'</small></td><td>'+escape(chart?.name??'No saved chart')+'</td><td>'+(chart?chart.rows.length:'—')+'</td><td>'+(chart?analysis.summaries.find(summary=>summary.id===user.id).stars:'—')+'</td><td>'+escape(user.growthChart?.updatedAt??'')+'</td><td><button class="button secondary small" data-chart-user="'+escape(user.id)+'">View chart</button></td></tr>';
+  }).join('')+'</tbody></table>';
+  if(!selected.some(user=>user.id===chartUserId)) { chartUserId=selected.length===1?selected[0].id:''; chartWeek=''; }
+  renderPottyDetail();
+}
+function weekStart(day) { // Calendar navigation uses UTC date arithmetic so daylight-saving shifts cannot move a column.
+  const value=new Date(day+'T12:00:00Z');
+  value.setUTCDate(value.getUTCDate()-(value.getUTCDay()+6)%7);
+  return value.toISOString().slice(0,10);
+}
+function shiftDay(day,offset) {
+  const value=new Date(day+'T12:00:00Z'); value.setUTCDate(value.getUTCDate()+offset);
+  return value.toISOString().slice(0,10);
+}
+function renderPottyDetail() { // Render a read-only chart from the authorized snapshot, preserving each row's ID, meaning and dated stars.
+  const user=dataset?.users.find(user=>user.id===chartUserId);
+  $('#potty-detail').hidden=!user;
+  if(!user) { $('#potty-detail-content').replaceChildren(); return; }
+  $('#potty-detail-title').textContent=user.label+'’s potty chart';
+  const chart=user.growthChart?.chart;
+  if(!chart) { $('#potty-detail-content').textContent='This participant has no saved linked potty chart.'; return; }
+  const stars=Object.keys(chart.stars).sort(),byRow=new Map(chart.rows.map(row=>[row.id,[]]));
+  for(const key of stars) { const [day,rowId]=key.split(':'); byRow.get(rowId)?.push(day); }
+  if(!chartWeek) chartWeek=weekStart(stars.at(-1)?.slice(0,10)??new Date().toISOString().slice(0,10));
+  const dates=Array.from({length:7},(_,i)=>shiftDay(chartWeek,i));
+  $('#potty-detail-content').innerHTML='<p class="section-copy">Complete saved chart; analysis date filters do not hide its history. Stars use the current row labels. Empty cells mean no saved star.</p>'+
+    '<div class="table-scroll">'+table(['Chart name','Participant ID','Started','Last saved','Total stars','Refusals','Reveal status'],[[chart.name,user.id,chart.since,user.growthChart.updatedAt,stars.length,chart.refusals,chart.escaped?'Revealed':'Not revealed']])+'</div>'+
+    '<div class="admin-buttons potty-week"><button class="button secondary" data-chart-week="-7">Previous week</button><div><label for="potty-week-date">Week containing</label><input id="potty-week-date" type="date" value="'+chartWeek+'"></div><button class="button secondary" data-chart-week="7">Next week</button></div>'+
+    '<div class="table-scroll"><table class="potty-grid"><caption>Week of '+chartWeek+'</caption><thead><tr><th scope="col">Chart line</th>'+dates.map(day=>'<th scope="col">'+day+'</th>').join('')+'<th scope="col">All stars</th></tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row" class="wrap">'+escape(row.label)+'</th>'+dates.map(day=>'<td>'+(chart.stars[day+':'+row.id]?'<span class="potty-star" role="img" aria-label="Star">&#9733;</span>':'<span aria-label="No saved star">&#8212;</span>')+'</td>').join('')+'<td>'+byRow.get(row.id).length+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<h3>Chart lines and full star history</h3><div class="potty-row-details">'+chart.rows.map(row=>'<details><summary>'+escape(row.label)+' ('+byRow.get(row.id).length+' stars)</summary><dl><dt>Row ID</dt><dd>'+escape(row.id)+'</dd><dt>Description</dt><dd>'+escape(row.note||'No description')+'</dd><dt>Praise</dt><dd>'+escape(row.praise||'No saved praise')+'</dd><dt>Status</dt><dd>'+(row.locked?'Locked':'Editable')+'</dd><dt>All saved star dates</dt><dd>'+escape(byRow.get(row.id).join(', ')||'No saved stars')+'</dd></dl></details>').join('')+'</div>';
+}
+$('#potty-users').addEventListener('click',event=>{
+  const button=event.target.closest('[data-chart-user]'); if(!button || !dataset) return;
+  chartUserId=button.dataset.chartUser; chartWeek=''; renderPottyDetail();
+  $('#potty-detail-title').focus(); $('#potty-detail').scrollIntoView({block:'start'});
+});
+$('#potty-detail-content').addEventListener('click',event=>{
+  const button=event.target.closest('[data-chart-week]'); if(!button) return;
+  const offset=Number(button.dataset.chartWeek),next=shiftDay(chartWeek,offset);
+  if(!/^\d{4}-/.test(next)) return;
+  chartWeek=next; renderPottyDetail();
+  $('#potty-detail-content [data-chart-week="'+offset+'"]').focus();
+});
+$('#potty-detail-content').addEventListener('change',event=>{
+  if(event.target.id!=='potty-week-date' || !event.target.value || !event.target.validity.valid) return;
+  chartWeek=weekStart(event.target.value); renderPottyDetail(); $('#potty-week-date').focus();
+});
 function renderRecords() {
   if(!analysis) return;
   const kind=$('#record-kind').value,rows=analysis.records.filter(row=>!kind || (row.entry.kind??'legacy')===kind).sort((a,b)=>b.entry.occurredAt.localeCompare(a.entry.occurredAt));
@@ -107,7 +166,7 @@ async function renderAudit() {
   $('#audit-table').innerHTML=table(['When','Actor','Action','Target','Details'],result.audit.map(row=>[row.created_at,users.find(user=>user.id===row.actor_id)?.label??row.actor_id,row.action,row.target_id,row.details_json]));
 }
 function navigate() {
-  const route=['analytics','users','transfer','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
+  const route=['analytics','potty-charts','users','transfer','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
   if(route==='audit' && actor) void renderAudit().catch(error=>status(error.message));
@@ -179,7 +238,7 @@ $('#user-table').addEventListener('click',async event=>{
   try { await request('user',input); await refresh(); if(actor) status('User access updated. Existing Little Log sessions were revoked.'); }
   catch(error) { status(error.message); } finally {button.disabled=false;}
 });
-$('#graphs').addEventListener('click',event=>{
+$('#admin-workspace').addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button || !analysis) return;
   const id=button.dataset.svg??button.dataset.graphCsv,graph=analysis.graphs.find(value=>value.id===id); if(!graph) return;
   if(button.dataset.svg) {

@@ -131,7 +131,7 @@ test('analytics separate participant-day intake, actual events, random draws and
   assert.equal(view.graphs.find(g=>g.id==='classification').rows.find(row=>row[0]==='semi-forced')[1],1);
   assert.equal(view.chartRows.filter(row=>row[2]==='custom').length,2);
   assert.equal(new Set(view.chartRows.filter(row=>row[2]==='custom').map(row=>row[3])).size,2);
-  assert.equal(view.graphs.length,21);
+  assert.equal(view.graphs.length,23);
   assert.equal(analyzeDataset(data,{from:'2026-09-12'}).totals.wettings,0);
 });
 

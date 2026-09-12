@@ -12,7 +12,7 @@ These cover all 101 probability settings, rejection sampling, cumulative snapsho
 
 `tests/observations.test.mjs` verifies interval sums, overlapping legacy cumulative snapshots, date attribution, separation of draw and observation fields, measurement-mode validation/exports, retry idempotency, second-device synchronization and totals after edits/deletions. The browser workflow verifies observation editing and intake reset; the protocol browser workflow checks that rolling preserves an unfinished observation and that saving during cooldown never creates another roll.
 
-Relocated-field coverage verifies that roll position and wetting diaper totals survive SQLite, exports and second-device sync; older observation fields remain intact. Browser checks select a roll position, save a wetting total, verify its next suggested count and edit the saved total without multiplying daily category counts.
+Historical-field coverage verifies that roll position and older per-diaper totals survive SQLite, exports and second-device sync. New totals belong to `diaper-change` records. `tests/diapers.test.mjs` covers dry changes, daily totals, next-diaper suggestions, preserved historical counts, classification/cooldown isolation, sync, corrections, deletion and CSV/JSON round trips. The protocol browser suite records two changes, checks next-day reset and edits/deletes a change, while verifying the new card stays below the wetting card on mobile.
 
 `tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
 
@@ -109,3 +109,7 @@ headless browser. Actual installation and shared browser/installed-app storage
 still need testing on the intended phones. See GROWTH_CHART_GUIDE.md.
 
 Semi-Forced coverage in `tests/training.test.mjs` verifies JSON/CSV validation, participant-scoped SQLite sync and second-device restore, SF-only completed days, ties with involuntary events and today's next-day preview. Check both Classification menus show F, SF, V, SI, I in that order; saving/editing SF must retain its history label and About-page count.
+
+Admin chart legends: at desktop and 320px widths, verify every chart has readable series labels beside 9px color keys; the intake scatter legend explains its points and both axes. Color keys must not inherit the full plot size.
+
+Admin Potty charts tab: the four chart graphs and row-meaning table live beside participant drilldowns. Statistics respect cohort/date filters; the read-only weekly chart and expandable row histories show the complete current saved chart. Missing charts are explicit, and authorization loss clears chart details from memory and the page. `tests/admin-browser.mjs` checks chart navigation, weekly stars, participant switching, date-filter separation and phone layouts.

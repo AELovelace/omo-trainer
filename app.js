@@ -2,12 +2,13 @@ import { STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localI
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
 import { isRoll, isObservation } from './lib/model.js';
+import { diaperSummary, suggestedDiaperWettings } from './lib/diapers.js';
 import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
 const $ = selector => document.querySelector(selector); // Keeps DOM lookups short while remaining dependency-free.
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
 const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
-let editedWetting = null;
+let editedWetting = null, editedDiaperChange = null;
 let protocolView;
 let state = deviceState(emptyState());
 let persistedRaw = null;
@@ -237,9 +238,8 @@ $('#intake-unit-toggle').addEventListener('click', () => {
 displayIntake(0);
 
 function seedForm(day = localDay(), resetLiquids = true) { // Carries forward the latest same-day counts and resets counts for a new day.
-  const latest = daySummary(state.entries, day).latest;
   if (resetLiquids) displayIntake(0);
-  $('#diaper').value = latest?.diaperNumber ?? 1;
+  $('#diaper').value = diaperSummary(state.entries, day).currentDiaper;
   formDay = day;
 }
 
@@ -290,15 +290,13 @@ function formEntry(form, original = null) { // Reads a snapshot; editing an unch
 
 function renderSummary() { // Renders today's snapshots separately from historical or future-dated entries.
   const summary = daySummary(state.entries, localDay());
-  const snapshots = sortedEntries(state.entries.filter(entry => entry.occurredAt.slice(0, 10) === localDay() && entry.diaperNumber !== undefined));
-  const latest = snapshots[0];
-  const counted = latest && snapshots.find(entry => entry.diaperNumber === latest.diaperNumber && entry.wettingsCount !== undefined);
+  const diapers = diaperSummary(state.entries, localDay());
   $('#today-label').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   $('#stat-rolls').textContent = summary.count.toLocaleString();
   $('#stat-results').textContent = summary.pee + summary.hold ? `${summary.pee} pee · ${summary.hold} hold` : 'No roll results today';
   $('#stat-liquids').textContent = summary.liquidsMl.toLocaleString();
-  $('#stat-diaper').textContent = latest ? `#${latest.diaperNumber}` : '—';
-  $('#stat-wettings').textContent = counted ? `${counted.wettingsCount} wettings in this diaper` : 'No wetting count recorded';
+  $('#stat-diaper').textContent = String(diapers.changes);
+  $('#stat-wettings').textContent = diapers.wettings + ' wettings in changed diapers';
 }
 
 function renderChart() { // Draws real daily data and supplies an equivalent table for screen readers and exact values.
@@ -334,13 +332,13 @@ function renderChart() { // Draws real daily data and supplies an equivalent tab
 }
 
 function entryLabel(entry) { // Gives each persisted record kind a factual label without inventing an outcome.
-  return entry.kind === 'wetting' ? categories[entry.category] : entry.kind === 'observation' ? 'Check-in' : entry.result === 'pee' ? 'Pee' : 'Hold';
+  return entry.kind === 'diaper-change' ? 'Diaper change' : entry.kind === 'wetting' ? categories[entry.category] : entry.kind === 'observation' ? 'Check-in' : entry.result === 'pee' ? 'Pee' : 'Hold';
 }
 
 function renderRecent() { // Includes standalone rolls without borrowing unsaved intake or position fields.
   const recent = sortedEntries(state.entries.filter(entry => entry.kind !== 'protocol')).slice(0, 4);
   $('#recent-list').innerHTML = recent.length ? recent.map(entry => {
-    const description = entry.kind === 'roll' ? 'Roll at ' + entry.probability + '%' : entry.kind === 'wetting' ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL ' + (entry.kind === 'observation' ? 'since last check-in' : 'daily cumulative');
+    const description = entry.kind === 'diaper-change' ? entry.wettingsCount + ' wettings before change' : entry.kind === 'roll' ? 'Roll at ' + entry.probability + '%' : entry.kind === 'wetting' ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL ' + (entry.kind === 'observation' ? 'since last check-in' : 'daily cumulative');
     const position = (entry.position ? ' &middot; ' + positions[entry.position] : '') + (entry.diaperNumber ? ' &middot; Diaper #' + entry.diaperNumber : '');
     return `<div class="recent-entry"><span class="entry-icon ${entry.result ?? 'pee'}"><svg class="icon"><use href="#i-${entry.result === 'hold' ? 'clock' : 'drop'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${description}${position}</p></div><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span></div>`;
   }).join('') : '<div class="empty-state">NO OBSERVATIONS FILED<br>Your saved observations and rolls will appear here.</div>';
@@ -362,9 +360,9 @@ function renderHistory() { // Limits initial table size while keeping filters an
   $('#load-more').hidden = entries.length <= historyLimit;
   $('#history-body').innerHTML = visible.map(entry => {
     const intake = isObservation(entry) ? entry.liquidsMl.toLocaleString() + ' mL<small>' + (entry.kind === 'observation' ? 'Since last check-in' : 'Daily cumulative') + '</small>' : '&mdash;';
-    const wettings = entry.kind === 'wetting' ? '1 event' + (entry.wettingsCount === undefined ? '' : '<small>' + entry.wettingsCount + ' in diaper</small>') : entry.wettingsCount ?? '&mdash;';
+    const wettings = entry.kind === 'diaper-change' ? entry.wettingsCount + '<small>Before change</small>' : entry.kind === 'wetting' ? '1 event' + (entry.wettingsCount === undefined ? '' : '<small>' + entry.wettingsCount + ' in diaper</small>') : entry.wettingsCount ?? '&mdash;';
     const probability = isRoll(entry) ? entry.probability + '%' : '&mdash;';
-    const provenance = entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled' : 'Manual (legacy)';
+    const provenance = entry.kind === 'diaper-change' ? 'Completed diaper' : entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled' : 'Manual (legacy)';
     const edit = entry.kind === 'roll' ? '' : `<button class="text-button" data-edit="${entry.id}" aria-label="Edit record ${dateLabel(entry.occurredAt)}">Edit</button>`;
     return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
   }).join('');
@@ -377,6 +375,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
   renderRecent();
   renderHistory();
   renderSync();
+  seedDiaperChange();
 }
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
@@ -464,7 +463,7 @@ $('#wetting-form').addEventListener('submit', event => { // Saves one classified
     refreshStoredState();
     const values = new FormData(event.currentTarget);
     const entry = validateEntry({ id: crypto.randomUUID(), kind: 'wetting', occurredAt: timestampFromInput(values.get('occurredAt')),
-      category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')), wettingsCount: Number(values.get('wettingsCount')) });
+      category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')) });
     if (Date.parse(entry.occurredAt) > Date.now()) throw new Error('A wetting must describe an event that has already happened.');
     commit({ ...state, entries: [...enroll(state.entries), entry] });
     $('#wetting-category').value = '';
@@ -483,30 +482,71 @@ $('#wetting-edit-form').addEventListener('submit', event => { // Corrects event 
     const values = new FormData(event.currentTarget), input = values.get('occurredAt');
     const next = validateEntry({ ...current, occurredAt: input === current.occurredAt.slice(0, 16) ? current.occurredAt : timestampFromInput(input),
       category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')), edited: true,
-      ...(values.get('wettingsCount') === '' ? {} : { wettingsCount: Number(values.get('wettingsCount')) }) });
+      ...(current.wettingsCount === undefined ? {} : { wettingsCount: Number(values.get('wettingsCount')) }) });
     if (Date.parse(next.occurredAt) > Date.now()) throw new Error('A wetting must describe an event that has already happened.');
     commit({ ...state, entries: state.entries.map(entry => entry.id === next.id ? next : entry) });
     $('#wetting-edit-dialog').close();
     notify('Wetting corrected. Daily probability recalculated.');
   } catch (error) { notify(error.message); }
 });
-function seedWetting(resetDiaper = false) { // Suggests the next total from saved records for this event's date and diaper.
+function seedWetting(resetDiaper = false) { // Suggest the current diaper without attaching a cumulative wetting total to individual events.
   const day = $('#wetting-time').value.slice(0, 10) || localDay();
-  const matches = sortedEntries(state.entries.filter(entry => entry.occurredAt.slice(0, 10) === day && entry.diaperNumber !== undefined));
-  if (resetDiaper) $('#wetting-diaper').value = matches[0]?.diaperNumber ?? 1;
-  const diaper = Number($('#wetting-diaper').value), relevant = matches.filter(entry => entry.diaperNumber === diaper);
-  const previous = relevant.find(entry => entry.wettingsCount !== undefined);
-  $('#wettings').value = Math.min(10000, (previous?.wettingsCount ?? relevant.filter(entry => entry.kind === 'wetting').length) + 1);
+  if (resetDiaper) $('#wetting-diaper').value = diaperSummary(state.entries, day).currentDiaper;
 }
-$('#new-diaper').addEventListener('click', () => { // Selects the next diaper in the wetting form; its next saved event starts at one.
-  const current = Number($('#wetting-diaper').value);
-  if (!Number.isInteger(current) || current < 1 || current >= 10000) return notify('Enter a diaper number from 1 to 9,999 before adding a new one.');
-  $('#wetting-diaper').value = current + 1;
-  $('#wettings').value = 1;
-  notify(`Diaper #${current + 1} selected for the next wetting.`);
-});
-$('#wetting-diaper').addEventListener('change', () => seedWetting());
+function seedDiaperChange(reset = false) { // Preserve typed totals while refreshing the day's saved change count and untouched suggestions.
+  if (reset) for (const selector of ['#diaper-change-number', '#diaper-change-wettings']) delete $(selector).dataset.edited;
+  const input = $('#diaper-change-time'), day = input.value.slice(0, 10) || localDay();
+  const summary = diaperSummary(state.entries, day);
+  $('#diaper-change-summary').textContent = summary.changes + ' changes recorded on ' + day + '. This will add change #' + (summary.changes + 1) + '.';
+  if (reset || !$('#diaper-change-number').dataset.edited) $('#diaper-change-number').value = summary.currentDiaper;
+  if (reset || !$('#diaper-change-wettings').dataset.edited) {
+    let before = null;
+    try { if (input.value) before = timestampFromInput(input.value); }
+    catch { $('#diaper-change-summary').textContent = 'Choose a valid date and time for this change.'; return; } // An invalid change draft must not interrupt other forms or sync rendering.
+    $('#diaper-change-wettings').value = suggestedDiaperWettings(state.entries, day, Number($('#diaper-change-number').value), before);
+  }
+}
 $('#wetting-time').addEventListener('change', () => seedWetting(true));
+$('#diaper-change-time').addEventListener('input', event => { event.target.dataset.edited = 'true'; });
+$('#diaper-change-time').addEventListener('change', () => {
+  delete $('#diaper-change-number').dataset.edited; delete $('#diaper-change-wettings').dataset.edited; seedDiaperChange(true);
+});
+$('#diaper-change-number').addEventListener('input', event => {
+  event.target.dataset.edited = 'true'; delete $('#diaper-change-wettings').dataset.edited; seedDiaperChange();
+});
+$('#diaper-change-wettings').addEventListener('input', event => { event.target.dataset.edited = 'true'; });
+$('#diaper-change-form').addEventListener('submit', event => { // Record one completed diaper with its final count; no classified wetting or roll is created.
+  event.preventDefault();
+  try {
+    refreshStoredState();
+    const values = new FormData(event.currentTarget);
+    const entry = validateEntry({ id: crypto.randomUUID(), kind: 'diaper-change',
+      occurredAt: $('#diaper-change-time').dataset.edited ? timestampFromInput(values.get('occurredAt')) : instantTimestamp(),
+      diaperNumber: Number(values.get('diaperNumber')), wettingsCount: Number(values.get('wettingsCount')) });
+    if (Date.parse(entry.occurredAt) > Date.now()) throw new Error('A diaper change must have already happened.');
+    commit({ ...state, entries: [...enroll(state.entries), entry] });
+    $('#diaper-change-time').value = localInput();
+    for (const selector of ['#diaper-change-time', '#diaper-change-number', '#diaper-change-wettings']) delete $(selector).dataset.edited;
+    seedDiaperChange(true); seedWetting(true);
+    $('#diaper').value = diaperSummary(state.entries, $('#occurred-at').value.slice(0, 10) || localDay()).currentDiaper;
+    notify('Diaper change saved with its final wetting count.');
+  } catch (error) { notify(error.message); }
+});
+$('#close-diaper-change-edit').addEventListener('click', () => $('#diaper-change-edit-dialog').close());
+$('#diaper-change-edit-form').addEventListener('submit', event => { // Corrections use the same conflict-aware record queue as observations.
+  event.preventDefault();
+  try {
+    refreshStoredState();
+    const current = state.entries.find(entry => entry.id === editedDiaperChange?.id);
+    if (!current || JSON.stringify(current) !== JSON.stringify(editedDiaperChange)) throw new Error('This diaper change changed. Close and reopen the editor.');
+    const values = new FormData(event.currentTarget), time = values.get('occurredAt');
+    const next = validateEntry({ ...current, occurredAt: time === current.occurredAt.slice(0, 16) ? current.occurredAt : timestampFromInput(time),
+      diaperNumber: Number(values.get('diaperNumber')), wettingsCount: Number(values.get('wettingsCount')), edited: true });
+    if (Date.parse(next.occurredAt) > Date.now()) throw new Error('A diaper change must have already happened.');
+    commit({ ...state, entries: state.entries.map(entry => entry.id === next.id ? next : entry) });
+    $('#diaper-change-edit-dialog').close(); notify('Diaper change corrected.');
+  } catch (error) { notify(error.message); }
+});
 $('#chart-days').addEventListener('change', renderChart);
 document.querySelectorAll('[data-metric]').forEach(button => button.addEventListener('click', () => { // Switches chart metrics without changing stored records.
   chartMetric = button.dataset.metric;
@@ -530,12 +570,21 @@ $('#history-body').addEventListener('click', event => { // Delegates actions so 
   if (edit) {
     editedEntry = state.entries.find(entry => entry.id === edit.dataset.edit);
     if (!editedEntry || editedEntry.kind === 'roll') return;
+    if (editedEntry.kind === 'diaper-change') {
+      editedDiaperChange = editedEntry;
+      $('#diaper-change-edit-time').value = editedEntry.occurredAt.slice(0, 16);
+      $('#diaper-change-edit-number').value = editedEntry.diaperNumber;
+      $('#diaper-change-edit-wettings').value = editedEntry.wettingsCount;
+      $('#diaper-change-edit-dialog').showModal(); return;
+    }
     if (editedEntry.kind === 'wetting') {
       editedWetting = editedEntry;
       const form = $('#wetting-edit-form');
       for (const key of ['category', 'position', 'diaperNumber']) form.elements.namedItem(key).value = editedWetting[key];
       $('#wetting-edit-count').value = editedWetting.wettingsCount ?? '';
       $('#wetting-edit-count').required = editedWetting.wettingsCount !== undefined;
+      $('#wetting-edit-count').disabled = editedWetting.wettingsCount === undefined;
+      $('#legacy-wetting-count').hidden = editedWetting.wettingsCount === undefined;
       $('#wetting-edit-time').value = editedWetting.occurredAt.slice(0, 16);
       $('#wetting-edit-dialog').showModal();
       return;
@@ -551,8 +600,8 @@ $('#history-body').addEventListener('click', event => { // Delegates actions so 
     $('#edit-time').value = editedEntry.occurredAt.slice(0, 16);
     $('#edit-dialog').showModal();
   }
-  if (remove && confirm('Delete this check-in? This cannot be undone.')) {
-    try { commit({ ...state, entries: state.entries.filter(entry => entry.id !== remove.dataset.delete) }); notify('Check-in deleted.'); }
+  if (remove && confirm('Delete this record? This cannot be undone.')) {
+    try { commit({ ...state, entries: state.entries.filter(entry => entry.id !== remove.dataset.delete) }); notify('Record deleted.'); }
     catch (error) { notify(error.message); }
   }
 });
@@ -662,6 +711,12 @@ function refreshClock() { // Advances untouched live timestamps and resets autom
     wettingTime.value = localInput();
     if (previousDay !== today) seedWetting(true);
   }
+  const changeTime = $('#diaper-change-time');
+  if (!changeTime.dataset.edited && document.activeElement !== changeTime) {
+    const previousDay = changeTime.value.slice(0, 10);
+    changeTime.value = localInput();
+    if (previousDay !== today) seedDiaperChange(true);
+  }
   renderCooldown();
 }
 $('#occurred-at').addEventListener('input', () => { $('#occurred-at').dataset.edited = 'true'; });
@@ -717,6 +772,7 @@ $('#disconnect-account').addEventListener('click', async () => { // Clears this 
 });
 
 loadState();
+$('#diaper-change-time').value = localInput();
 $('#wetting-time').value = localInput();
 $('#occurred-at').value = localInput();
 setDefaults();

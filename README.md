@@ -8,6 +8,15 @@ The main protocol starts at 50%, applies a ten-minute cooldown after a random Ho
 
 Each check-in stores its timestamp, liquids consumed since the previous check-in and diaper number. Rolling is a separate action that records its actual time, selected position, calculated probability, and result. Saving a check-in never rolls; rolling leaves unsaved check-in fields untouched. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
 
+The **Record a diaper change** card sits below **Record a wetting**, including
+in the mobile Wetting tab. Save the date/time, diaper number being changed and
+its final wetting count (including zero for a dry change). Daily totals count
+saved changes; the next diaper number is suggested automatically. Suggestions
+use that day's records, so adjust totals for unlogged or overnight wettings.
+New wetting events no longer store a per-diaper total. Historical totals remain
+editable, and changes sync and export as separate `diaper-change` records.
+Admin analytics includes change counts and mean wettings per completed diaper.
+
 The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
 
 New participants can choose **Settings & data → Create account**, or register from the shared sign-in page. Registration uses a username and password, then returns through app consent. The account works across registered lidoll.dev apps. Email is not collected; password resets are handled by the administrator. [AUTH_GUIDE.md](AUTH_GUIDE.md) describes registration and its request limits.
@@ -94,7 +103,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v19-intake-units. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v20-diaper-changes. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
