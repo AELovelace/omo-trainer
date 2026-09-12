@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { validateEntry, MAX_ENTRIES } from '../lib/model.js';
 import { validateGrowthChart } from './growth-chart.mjs';
 import { createAdminStore } from './admin-store.mjs';
+import { createRewardBridge } from './reward-bridge.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex'); // Stores only a digest of session secrets and retry payloads.
 export const databasePath = () => resolve(process.env.DATA_DIR ?? 'data', 'little-log.sqlite');
@@ -13,7 +14,7 @@ export class ApiError extends Error { // Carries expected client errors without 
   constructor(status, message) { super(message); this.status = status; }
 }
 
-export function openDatabase(filename = databasePath()) { // Opens a persistent, transactional database outside the public asset allowlist.
+export function openDatabase(filename = databasePath(), options = {}) { // Opens a persistent, transactional database outside the public asset allowlist.
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(filename);
   if (db.prepare('PRAGMA user_version').get().user_version > 2) { db.close(); throw new Error('This database was created by a newer app version.'); }
@@ -78,8 +79,10 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
       const version = input.baseVersion + 1, updatedAt = new Date().toISOString();
       db.prepare(`INSERT INTO growth_charts VALUES (?, ?, ?, ?) ON CONFLICT(participant_id)
         DO UPDATE SET payload_json=excluded.payload_json, version=excluded.version, updated_at=excluded.updated_at`).run(participantId, JSON.stringify(chart), version, updatedAt);
+      economy.awardStars(participantId, chart); // Credit new star cells in the same transaction as chart progress.
       db.prepare('INSERT INTO growth_chart_mutations VALUES (?, ?, ?, ?, ?)').run(participantId, input.mutationId, fingerprint, version, updatedAt);
       db.exec('COMMIT');
+      economy.tryFlush(); // Deliver rewards after the scientific transaction has committed.
       return { chart, version, updatedAt };
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
@@ -193,11 +196,13 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
           entry?.source ?? null, entry ? Number(entry.edited ?? false) : null, change.baseVersion + 1, now, now, entry ? null : now,
           entry ? JSON.stringify(entry) : null,
         );
+        if (!row && entry) economy.awardRecord(participantId, entry); // Award only after the server accepts a new record.
         db.prepare('INSERT INTO mutations (participant_id, id, request_hash, created_at) VALUES (?, ?, ?, ?)').run(participantId, change.mutationId, fingerprint, now);
         ack.push(change.mutationId);
       }
       const snapshot = records(participantId);
       db.exec('COMMIT');
+      economy.tryFlush(); // Market failure leaves durable rewards pending without failing this saved sync.
       return { ack, conflicts: [...conflicts.values()], records: snapshot };
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
@@ -215,12 +220,13 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
   }
 
   const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
+  const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
   return {
-    admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),
     backup: destination => backup(db, destination), // Uses SQLite's online backup API so WAL data is included consistently.
-    close: () => db.close(),
+    close: () => { economy.close(); db.close(); },
   };
 }

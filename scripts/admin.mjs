@@ -3,9 +3,9 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const [command, argument] = process.argv.slice(2);
-const valid = ['list', 'export-json', 'export-csv', 'export-charts-json', 'backup'];
+const valid = ['list', 'export-json', 'export-csv', 'export-charts-json', 'backup', 'backup-market'];
 if (!valid.includes(command) || (command !== 'list' && !argument)) {
-  console.log('Usage: node scripts/admin.mjs list | export-json <file> | export-csv <file> | export-charts-json <file> | backup <new-file>');
+  console.log('Usage: node scripts/admin.mjs list | export-json <file> | export-csv <file> | export-charts-json <file> | backup <new-file> | backup-market <new-file>');
   process.exit(1);
 }
 const database = openDatabase();
@@ -14,9 +14,10 @@ try {
   else {
     const destination = resolve(argument);
     await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
-    if (command === 'backup') {
+    if (command === 'backup' || command === 'backup-market') {
       await writeFile(destination, '', { flag: 'wx', mode: 0o600 }); // Refuses to overwrite an existing backup or the live database.
-      await database.backup(destination);
+      if(command==='backup-market') await database.economy.backup(destination);
+      else await database.backup(destination);
     } else if (command === 'export-charts-json') {
       await writeFile(destination, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), charts: database.exportCharts() }, null, 2), { flag: 'wx', mode: 0o600 }); // Keep chart exports private and never overwrite existing files.
     } else {

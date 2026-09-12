@@ -5,6 +5,7 @@ import path from 'node:path';
 import { openDatabase } from '../server/database.mjs';
 import { createApi } from '../server/api.mjs';
 import { createLogin } from '../server/login.mjs';
+import { stickerCatalog } from '../server/sticker-catalog.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const host = process.env.HOST ?? '127.0.0.1';
@@ -14,7 +15,11 @@ if (!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(base)) throw new Error('BASE_PATH must sta
 const database = openDatabase();
 const login = createLogin(database, base);
 const api = createApi(database, login);
+const stickerAssets = stickerCatalog();
+const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
+  ...stickerAssets.map(item => [item.url, item.mime]),
+  ['lib/economy.js', 'text/javascript; charset=utf-8'],
   ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
   ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
   ['lib/training.js', 'text/javascript; charset=utf-8'], ['lib/diapers.js', 'text/javascript; charset=utf-8'],
@@ -45,13 +50,15 @@ export const server = http.createServer(async (request, response) => { // Serves
   const filename = pathname.slice(base.length) === 'admin/' ? 'admin/index.html' : pathname.slice(base.length) === 'potty_chart/' ? 'potty_chart/index.html' : pathname.slice(base.length) || 'index.html';
   if (!files.has(filename)) { response.writeHead(404); return response.end('Not found'); }
   try {
-    const content = await readFile(path.join(root, filename));
+    const assetPath = stickerPaths.get(filename) ?? filename;
+    const content = await readFile(path.join(root, assetPath));
     response.writeHead(200, { 'Content-Type': files.get(filename), 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch { response.writeHead(503); response.end('App asset unavailable'); }
 });
 
-server.on('close', () => database.close()); // Flushes and closes the persistent connection during controlled shutdowns and tests.
+const rewardTimer=setInterval(()=>database.economy.tryFlush(),30000);rewardTimer.unref(); // Resume reward delivery even without another record submission.
+server.on('close', () => {clearInterval(rewardTimer);database.close();}); // Flushes and closes the persistent connection during controlled shutdowns and tests.
 server.requestTimeout = 15000;
 server.headersTimeout = 10000;
 

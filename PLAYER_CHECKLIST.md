@@ -59,3 +59,11 @@ On mobile, use Record change in the bottom bar to save a completed diaper and it
 Potty chart is a native Little Log view at #potty-chart. Navigation keeps the same document and preserves drafts; the app header shows chart sync status on this route. Existing ldq-growth-chart-v2 saves are reused. Old chart URLs and the PWA shortcut lead to the integrated view, and OAuth returns there. Run node scripts/embed-growth-chart.mjs after editing bundled chart markup/styles; the source importer also runs it. Commit index.html and potty_chart/embedded.css with the matching chart scripts and worker. Static deployments must include the updated nginx chart redirects.
 
 Roll desperation: the four-step slider records low/medium/high/crisis on each new roll (displayed Low/Med/High/Crisis), without changing probability or cooldown. History, JSON/CSV backups, database sync and admin exports retain the field. Older rolls omit it and appear as Not recorded in the admin distribution. The chosen level stays selected while switching views and after saving; a new page starts at Low. Tests/desperation.test.mjs covers validation, sync and export round trips; tests/training-browser.mjs checks keyboard steps, saving and mobile draft retention.
+
+## Stickers and market
+
+- Connect your device in Settings so saved observations, wettings and diaper changes can earn account stickers. Offline records earn when they sync.
+- Open Stickers & market to see each type owned, listed and earned, plus LiDollCoins and separate spendable stars.
+- Sell to the stickerbank, buy available bank stock, list a coin sale or offer a sticker swap. Check the displayed whole-number total.
+- Cancel your own listing to release its reserved stickers. Retry an unconfirmed exchange with Retry pending exchange.
+- Chart progress remains intact; each dated row cell earns its separate star once. Star spending will arrive later.

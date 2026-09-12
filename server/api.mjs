@@ -39,6 +39,8 @@ export function createApi(database, login) { // Resolves each app session to an 
         if (route === 'admin/import-preview' && request.method === 'POST') return send(response, 200, database.admin.previewImport(participant.id, await body(request, 24 * 1024 * 1024)));
         if (route === 'admin/import' && request.method === 'POST') return send(response, 200, database.admin.importData(participant.id, await body(request, 24 * 1024 * 1024)));
       }
+      if (route === 'economy' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.economy.snapshot(participant.id) });
+      if (route === 'economy' && request.method === 'POST') return send(response, 200, database.economy.act(participant.id, await body(request, 4096)));
       if (route === 'growth-chart' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.growthChart(participant.id) });
       if (route === 'growth-chart' && request.method === 'POST') return send(response, 200, { participant, ...database.saveGrowthChart(participant.id, await body(request)) });
       if (route === 'session' && request.method === 'GET') return send(response, 200, { participant, csrf, role: session.role, records: database.records(participant.id) });

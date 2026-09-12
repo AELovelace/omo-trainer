@@ -5,18 +5,21 @@ import { isRoll, isObservation } from './lib/model.js';
 import { diaperSummary, suggestedDiaperWettings } from './lib/diapers.js';
 import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
+import './lib/economy.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
 import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.
 
 const $ = selector => document.querySelector(selector); // Keeps DOM lookups short while remaining dependency-free.
-let chartHeader=null;
-function renderChartHeader() { // The top bar describes chart sync on the chart route, and observation sync on other routes.
-  if(location.hash!=='#potty-chart' || !chartHeader) return;
-  $('.local-badge').lastChild.textContent=' '+chartHeader.text;
-  $('#topbar-sign-in').hidden=chartHeader.connected;
+let chartHeader=null,economyHeader=null;
+function renderChartHeader() { // Match the top bar to the current chart, account wallet or scientific recording view.
+  const header=location.hash==='#stickers'?economyHeader:location.hash==='#potty-chart'?chartHeader:null;
+  if(!header) return;
+  $('.local-badge').lastChild.textContent=' '+header.text;
+  $('#topbar-sign-in').hidden=header.connected;
 }
 window.addEventListener('little-log-chart-status',event=>{chartHeader=event.detail;renderChartHeader();});
+window.addEventListener('little-log-economy-status',event=>{economyHeader=event.detail;renderChartHeader();});
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
 const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
 let editedWetting = null, editedDiaperChange = null;
@@ -184,6 +187,7 @@ async function syncNow() { // Retries durable mutations in bounded batches; a lo
       if (state.sync.participant?.id !== participantId) return;
       if (response.participant.id !== participantId) throw new Error('The server account changed during sync.');
       commit(reconcile(state, response), true);
+      window.dispatchEvent(new Event('little-log-rewards-updated'));
       if (!state.sync.queue.length) break;
     }
   } catch (error) { syncMessage = `${error.message} Unsynced changes are kept on this device.`; }
@@ -392,7 +396,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about', 'potty-chart'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers'].includes(requested) ? requested : 'overview';
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -422,7 +426,7 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     window.dispatchEvent(new Event('little-log-chart-visible'));
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.

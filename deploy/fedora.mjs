@@ -213,7 +213,7 @@ async function main() { // Separates preparation from the brief stop/backup/swit
     const previous = previousRelease();
     if (command === 'update' && !previous) throw new Error('No active release. Run the deployment script to complete the initial installation.');
     if (previous) {
-      for (const file of ['tracker/little-log.sqlite', 'auth/auth.sqlite', 'auth/secrets.json', 'auth/clients.json']) {
+      for (const file of ['tracker/little-log.sqlite', 'tracker/market.sqlite', 'auth/auth.sqlite', 'auth/secrets.json', 'auth/clients.json']) {
         const path = join(DATA, file);
         if (!existsSync(path) || !lstatSync(path).isFile()) throw new Error(`Persistent data is missing or symlinked: ${path}. Restore or verify it before updating; new identities will not be generated over missing data.`);
       }
