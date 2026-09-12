@@ -82,7 +82,7 @@ and layout at 320px. Saved records and record editing continue to use whole mL.
 
 ## Mobile quick actions
 
-`tests/training-browser.mjs` checks the bottom bar at 320/390/680px, all four
+`tests/training-browser.mjs` checks the bottom bar at 320/390/680px, all five
 panels, unsaved form retention, Back/Forward, return from Settings, offline
 reopening, touch targets, bottom clearance and the unchanged desktop dashboard.
 On a real phone, also check the home-indicator safe area and form scrolling with
@@ -113,3 +113,5 @@ Semi-Forced coverage in `tests/training.test.mjs` verifies JSON/CSV validation, 
 Admin chart legends: at desktop and 320px widths, verify every chart has readable series labels beside 9px color keys; the intake scatter legend explains its points and both axes. Color keys must not inherit the full plot size.
 
 Admin Potty charts tab: the four chart graphs and row-meaning table live beside participant drilldowns. Statistics respect cohort/date filters; the read-only weekly chart and expandable row histories show the complete current saved chart. Missing charts are explicit, and authorization loss clears chart details from memory and the page. `tests/admin-browser.mjs` checks chart navigation, weekly stars, participant switching, date-filter separation and phone layouts.
+
+Admin chart freshness regression: change a participant chart through its own UI after the admin dataset loads, wait for sync, then open View chart. Verify renamed/new rows and all saved stars match the participant chart and database. Drilldowns and participant selections fetch current data; failed reads must not silently display the older snapshot.

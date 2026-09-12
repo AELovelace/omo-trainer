@@ -7,12 +7,12 @@ const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
-let chartUserId='',chartWeek=''; // Keep drilldown state only in memory alongside the authorized dataset.
+let chartUserId='',chartWeek='',chartRequest=0; // Keep drilldown state only in memory alongside the authorized dataset.
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
-  accessEpoch++; chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
+  accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
   for(const selector of ['#potty-graphs','#potty-summary','#potty-users','#potty-detail-content','#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
   $('#participant-filter').innerHTML='<option value="">Everyone</option>';
   $('#admin-workspace').hidden=true; $('#admin-gate').hidden=false; $('#refresh').hidden=true; $('#admin-identity').textContent='';
@@ -127,16 +127,42 @@ function renderPottyDetail() { // Render a read-only chart from the authorized s
   for(const key of stars) { const [day,rowId]=key.split(':'); byRow.get(rowId)?.push(day); }
   if(!chartWeek) chartWeek=weekStart(stars.at(-1)?.slice(0,10)??new Date().toISOString().slice(0,10));
   const dates=Array.from({length:7},(_,i)=>shiftDay(chartWeek,i));
-  $('#potty-detail-content').innerHTML='<p class="section-copy">Complete saved chart; analysis date filters do not hide its history. Stars use the current row labels. Empty cells mean no saved star.</p>'+
-    '<div class="table-scroll">'+table(['Chart name','Participant ID','Started','Last saved','Total stars','Refusals','Reveal status'],[[chart.name,user.id,chart.since,user.growthChart.updatedAt,stars.length,chart.refusals,chart.escaped?'Revealed':'Not revealed']])+'</div>'+
+  $('#potty-detail-content').innerHTML='<p class="section-copy">Saved chart from the Chrysalis file. Unsynced browser changes are not included; analysis date filters do not hide saved history. Stars use the current row labels. Empty cells mean no saved star.</p>'+
+    '<div class="table-scroll">'+table(['Chart name','Participant ID','Started','Last saved','Saved version','Total stars','Refusals','Reveal status'],[[chart.name,user.id,chart.since,user.growthChart.updatedAt,user.growthChart.version,stars.length,chart.refusals,chart.escaped?'Revealed':'Not revealed']])+'</div>'+
     '<div class="admin-buttons potty-week"><button class="button secondary" data-chart-week="-7">Previous week</button><div><label for="potty-week-date">Week containing</label><input id="potty-week-date" type="date" value="'+chartWeek+'"></div><button class="button secondary" data-chart-week="7">Next week</button></div>'+
     '<div class="table-scroll"><table class="potty-grid"><caption>Week of '+chartWeek+'</caption><thead><tr><th scope="col">Chart line</th>'+dates.map(day=>'<th scope="col">'+day+'</th>').join('')+'<th scope="col">All stars</th></tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row" class="wrap">'+escape(row.label)+'</th>'+dates.map(day=>'<td>'+(chart.stars[day+':'+row.id]?'<span class="potty-star" role="img" aria-label="Star">&#9733;</span>':'<span aria-label="No saved star">&#8212;</span>')+'</td>').join('')+'<td>'+byRow.get(row.id).length+'</td></tr>').join('')+'</tbody></table></div>'+
     '<h3>Chart lines and full star history</h3><div class="potty-row-details">'+chart.rows.map(row=>'<details><summary>'+escape(row.label)+' ('+byRow.get(row.id).length+' stars)</summary><dl><dt>Row ID</dt><dd>'+escape(row.id)+'</dd><dt>Description</dt><dd>'+escape(row.note||'No description')+'</dd><dt>Praise</dt><dd>'+escape(row.praise||'No saved praise')+'</dd><dt>Status</dt><dd>'+(row.locked?'Locked':'Editable')+'</dd><dt>All saved star dates</dt><dd>'+escape(byRow.get(row.id).join(', ')||'No saved stars')+'</dd></dl></details>').join('')+'</div>';
 }
+async function loadPottyChart(id,focus=false) { // Re-fetch the selected participant rather than displaying the snapshot from when the admin page opened.
+  if(!dataset) return;
+  const sequence=++chartRequest,selection=selectedId();
+  chartUserId=id;
+  const user=dataset.users.find(value=>value.id===id); if(!user) return;
+  $('#potty-detail').hidden=false; $('#potty-detail-title').textContent=user.label+'’s potty chart';
+  $('#potty-detail-content').textContent='Fetching the latest saved chart...';
+  $('#potty-detail').setAttribute('aria-busy','true');
+  try {
+    const latest=await request('data?participantId='+encodeURIComponent(id));
+    if(sequence!==chartRequest || !dataset || chartUserId!==id || selection!==selectedId()) return; // Ignore stale responses after participant switches, refreshes or sign-out.
+    const current=latest.users.find(value=>value.id===id);
+    if(!current) throw Error('This participant is no longer available.');
+    dataset.users=dataset.users.map(value=>value.id===id?current:value);
+    renderAnalytics(); renderPottyDetail();
+    status('Fetched the latest saved chart for '+current.label+'.');
+  } catch(error) {
+    if(sequence!==chartRequest || !dataset) return;
+    $('#potty-detail-content').textContent='Could not fetch the latest chart. '+error.message;
+    status(error.message);
+  } finally {
+    if(sequence===chartRequest) {
+      $('#potty-detail').removeAttribute('aria-busy');
+      if(focus && dataset) { $('#potty-detail-title').focus(); $('#potty-detail').scrollIntoView({block:'start'}); }
+    }
+  }
+}
 $('#potty-users').addEventListener('click',event=>{
   const button=event.target.closest('[data-chart-user]'); if(!button || !dataset) return;
-  chartUserId=button.dataset.chartUser; chartWeek=''; renderPottyDetail();
-  $('#potty-detail-title').focus(); $('#potty-detail').scrollIntoView({block:'start'});
+  chartWeek=''; void loadPottyChart(button.dataset.chartUser,true);
 });
 $('#potty-detail-content').addEventListener('click',event=>{
   const button=event.target.closest('[data-chart-week]'); if(!button) return;
@@ -174,6 +200,7 @@ function navigate() {
 function resetPreview() { preview=null; $('#import-preview').textContent=''; $('#apply-import').hidden=true; }
 async function refresh() { // Fetch shared records only after a successful server-side admin check.
   if(loading) return;
+  chartRequest++; $('#potty-detail').removeAttribute('aria-busy');
   loading=true; status('Loading administrator data…'); resetPreview();
   try {
     const session=await request('users'); csrf=session.csrf; actor=session.participant; users=session.users;
@@ -212,7 +239,10 @@ $('#apply-import').addEventListener('click',async()=>{
   finally { $('#apply-import').disabled=false; }
 });
 for(const selector of ['#import-file','#import-mode']) $(selector).addEventListener('change',resetPreview);
-$('#participant-filter').addEventListener('change',()=>{resetPreview();renderAnalytics();});
+$('#participant-filter').addEventListener('change',()=>{
+  chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); resetPreview(); renderAnalytics();
+  if(selectedId() && location.hash==='#potty-charts') void loadPottyChart(selectedId());
+});
 for(const selector of ['#date-from','#date-to','#interval']) $(selector).addEventListener('change',renderAnalytics);
 $('#all-dates').addEventListener('click',()=>{$('#date-from').value='';$('#date-to').value='';renderAnalytics();});
 $('#user-search').addEventListener('input',renderUsers);

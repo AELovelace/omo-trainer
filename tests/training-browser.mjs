@@ -120,7 +120,7 @@ try {
   await page.screenshot({ path: resolve('artifacts/protocol-desktop.png'), fullPage: true });
   await page.setViewport({ width: 390, height: 844 });
 
-  const actions = ['observation', 'wetting', 'roll', 'analysis'];
+  const actions = ['observation', 'wetting', 'change', 'roll', 'analysis'];
   const visiblePanels = () => page.$$eval('[data-mobile-panel]', panels => panels.filter(panel => panel.getClientRects().length).map(panel => panel.dataset.mobilePanel));
   const selectAction = async action => { // Use the fixed bar exactly as a phone visitor would.
     await page.click('.mobile-actions [data-action="' + action + '"]');
@@ -130,6 +130,8 @@ try {
   await fill(page, '#liquids', '321');
   await selectAction('wetting');
   await fill(page, '#wetting-category', 'voluntary');
+  await selectAction('change');
+  await fill(page, '#diaper-change-wettings', '7');
   const entriesBeforeNavigation = (await saved(page)).entries.length;
   for (const width of [320, 390, 680]) {
     await page.setViewport({ width, height: 844 });
@@ -141,6 +143,9 @@ try {
       assert.equal(await page.$$eval('.mobile-actions a', links => links.every(link => link.getBoundingClientRect().height >= 44)), true, 'Every action has a touch-sized target');
     }
   }
+  await selectAction('change');
+  assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '7', 'Switching keeps the change draft');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'diaper-change-title');
   await selectAction('observation');
   assert.equal(await page.$eval('#liquids', input => input.value), '321', 'Switching keeps the observation draft');
   await selectAction('wetting');
@@ -153,13 +158,13 @@ try {
   await page.click('[data-page="settings"]');
   await page.waitForFunction(() => !document.querySelector('#page-settings').hidden);
   assert.equal(await page.$('.mobile-actions [aria-current]'), null);
-  await selectAction('analysis');
+  await selectAction('change');
   await page.setOfflineMode(true);
   await page.reload({ waitUntil: 'networkidle0' });
-  assert.deepEqual(await visiblePanels(), ['analysis'], 'Offline reopening retains the selected action');
+  assert.deepEqual(await visiblePanels(), ['change'], 'Offline reopening retains the selected action');
   await page.setOfflineMode(false);
   await page.setViewport({ width: 1024, height: 1000 });
-  assert.deepEqual(await visiblePanels(), actions, 'Desktop keeps all four dashboard cards');
+  assert.deepEqual(await visiblePanels(), actions, 'Desktop keeps all five dashboard cards');
   assert.equal(await page.$eval('.mobile-actions', bar => bar.getClientRects().length), 0);
   await page.setViewport({ width: 390, height: 844 });
   await selectAction('wetting');
@@ -215,8 +220,11 @@ try {
   page.once('dialog', dialog => dialog.accept());
   await page.click('[data-delete="' + completed.id + '"]');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 1);
-  await selectAction('wetting');
-  assert.equal(await page.evaluate(() => document.querySelector('.diaper-change-card').getBoundingClientRect().top > document.querySelector('.wetting-card').getBoundingClientRect().bottom), true, 'Change card stays directly beneath wetting on mobile');
+  await selectAction('change');
+  assert.deepEqual(await visiblePanels(), ['change']);
+  await fill(page, '#diaper-change-wettings', '2');
+  await page.click('#diaper-change-form button[type="submit"]');
+  assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2, 'Mobile Record change saves a completed diaper');
   await page.screenshot({ path: resolve('artifacts/diaper-change-mobile.png'), fullPage: true });
 
   assert.deepEqual(errors, []);

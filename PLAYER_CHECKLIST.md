@@ -53,3 +53,5 @@ During a server update, offline check-ins remain on the device and retry afterwa
 - [ ] Confirm switching accounts cannot upload the previous account's chart.
 - [ ] Clear chart & reset rows, sync, and confirm cleared stars stay cleared.
 - [ ] Sign out & clear this browser chart only removes this chart's local copy.
+
+On mobile, use Record change in the bottom bar to save a completed diaper and its final wetting count. Switching tabs preserves your unsaved form.
