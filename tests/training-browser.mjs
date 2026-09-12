@@ -109,6 +109,54 @@ try {
   await page.click('[data-page="overview"]');
   await page.screenshot({ path: resolve('artifacts/protocol-desktop.png'), fullPage: true });
   await page.setViewport({ width: 390, height: 844 });
+
+  const actions = ['observation', 'wetting', 'roll', 'analysis'];
+  const visiblePanels = () => page.$$eval('[data-mobile-panel]', panels => panels.filter(panel => panel.getClientRects().length).map(panel => panel.dataset.mobilePanel));
+  const selectAction = async action => { // Use the fixed bar exactly as a phone visitor would.
+    await page.click('.mobile-actions [data-action="' + action + '"]');
+    await page.waitForFunction(value => document.querySelector('.mobile-actions [aria-current="page"]')?.dataset.action === value, {}, action);
+    await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame)))); // Let destination focus and scrolling finish before layout assertions.
+  };
+  await fill(page, '#liquids', '321');
+  await selectAction('wetting');
+  await fill(page, '#wetting-category', 'voluntary');
+  const entriesBeforeNavigation = (await saved(page)).entries.length;
+  for (const width of [320, 390, 680]) {
+    await page.setViewport({ width, height: 844 });
+    for (const action of actions) {
+      await selectAction(action);
+      assert.deepEqual(await visiblePanels(), [action], 'Mobile actions show only the requested form or analysis');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Bottom actions must fit at ' + width);
+      assert.equal(await page.$eval('.mobile-actions', bar => Math.abs(bar.getBoundingClientRect().bottom - innerHeight) < 1), true);
+      assert.equal(await page.$$eval('.mobile-actions a', links => links.every(link => link.getBoundingClientRect().height >= 44)), true, 'Every action has a touch-sized target');
+    }
+  }
+  await selectAction('observation');
+  assert.equal(await page.$eval('#liquids', input => input.value), '321', 'Switching keeps the observation draft');
+  await selectAction('wetting');
+  assert.equal(await page.$eval('#wetting-category', input => input.value), 'voluntary', 'Switching keeps the wetting draft');
+  await page.goBack(); await page.waitForFunction(() => location.hash === '#observation');
+  assert.deepEqual(await visiblePanels(), ['observation']);
+  await page.goForward(); await page.waitForFunction(() => location.hash === '#wetting');
+  assert.deepEqual(await visiblePanels(), ['wetting']);
+  assert.equal((await saved(page)).entries.length, entriesBeforeNavigation, 'Navigation must never save an observation, wetting or roll');
+  await page.click('[data-page="settings"]');
+  await page.waitForFunction(() => !document.querySelector('#page-settings').hidden);
+  assert.equal(await page.$('.mobile-actions [aria-current]'), null);
+  await selectAction('analysis');
+  await page.setOfflineMode(true);
+  await page.reload({ waitUntil: 'networkidle0' });
+  assert.deepEqual(await visiblePanels(), ['analysis'], 'Offline reopening retains the selected action');
+  await page.setOfflineMode(false);
+  await page.setViewport({ width: 1024, height: 1000 });
+  assert.deepEqual(await visiblePanels(), actions, 'Desktop keeps all four dashboard cards');
+  assert.equal(await page.$eval('.mobile-actions', bar => bar.getClientRects().length), 0);
+  await page.setViewport({ width: 390, height: 844 });
+  await selectAction('wetting');
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  assert.equal(await page.evaluate(() => document.querySelector('footer').getBoundingClientRect().bottom <= document.querySelector('.mobile-actions').getBoundingClientRect().top), true, 'The bar must leave the end of the page reachable');
+  await selectAction('wetting'); // Tapping the current action returns to its heading.
+
   await page.screenshot({ path: resolve('artifacts/protocol-mobile.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log('Protocol browser checks passed: cooldown boundary, offline reload, manual and wetting logging, midnight rules, corrections, history and six viewport widths.');

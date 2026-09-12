@@ -1527,3 +1527,46 @@ dialog .primary {
 .roll-button:disabled { opacity: .6; cursor: wait; }
 .roll-card { padding: 24px; }
 #save-observation { width: 100%; margin-top: 18px; }
+
+/* Quick actions share the existing page routes; only phones switch between individual dashboard cards. */
+.mobile-actions { display: none; }
+@media (max-width: 680px) {
+  :root { --mobile-actions-height: 78px; }
+  body { padding-bottom: calc(var(--mobile-actions-height) + env(safe-area-inset-bottom, 0px) + 16px); }
+  html { scroll-padding-bottom: calc(var(--mobile-actions-height) + env(safe-area-inset-bottom, 0px) + 16px); }
+  .mobile-actions {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 9;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    border-top: 1px solid var(--rail);
+    background: var(--panel-deep);
+    box-shadow: 0 -6px 24px #1a061180;
+  }
+  .mobile-actions a {
+    min-width: 0;
+    min-height: var(--mobile-actions-height);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 3px;
+    color: var(--muted);
+    font: 11px/1.25 "Segoe UI", system-ui, sans-serif;
+    text-align: center;
+  }
+  .mobile-actions a[aria-current="page"] {
+    color: var(--pink);
+    background: var(--panel);
+    box-shadow: inset 0 3px var(--pink);
+  }
+  .mobile-actions a:focus-visible { outline-offset: -4px; }
+  .mobile-actions .icon { width: 20px; height: 20px; }
+  .dashboard-grid > .left-column, .dashboard-grid > .right-column { display: contents; }
+  [data-mobile-panel] { scroll-margin-top: 16px; }
+  [data-mobile-panel][data-active="false"] { display: none; }
+  .toast { bottom: calc(var(--mobile-actions-height) + env(safe-area-inset-bottom, 0px) + 16px); }
+}

@@ -15,10 +15,12 @@ with `returnTo=growth-chart` return to the bundled chart using the existing
 `/tracker/auth/callback` registration. Arbitrary return URLs are not accepted.
 An account mismatch offers reauthentication with `prompt=login`.
 
-Signing in alone does not upload a browser chart. **Link & upload this chart**
-explicitly saves it to the same participant ID as that account's observations.
-If a chart already exists, choose which complete chart to retain; there is no
-automatic merge of conflicting names, rows or stars. Download a backup before
+Signing in automatically links and saves the browser chart to the same
+participant ID as that account's observations. Opening the chart with an existing
+app session also links it automatically. A fresh device loads the saved chart.
+If the browser and file contain different meaningful charts, choose which complete
+chart to retain; this pending choice survives reloads and automatic retries.
+There is no automatic merge of names, rows or stars. Download a backup before
 replacing content you want to keep.
 
 Names, custom rows/notes, stars, refusal count, reveal status and start date are
@@ -31,6 +33,19 @@ exports use:
 ```sh
 node --env-file=/etc/lidoll/tracker.env scripts/admin.mjs export-charts-json /private/exports/charts.json
 ```
+
+
+Each chart stores its ordered `rows` array with the user's actual `id`, `label`,
+`note`, optional `praise`, and `locked` flag. Each `stars` key is
+`YYYY-MM-DD:rowId`. Resolve that ID against the rows in the same participant's
+chart, never a global default label or a row's position: users can rename default
+rows, create custom rows, and use identical labels for different rows. API
+responses, chart backups and administrator chart exports retain both structures.
+
+Renaming a row preserves its ID and dated stars, updating the current label/note
+for all those stars. There is no separate history of labels at award time.
+Removing a row also removes its stars; clearing resets the chart. The central
+document represents the current chart, not an immutable event history.
 
 Observation JSON/CSV exports remain separate. Chart exports include personal
 chart text and pseudonymous participant IDs, never OAuth credentials.

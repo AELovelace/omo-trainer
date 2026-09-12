@@ -1,5 +1,5 @@
 /* -- LiDOLL QUEST // Promotional Growth Chart ------------------------------
-   The chart stays in one browser save until its owner explicitly links it.
+   The chart stays in one browser save until its owner signs in to link it.
    account.js then syncs it through the shared Little Log session and database.
 
    Stars are keyed by REAL CALENDAR DATE, so the chart shows the actual week you
@@ -271,7 +271,7 @@
       refusals: 0,                                                // Times the locked row was pressed, ever.
       escaped: false,                                             // Whether the friend's note has been unlocked.
       since: todayKey,                                            // Date the file was opened, for the summary line.
-      sync: null                                                  // New charts remain unlinked until the visitor explicitly chooses upload.
+      sync: null                                                  // New charts link automatically once a verified account session is available.
     };
   }
 
@@ -914,6 +914,8 @@
 
   account = window.createGrowthChartAccount({
     get: () => state,
+    isBlank: () => state.name.trim() === "" && Object.keys(state.stars).length === 0 && state.refusals === 0 && !state.escaped
+      && JSON.stringify(state.rows) === JSON.stringify(sanitizeRows(cloneDefaultRows())), // Only untouched charts may be replaced automatically with the account's saved chart.
     persist: () => saveState(false),
     replace: replaceChart,
     clear: () => replaceChart(blankState()),

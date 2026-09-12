@@ -5,7 +5,6 @@ window.createGrowthChartAccount = function (adapter) {
   const panel = document.querySelector("#chart-account");
   const status = document.querySelector("#chart-account-status");
   const conflictPanel = document.querySelector("#chart-conflict");
-  const linkButton = document.querySelector("#chart-link");
   const syncButton = document.querySelector("#chart-sync");
   const logoutButton = document.querySelector("#chart-logout");
   let session = null, conflict = null, busy = false, message = "", timer;
@@ -30,8 +29,7 @@ window.createGrowthChartAccount = function (adapter) {
     document.querySelector("#chart-register").hidden = Boolean(owner || session);
     status.textContent = message || (owner
       ? `Linked to ${owner.label}'s Chrysalis file (${owner.id}). ${dirty() || link().pending ? "Changes waiting to sync." : "Chart saved to your file."}`
-      : session ? `Signed in as ${session.participant.label}. Choose whether to link this browser chart to your file.` : "This chart stays in this browser until you sign in and choose to link it.");
-    linkButton.hidden = Boolean(owner || !session || session.chart);
+      : session ? `Signed in as ${session.participant.label}. Linking this chart to your file…` : "Sign in with LidollID to automatically link and sync this chart.");
     syncButton.hidden = !owner;
     logoutButton.hidden = !owner && !session;
     conflictPanel.hidden = !conflict || Boolean(mismatch);
@@ -54,7 +52,7 @@ window.createGrowthChartAccount = function (adapter) {
     if (link() && link().participant.id !== session.participant.id) throw new Error("Another account is signed in. Sign in to the account linked to this chart before syncing, or export and clear this browser chart.");
   }
 
-  function adopt(remote) { // Replace the chart only after explicit selection or a clean, linked-device refresh.
+  function adopt(remote) { // Restore a fresh device or refresh a clean linked copy; conflicting content requires explicit selection.
     adapter.replace({ ...remote.chart, sync: { participant: session.participant, version: remote.version, base: JSON.stringify(remote.chart), pending: null } });
     persist();
     conflict = null;
@@ -76,13 +74,24 @@ window.createGrowthChartAccount = function (adapter) {
         if (choice === "pull") {
           if (!session.chart) throw new Error("There is no saved chart to load yet.");
           adopt(session);
-        } else if (choice === "push" || choice === "link") {
-          if (choice === "link" && session.chart) { conflict = session; return; }
+        } else if (choice === "push") {
           adapter.get().sync = { participant: session.participant, version: session.version, base: null, pending: null };
-          persist(); // First upload and replacing a conflicting file both require the visitor's explicit button choice.
+          persist(); // Replacing a conflicting file still requires the visitor's explicit version choice.
           conflict = null;
         }
-        if (!link()) { conflict = session.chart ? session : null; return; }
+        if (!link()) { // A verified sign-in links the chart automatically, including an already-signed-in visit.
+          if (session.chart && (adapter.isBlank() || JSON.stringify(snapshot()) === JSON.stringify(session.chart))) {
+            adopt(session); // Restore an existing file automatically on a fresh device or when both copies already match.
+          } else {
+            adapter.get().sync = {
+              participant: session.participant, version: session.version,
+              base: session.chart ? JSON.stringify(session.chart) : null, pending: null,
+              needsChoice: Boolean(session.chart), // Persist the first-link conflict so reloads and automatic retries cannot overwrite either chart.
+            };
+            persist();
+          }
+        }
+        if (link().needsChoice) { conflict = session; return; }
         for (let attempt = 0; attempt < 3; attempt++) {
           const current = link();
           if (!current.pending && !dirty()) {
@@ -124,7 +133,6 @@ window.createGrowthChartAccount = function (adapter) {
   document.querySelector("#chart-sign-in").href = new URL("auth/login?returnTo=growth-chart", endpoint).href;
   document.querySelector("#chart-register").href = new URL("auth/register?returnTo=growth-chart", endpoint).href;
   document.querySelector("#chart-tracker").href = endpoint.href;
-  linkButton.addEventListener("click", () => synchronize("link"));
   syncButton.addEventListener("click", () => synchronize());
   document.querySelector("#chart-use-file").addEventListener("click", () => synchronize("pull"));
   document.querySelector("#chart-use-device").addEventListener("click", () => synchronize("push"));

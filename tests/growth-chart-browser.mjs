@@ -54,7 +54,7 @@ async function signIn(page) { // Exercise the real OIDC redirect, password, cons
   }
   if (page.url().startsWith(issuer)) await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('button[type="submit"]')]);
   assert.equal(page.url(), origin + '/tracker/potty_chart/');
-  await page.waitForFunction(() => !document.querySelector('#chart-link').hidden || !document.querySelector('#chart-conflict').hidden);
+  await page.waitForFunction(() => !document.querySelector('#chart-sync').hidden || !document.querySelector('#chart-conflict').hidden);
 }
 
 try {
@@ -67,21 +67,65 @@ try {
   assert.equal(await first.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Chart must fit a phone viewport');
   await fill(first, 'Device chart');
   await first.click('.star-cell:not(.is-locked):not(.is-future)');
-  await signIn(first);
+  await first.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
+  await first.$eval('.row-edit-label', element => { element.value = 'Morning routine'; });
+  await first.$eval('.row-edit-note', element => { element.value = 'My own description for this line'; });
+  await first.click('.row-edit-save'); // Rename a row after awarding a star to verify the stable ID keeps its association.
+  await first.click('#add-row');
+  await first.$eval('.row-edit-label', element => { element.value = 'Evening routine'; });
+  await first.$eval('.row-edit-note', element => { element.value = 'A custom task before bed'; });
+  await first.click('.row-edit-save');
+  const customRow = (await saved(first)).rows.find(row => row.label === 'Evening routine');
+  await first.click('.star-cell[data-row="' + customRow.id + '"]:not(.is-future)');
+  await first.reload({ waitUntil: 'networkidle0' }); // Verify edited definitions survive the guest save before OAuth.
+  const authored = await saved(first);
+
   const alice = db.ensureParticipant(issuer, aliceSubject, 'alice');
-  assert.equal(db.growthChart(alice.id).chart, null, 'Signing in must not upload an unlinked browser chart');
+  assert.equal(db.growthChart(alice.id).chart, null, 'An anonymous chart stays local before sign-in');
+  await signIn(first); await settled(first);
+  assert.equal(await first.$('#chart-link'), null, 'Sign-in must link without an extra button');
   assert.equal((await saved(first)).name, 'Device chart');
-  await first.click('#chart-link'); await settled(first);
   assert.equal(db.growthChart(alice.id).chart.name, 'Device chart');
-  assert.equal(Object.keys(db.growthChart(alice.id).chart.stars).length, 1);
+  assert.equal(Object.keys(db.growthChart(alice.id).chart.stars).length, 2);
+  assert.deepEqual(db.growthChart(alice.id).chart.rows, authored.rows, 'OAuth upload must include renamed and custom row labels and notes');
+  assert.deepEqual(db.growthChart(alice.id).chart.stars, authored.stars);
   assert.equal((await saved(first)).sync.participant.id, alice.id);
   assert.equal((await first.evaluate(async () => (await (await fetch('../api/session')).json()).participant.id)), alice.id, 'Observations and chart share one participant');
 
   await second.goto(origin + '/tracker/potty_chart/', { waitUntil: 'networkidle0' });
   await signIn(second);
-  await second.click('#chart-use-file'); await settled(second);
+  await settled(second); // A fresh device automatically links and restores the existing file.
   assert.equal((await saved(second)).name, 'Device chart');
-  assert.equal(Object.keys((await saved(second)).stars).length, 1);
+  assert.equal(Object.keys((await saved(second)).stars).length, 2);
+  assert.deepEqual((await saved(second)).rows, authored.rows, 'A second device must restore each line definition, not substitute default labels');
+  assert.deepEqual((await saved(second)).stars, authored.stars);
+
+  await second.evaluate(() => localStorage.removeItem('ldq-growth-chart-v2'));
+  await second.reload({ waitUntil: 'networkidle0' }); await settled(second);
+  assert.equal((await saved(second)).name, 'Device chart', 'An existing app session must link and restore without signing in again');
+
+  const thirdContext = await browser.createBrowserContext(), third = await thirdContext.newPage();
+  third.on('pageerror', error => errors.push(error.message));
+  await third.goto(origin + '/tracker/potty_chart/', { waitUntil: 'networkidle0' });
+  await third.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
+  await third.$eval('.row-edit-note', element => { element.value = 'Guest row note'; });
+  await third.click('.row-edit-save'); // Custom rows alone are meaningful, even without a name or stars.
+  const guestRows = (await saved(third)).rows, beforeConflict = db.growthChart(alice.id).version;
+  await signIn(third);
+  const choiceReady = () => third.waitForFunction(() => !document.querySelector('#chart-conflict').hidden && !document.querySelector('#chart-use-file').disabled);
+  await choiceReady();
+  assert.equal((await saved(third)).sync.participant.id, alice.id, 'Sign-in links ownership even when content needs a choice');
+  assert.equal((await saved(third)).sync.needsChoice, true);
+  assert.deepEqual((await saved(third)).rows, guestRows);
+  await third.reload({ waitUntil: 'networkidle0' }); await choiceReady();
+  await third.click('#chart-sync'); await choiceReady();
+  assert.equal((await saved(third)).sync.needsChoice, true, 'Reloads and retries must preserve the first-link choice');
+  assert.equal(db.growthChart(alice.id).version, beforeConflict, 'A first-link conflict must not silently replace the saved file');
+  await third.click('#chart-use-file'); await settled(third);
+  assert.equal((await saved(third)).name, 'Device chart');
+  assert.equal((await saved(third)).sync.needsChoice, undefined);
+  await thirdContext.close();
+
   await first.setOfflineMode(true); await fill(first, 'Offline chart');
   await first.reload({ waitUntil: 'load' });
   assert.equal((await saved(first)).name, 'Offline chart');
@@ -139,7 +183,7 @@ try {
   assert.deepEqual(db.growthChart(alice.id).chart.stars, {});
   await first.screenshot({ path: resolve(directory, 'chart-phone.png'), fullPage: true });
   assert.deepEqual(errors, []);
-  console.log('PASS: real OAuth callback, explicit linking, shared file identity, second-device restore, offline conflict, lost-response retry, account isolation, clear and phone layout.');
+  console.log('PASS: real OAuth callback, automatic linking, shared file identity, second-device restore, offline conflict, lost-response retry, account isolation, clear and phone layout.');
 } finally {
   if (browser) await browser.close();
   db.close();

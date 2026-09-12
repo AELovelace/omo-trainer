@@ -12,7 +12,11 @@ The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CS
 
 New participants can choose **Settings & data → Create account**, or register from the shared sign-in page. Registration uses a username and password, then returns through app consent. The account works across registered lidoll.dev apps. Email is not collected; password resets are handled by the administrator. [AUTH_GUIDE.md](AUTH_GUIDE.md) describes registration and its request limits.
 
-The PWA now includes the **Potty chart** from LiDOLL QUEST. It can be linked to the same Chrysalis participant file as observations, with explicit first upload, offline edits and version-conflict choices. See [Growth Chart setup and behavior](GROWTH_CHART_GUIDE.md).
+The PWA now includes the **Potty chart** from LiDOLL QUEST. It can be linked to the same Chrysalis participant file as observations, with automatic linking on sign-in, offline edits and version-conflict choices. See [Growth Chart setup and behavior](GROWTH_CHART_GUIDE.md).
+
+On mobile (up to 680px wide), the bottom bar switches between **Record observation**,
+**Record wetting**, **Roll**, and **Pattern analysis**. Unsaved form values remain
+when switching. The links support browser Back/Forward and offline reopening.
 
 ## Run locally
 
@@ -86,7 +90,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v14-lidollid. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v16-mobile-actions. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 

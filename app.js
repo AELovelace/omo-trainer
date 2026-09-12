@@ -340,6 +340,23 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
   const page = ['overview', 'history', 'settings', 'about'].includes(requested) ? requested : 'overview';
+  const action = ['observation', 'wetting', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
+  document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
+    panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
+  });
+  document.querySelectorAll('[data-action]').forEach(link => {
+    const selected = page === 'overview' && link.dataset.action === action;
+    if (selected) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  if (page === 'overview' && requested === action) {
+    requestAnimationFrame(() => {
+      const panel = document.querySelector('[data-mobile-panel="' + action + '"]');
+      panel.querySelector('h2').focus({ preventScroll: true }); // Announce the destination without opening the phone keyboard.
+      panel.scrollIntoView({ block: 'start', behavior: 'instant' });
+    });
+  }
+
   document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `page-${page}`; });
   document.querySelectorAll('[data-page]').forEach(link => {
     const selected = link.dataset.page === page;
@@ -562,6 +579,9 @@ $('#delete-all').addEventListener('click', () => { // Removes only this app's na
 });
 
 window.addEventListener('hashchange', navigate);
+document.querySelectorAll('[data-action]').forEach(link => link.addEventListener('click', () => {
+  if (location.hash === link.getAttribute('href')) navigate(); // Tapping the active action returns to its form after scrolling down.
+}));
 window.addEventListener('storage', event => { // Adopts changes from another tab while preserving any in-progress form edits.
   if (event.key !== STORAGE_KEY && event.key !== null) return;
   try {

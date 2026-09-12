@@ -45,6 +45,54 @@ test('charts and receipts persist, isolate participants, and prevent stale edits
   } finally { db.close(); }
 });
 
+test('row meanings and dated star associations survive renames, account isolation, reopening and exports', async () => {
+  await mkdir('artifacts', { recursive: true });
+  const path = resolve(await mkdtemp(resolve('artifacts/growth-rows-')), 'chart.sqlite');
+  let db = openDatabase(path);
+  try {
+    const alice = db.ensureParticipant('issuer', 'alice', 'Alice');
+    const bob = db.ensureParticipant('issuer', 'bob', 'Bob');
+    const aliceChart = {
+      ...chart(),
+      rows: [
+        { id: 'diaper', label: 'Morning check-in', note: 'Recorded before breakfast', praise: 'Saved.', locked: false },
+        { id: 'custom_evening', label: 'Morning check-in', note: 'A separate user-defined task', locked: false },
+        chart().rows[1],
+      ],
+      stars: { '2026-09-10:diaper': true, '2026-09-11:custom_evening': true },
+    };
+    const bobChart = {
+      ...chart(),
+      rows: [{ ...chart().rows[0], label: 'Evening routine', note: 'Bob uses this ID differently' }, chart().rows[1]],
+    };
+    db.saveGrowthChart(alice.id, change(0, 'alice-rows', aliceChart));
+    db.saveGrowthChart(bob.id, change(0, 'bob-rows', bobChart));
+
+    const renamed = structuredClone(aliceChart);
+    renamed.rows[0].label = 'Breakfast routine';
+    renamed.rows[0].note = 'Updated description for this chart line';
+    renamed.rows = [renamed.rows[1], renamed.rows[0], renamed.rows[2]]; // Position and duplicate labels must never determine star identity.
+    db.saveGrowthChart(alice.id, change(1, 'alice-rename', renamed));
+    db.close(); db = openDatabase(path);
+
+    const restored = db.growthChart(alice.id).chart;
+    assert.deepEqual(restored, renamed, 'Persist the complete user-authored row definitions with the stars');
+    assert.deepEqual(db.growthChart(bob.id).chart, bobChart, 'Another user sharing a row ID retains their own meaning');
+    const meanings = Object.keys(restored.stars).sort().map(key => {
+      const [date, rowId] = key.split(':');
+      const row = restored.rows.find(candidate => candidate.id === rowId);
+      return { date, rowId, label: row.label, note: row.note }; // Resolve within this participant's saved rows, never from a global default.
+    });
+    assert.deepEqual(meanings, [
+      { date: '2026-09-10', rowId: 'diaper', label: 'Breakfast routine', note: 'Updated description for this chart line' },
+      { date: '2026-09-11', rowId: 'custom_evening', label: 'Morning check-in', note: 'A separate user-defined task' },
+    ]);
+    const exported = JSON.parse(JSON.stringify(db.exportCharts())); // Operator JSON exports must retain the same row-to-star relationship.
+    assert.deepEqual(exported.find(value => value.participantId === alice.id).chart, renamed);
+    assert.deepEqual(exported.find(value => value.participantId === bob.id).chart, bobChart);
+  } finally { db.close(); }
+});
+
 test('explicit issuer migration preserves participant IDs and charts, invalidates sessions, and refuses collisions atomically', () => {
   const db = openDatabase(':memory:');
   try {

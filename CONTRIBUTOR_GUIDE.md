@@ -52,7 +52,14 @@ Use `scripts/import-growth-chart.mjs <source-folder>` to refresh public assets.
 Both charts use the existing OIDC session and participant ID; keep the
 `growth-chart` API session-owned, CSRF-protected, versioned and uncached.
 The browser chart and its retry/ownership metadata share one atomic save.
-Sign-in alone never links or uploads a guest chart. See GROWTH_CHART_GUIDE.md.
+Mobile quick actions use `#observation`, `#wetting`, `#roll`, and `#analysis`
+inside Overview. Keep the existing forms mounted so switching preserves drafts;
+CSS limits single-panel display to 680px and below. The fixed bar and toast spacing
+include the phone safe area. Desktop retains all dashboard cards.
+
+Sign-in automatically links and uploads a guest chart, or restores the saved
+chart on a fresh device. Conflicting first-link content requires a durable
+`sync.needsChoice` version choice before uploading. See GROWTH_CHART_GUIDE.md.
 Production auth defaults use auth.sadgirlsclub.wtf; existing issuer transitions
 require the explicit migration documented in AUTH_GUIDE.md.
 
