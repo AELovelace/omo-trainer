@@ -690,21 +690,6 @@ input[type="number"] {
   color: var(--pink) !important;
   font: 16px var(--mono) !important;
 }
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--pink);
-  height: 28px;
-  min-height: 28px;
-  margin: 12px 0 4px;
-  cursor: pointer;
-}
-.range-labels {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font: 9px/1.5 var(--mono);
-  color: var(--muted);
-}
 .prompt-note {
   font-size: 11px;
   line-height: 1.75;
@@ -1457,9 +1442,6 @@ dialog .primary {
   .field-help,
   .prompt-note {
     font-size: 11px;
-  }
-  .range-labels {
-    font-size: 9px;
   }
   .button {
     padding: 11px 12px;

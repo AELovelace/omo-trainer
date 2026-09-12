@@ -225,7 +225,6 @@ function renderProtocol() { // Shows the current chance and an auditable daily b
   protocolView = trainingState(state.entries);
   const view = protocolView, counts = view.counts;
   $('#probability').value = view.probability;
-  $('#probability-slider').value = view.probability;
   $('#protocol-probability').textContent = `${view.probability}%`;
   $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's chance is fixed by completed days.` : 'Starts at 50% with your first new observation. Earlier, unclassified snapshots are kept in your archive.';
   $('#protocol-today').textContent = `Today: F ${counts.forced} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
@@ -423,8 +422,6 @@ $('#diaper').addEventListener('change', () => { // Restores a selected diaper's 
   const latest = sortedEntries(state.entries).find(entry => entry.occurredAt.startsWith(`${formDay}T`) && entry.diaperNumber === Number($('#diaper').value));
   $('#wettings').value = latest?.wettingsCount ?? 0;
 });
-$('#probability-slider').addEventListener('input', event => { $('#probability').value = event.target.value; }); // Synchronizes the whole-number slider with its editable value.
-$('#probability').addEventListener('input', event => { if (event.target.validity.valid) $('#probability-slider').value = event.target.value; });
 $('#chart-days').addEventListener('change', renderChart);
 document.querySelectorAll('[data-metric]').forEach(button => button.addEventListener('click', () => { // Switches chart metrics without changing stored records.
   chartMetric = button.dataset.metric;
