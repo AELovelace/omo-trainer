@@ -1,7 +1,8 @@
 # Growth Chart and Chrysalis files
 
-The promotional Growth Chart from LiDOLL QUEST is bundled at
-`/tracker/potty_chart/`. Open it using **Potty chart** in Little Log's navigation
+The Growth Chart from LiDOLL QUEST is integrated into Little Log at
+`/tracker/#potty-chart`. Its markup and scoped styles live in the main app document.
+Legacy `/tracker/potty_chart/` URLs redirect to this view, including offline bookmarks. Open it using **Potty chart** in Little Log's navigation
 or the installed PWA shortcut. It uses the same manifest, worker, OAuth client
 and app session as Little Log. The main website's `/potty_chart/` source also
 uses this backend; serve both on the same origin to carry its existing browser
@@ -11,17 +12,14 @@ chart through the login redirect.
 
 Sign in with LiD0llID. The existing authorization-code flow validates PKCE,
 state, nonce, issuer, ID-token signature and userinfo subject. Login requests
-with `returnTo=growth-chart` return to the bundled chart using the existing
+with `returnTo=growth-chart` return to the integrated chart view using the existing
 `/tracker/auth/callback` registration. Arbitrary return URLs are not accepted.
 An account mismatch offers reauthentication with `prompt=login`.
 
 Signing in automatically links and saves the browser chart to the same
 participant ID as that account's observations. Opening the chart with an existing
 app session also links it automatically. A fresh device loads the saved chart.
-If the browser and file contain different meaningful charts, choose which complete
-chart to retain; this pending choice survives reloads and automatic retries.
-There is no automatic merge of names, rows or stars. Download a backup before
-replacing content you want to keep.
+Chart sync now combines unsynced edits against the last acknowledged base, retries failed uploads with the same mutation receipt, and refreshes across tabs and every 15 visible seconds. Independent row fields and star additions/removals merge; a pending local edit wins a simultaneous edit to the same field. First-link guest rows with different meanings receive separate IDs and keep their stars. Account mismatches still block upload; storage or combined-size limits report an error without discarding either copy. A closed PWA must reopen to upload offline edits.
 
 Names, custom rows/notes, stars, refusal count, reveal status and start date are
 stored in `growth_charts` in the existing SQLite file. `growth_chart_mutations`
@@ -64,13 +62,15 @@ the participant, acknowledged base/version and any pending mutation atomically.
 Only that browser envelope carries pending offline edits. Account changes cannot
 upload another participant's chart. Edits made during an upload remain pending
 after its acknowledgement. Sync runs after edits, on reconnect, on return to the
-page and every 30 visible seconds. A closed PWA must reopen to sync.
+page and every 15 visible seconds. A closed PWA must reopen to sync.
 
 **Clear chart & reset rows** clears stars/history and restores default rows;
 it remains linked and queues that change centrally. **Sign out & clear this
 browser chart** ends the Little Log app session and clears this chart's local
 copy; it leaves the central chart and Little Log's observation cache intact.
-Conversely, signing out from Little Log does not erase the separate chart cache.
+Signing out through Little Log Settings clears both local observations and the
+integrated chart after ending the shared session; server data remains saved.
+The chart uses the shared Settings sign-out control and the shared CRT/install controls.
 The shared identity-provider login may remain active. Browser profiles shared
 with other people can expose cached content; installed apps may have separate
 storage on some platforms. Earlier exports/backups can retain removed data.
@@ -105,3 +105,7 @@ before changing an existing installation. No live DNS, proxy or service has
 been changed by this implementation.
 
 Admin Potty charts tab: the four chart graphs and row-meaning table live beside participant drilldowns. Statistics respect cohort/date filters; the read-only weekly chart and expandable row histories show the complete current saved chart. Missing charts are explicit, and authorization loss clears chart details from memory and the page. `tests/admin-browser.mjs` checks chart navigation, weekly stars, participant switching, date-filter separation and phone layouts.
+
+Automatic chart synchronization: Chart sync now combines unsynced edits against the last acknowledged base, retries failed uploads with the same mutation receipt, and refreshes across tabs and every 15 visible seconds. Independent row fields and star additions/removals merge; a pending local edit wins a simultaneous edit to the same field. First-link guest rows with different meanings receive separate IDs and keep their stars. Account mismatches still block upload; storage or combined-size limits report an error without discarding either copy. A closed PWA must reopen to upload offline edits. Admin chart views poll the protected chart-only endpoint every 15 seconds while visible, and refresh on focus or same-origin save notifications. No observation datasets are polled. The shared merge.js asset must ship in both chart shells and offline caches. Browser regression coverage includes actual saved chart edits reaching the admin view, cross-tab draft preservation, automatic guest/offline merges, 409 retries and lost-response receipts.
+
+Potty chart is a native Little Log view at #potty-chart. Navigation keeps the same document and preserves drafts; the app header shows chart sync status on this route. Existing ldq-growth-chart-v2 saves are reused. Old chart URLs and the PWA shortcut lead to the integrated view, and OAuth returns there. Run node scripts/embed-growth-chart.mjs after editing bundled chart markup/styles; the source importer also runs it. Commit index.html and potty_chart/embedded.css with the matching chart scripts and worker. Static deployments must include the updated nginx chart redirects.

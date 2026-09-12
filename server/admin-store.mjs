@@ -75,6 +75,10 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
     return {format:'little-log-admin',schemaVersion:1,exportedAt:new Date().toISOString(),
       users:selected.map(user=>({id:user.id,label:user.label,createdAt:user.createdAt,records:records(user.id).filter(record=>record.entry),growthChart:growthChart(user.id)}))};
   }
+  function charts(actor) { // Poll only chart snapshots, without repeatedly transferring every observation record.
+    requireAdmin(actor);
+    return {users:users(actor).map(user=>({id:user.id,growthChart:growthChart(user.id)}))};
+  }
   function plan(input) { // Validate the whole batch and fingerprint reviewed database versions before an all-or-nothing import.
     let incoming;
     try { incoming=parseAdminImport(input); } catch(error) { throw new ApiError(400,error.message); }
@@ -136,6 +140,6 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
       db.exec('COMMIT'); return result.summary;
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
-  return {access,requireAdmin,bootstrap,users,updateUser,dataset,previewImport,importData,
+  return {access,requireAdmin,bootstrap,users,updateUser,dataset,charts,previewImport,importData,
     auditList(actor) { requireAdmin(actor); return db.prepare('SELECT * FROM admin_audit ORDER BY created_at DESC,rowid DESC LIMIT 100').all(); }};
 }

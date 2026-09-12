@@ -210,7 +210,7 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
       json_extract(payload_json, '$.protocolVersion') AS protocol_version, json_extract(payload_json, '$.timeZone') AS time_zone,
       json_extract(payload_json, '$.lastFailureAt') AS last_failure_at,
       CASE WHEN json_extract(payload_json, '$.kind') IS NULL THEN 'cumulative'
-        ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode
+        ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode, json_extract(payload_json, '$.desperation') AS desperation
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 

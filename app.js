@@ -1,11 +1,22 @@
-import { STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
+import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
 import { isRoll, isObservation } from './lib/model.js';
 import { diaperSummary, suggestedDiaperWettings } from './lib/diapers.js';
 import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
+import './potty_chart/merge.js';
+import './potty_chart/account.js';
+import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.
+
 const $ = selector => document.querySelector(selector); // Keeps DOM lookups short while remaining dependency-free.
+let chartHeader=null;
+function renderChartHeader() { // The top bar describes chart sync on the chart route, and observation sync on other routes.
+  if(location.hash!=='#potty-chart' || !chartHeader) return;
+  $('.local-badge').lastChild.textContent=' '+chartHeader.text;
+  $('#topbar-sign-in').hidden=chartHeader.connected;
+}
+window.addEventListener('little-log-chart-status',event=>{chartHeader=event.detail;renderChartHeader();});
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
 const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
 let editedWetting = null, editedDiaperChange = null;
@@ -108,6 +119,7 @@ function renderSync() { // Separates local saving, pending uploads, conflicts, a
   $('#disconnect-account').hidden = !sync.participant && !serverSession;
   $('#sync-now').disabled = syncRunning;
   $('#disconnect-account').disabled = syncRunning;
+  renderChartHeader();
   const conflictKey = JSON.stringify(sync.conflicts);
   if (conflictKey === renderedConflicts) return; // Status-only refreshes must not detach a conflict button while it is focused or being clicked.
   renderedConflicts = conflictKey;
@@ -340,7 +352,7 @@ function renderRecent() { // Includes standalone rolls without borrowing unsaved
   $('#recent-list').innerHTML = recent.length ? recent.map(entry => {
     const description = entry.kind === 'diaper-change' ? entry.wettingsCount + ' wettings before change' : entry.kind === 'roll' ? 'Roll at ' + entry.probability + '%' : entry.kind === 'wetting' ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL ' + (entry.kind === 'observation' ? 'since last check-in' : 'daily cumulative');
     const position = (entry.position ? ' &middot; ' + positions[entry.position] : '') + (entry.diaperNumber ? ' &middot; Diaper #' + entry.diaperNumber : '');
-    return `<div class="recent-entry"><span class="entry-icon ${entry.result ?? 'pee'}"><svg class="icon"><use href="#i-${entry.result === 'hold' ? 'clock' : 'drop'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${description}${position}</p></div><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span></div>`;
+    return `<div class="recent-entry"><span class="entry-icon ${entry.result ?? 'pee'}"><svg class="icon"><use href="#i-${entry.result === 'hold' ? 'clock' : 'drop'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${description}${position}${entry.desperation ? " &middot; Desperation: " + DESPERATION_LABELS[entry.desperation] : ""}</p></div><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span></div>`;
   }).join('') : '<div class="empty-state">NO OBSERVATIONS FILED<br>Your saved observations and rolls will appear here.</div>';
 }
 
@@ -364,7 +376,7 @@ function renderHistory() { // Limits initial table size while keeping filters an
     const probability = isRoll(entry) ? entry.probability + '%' : '&mdash;';
     const provenance = entry.kind === 'diaper-change' ? 'Completed diaper' : entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled' : 'Manual (legacy)';
     const edit = entry.kind === 'roll' ? '' : `<button class="text-button" data-edit="${entry.id}" aria-label="Edit record ${dateLabel(entry.occurredAt)}">Edit</button>`;
-    return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
+    return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.desperation ? ' &middot; Desperation: ' + DESPERATION_LABELS[entry.desperation] : ''}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
   }).join('');
 }
 
@@ -380,7 +392,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about', 'potty-chart'].includes(requested) ? requested : 'overview';
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -405,7 +417,12 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     if (selected) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  renderSync();
+  if(page==='potty-chart') {
+    window.dispatchEvent(new Event('little-log-chart-visible'));
+    requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
+  }
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.
@@ -434,6 +451,11 @@ $('#log-form').addEventListener('submit', event => { // Saves interval intake an
   } catch (error) { notify(error.message); }
 });
 
+$('#roll-desperation').addEventListener('input',event=>{ // Present the four named steps to both sighted users and screen readers.
+  const label=DESPERATION_LABELS[DESPERATION_LEVELS[Number(event.target.value)]];
+  $('#roll-desperation-value').value=label;
+  event.target.setAttribute('aria-valuetext',label);
+});
 $('.roll-button').addEventListener('click', () => { // Draws independently, leaving every unsaved observation field untouched.
   try {
     refreshStoredState();
@@ -442,12 +464,13 @@ $('.roll-button').addEventListener('click', () => { // Draws independently, leav
     const entries = enroll(state.entries, now), probability = trainingState(entries, now).probability;
     const result = rollResult(probability), occurredAt = instantTimestamp(now);
     const candidate = validateEntry({ id: crypto.randomUUID(), kind: 'roll', occurredAt, probability, result,
-      source: 'random', rolledAt: occurredAt, rolledResult: result, position: $('.roll-card input[name="position"]:checked').value });
+      source: 'random', rolledAt: occurredAt, rolledResult: result, position: $('.roll-card input[name="position"]:checked').value,
+      desperation: DESPERATION_LEVELS[Number($('#roll-desperation').value)] });
     const enrollment = protocolFor(entries);
     const savedEntries = result === 'hold'
       ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt } : entry) : entries;
     commit({ ...state, entries: [...savedEntries, candidate] });
-    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Roll saved. You're always free to use the bathroom.`;
+    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
     $('#roll-result').hidden = false;
   } catch (error) { notify(error.message); }
 });
@@ -751,11 +774,11 @@ $('#topbar-sign-in').addEventListener('click', () => { // Opens shared sign-in f
     return;
   }
   try { sessionStorage.removeItem('little-log.connect'); } catch { /* Shared sign-in can still proceed without a saved upload preference. */ }
-  location.assign('./auth/login');
+  location.assign('./auth/login'+(location.hash==='#potty-chart'?'?returnTo=growth-chart':''));
 });
 $('#disconnect-account').addEventListener('click', async () => { // Clears this device only after ending its app session; centralized records remain available on the next sign-in.
   if (syncRunning) return notify('Wait for the current sync to finish before signing out.');
-  if (!confirm('Sign out of Little Log and clear its device copy? Server records stay saved. Any unsynced changes on this device will be lost; export a backup first to keep them.')) return;
+  if (!confirm('Sign out of Little Log and clear observations and the potty chart on this device? Server records stay saved. Any unsynced changes on this device will be lost; export a backup first to keep them.')) return;
   try {
     if (!serverSession) serverSession = await apiRequest('session');
     await apiRequest('logout', {});
@@ -763,6 +786,7 @@ $('#disconnect-account').addEventListener('click', async () => { // Clears this 
     localStorage.removeItem(STORAGE_KEY);
     persistedRaw = null;
     state = deviceState(emptyState());
+    window.dispatchEvent(new Event('little-log-signout')); // Clear both integrated views after the shared session ends.
     serverSession = null;
     syncMessage = '';
     sessionStorage.removeItem('little-log.connect');

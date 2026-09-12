@@ -53,7 +53,7 @@ try {
   if(page.url().startsWith(issuer))await Promise.all([page.waitForNavigation({waitUntil:'networkidle0'}),page.click('button[type="submit"]')]);
   assert.equal(page.url(),origin+'/tracker/admin/');
   await page.waitForSelector('#graphs .admin-graph');
-  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),19);
+  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),20);
   assert.equal(await page.$$eval('#potty-graphs .admin-graph',nodes=>nodes.length),4);
   assert.match(await page.$eval('#chart-lines',node=>node.textContent),/A custom line/);
   assert.equal(await page.evaluate(()=>localStorage.length),0,'The admin console must not cache everyone’s data in localStorage');
@@ -105,6 +105,10 @@ try {
   assert.equal(await page.$$eval('#graph-stars svg[role="img"]',nodes=>nodes.length),0);
   assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),2,'Drilldown retains history outside statistics dates');
   await page.click('#all-dates');
+  const background=db.growthChart(alice.id);
+  db.saveGrowthChart(alice.id,{baseVersion:background.version,mutationId:'background-chart-update',chart:{...background.chart,name:'Automatic admin refresh'}});
+  await page.waitForFunction(()=>document.querySelector('#potty-detail-content').textContent.includes('Automatic admin refresh'),{timeout:22000});
+  assert.match(await page.$eval('#admin-status',node=>node.textContent),/updated automatically/);
   for(const width of [320,390,768,1440]) {
     await page.setViewport({width,height:1000});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'Chart tab overflows at '+width);
@@ -178,7 +182,7 @@ try {
   assert.equal(await ordinary.$$eval('#graphs .admin-graph',nodes=>nodes.length),0,'Ordinary users must not receive shared analytics');
   assert.equal(await ordinary.evaluate(async()=> (await fetch('../api/admin/data')).status),403);
   assert.deepEqual(errors,[]);
-  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 23 graphs, potty chart drilldown, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
+  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 24 graphs, potty chart drilldown, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
   console.log('Screenshots: '+directory);
 }finally{
   if(browser)await browser.close();db.close();

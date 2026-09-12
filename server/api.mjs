@@ -32,6 +32,7 @@ export function createApi(database, login) { // Resolves each app session to an 
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
         const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';
         if (route === 'admin/users' && request.method === 'GET') return send(response, 200, { users: database.admin.users(participant.id), csrf, participant });
+        if (route === 'admin/charts' && request.method === 'GET') return send(response, 200, database.admin.charts(participant.id));
         if (route === 'admin/data' && request.method === 'GET') return send(response, 200, database.admin.dataset(participant.id, scope));
         if (route === 'admin/audit' && request.method === 'GET') return send(response, 200, { audit: database.admin.auditList(participant.id) });
         if (route === 'admin/user' && request.method === 'POST') return send(response, 200, database.admin.updateUser(participant.id, await body(request)));

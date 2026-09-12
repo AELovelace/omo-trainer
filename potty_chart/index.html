@@ -116,12 +116,8 @@
         <button class="action" id="chart-backup" type="button">Download chart backup</button>
         <button class="action" id="chart-logout" type="button" hidden>Sign out &amp; clear this browser chart</button>
       </div>
-      <div id="chart-conflict" hidden>
-        <p>Choose one complete chart. Download a backup first if you want to keep both versions.</p>
-        <button class="action" id="chart-use-file" type="button">Replace browser chart with file chart</button>
-        <button class="action" id="chart-use-device" type="button">Replace file chart with browser chart</button>
-      </div>
-      <p>Linked edits, row removals and clearing the chart sync when online. Offline changes wait here until you reopen the chart. Signing out ends the shared Little Log app session; the identity-provider sign-in may remain active.</p>
+
+      <p>Edits, row removals and stars sync automatically while the chart is open. Offline changes retry when you reconnect. Changes from other devices are combined automatically. Signing out ends the shared Little Log app session; the identity-provider sign-in may remain active.</p>
     </section>
 
     <footer class="promo-foot">
@@ -129,6 +125,7 @@
     </footer>
   </main>
 
+  <script src="merge.js"></script>
   <script src="account.js"></script>
   <script src="app.js"></script>
   <script src="pwa.js"></script>

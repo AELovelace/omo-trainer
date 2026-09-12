@@ -1573,3 +1573,11 @@ dialog .primary {
   [data-mobile-panel][data-active="false"] { display: none; }
   .toast { bottom: calc(var(--mobile-actions-height) + env(safe-area-inset-bottom, 0px) + 16px); }
 }
+
+/* Four named desperation steps remain easy to read and drag on a phone. */
+.desperation-control { margin: 20px 0; }
+.desperation-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.desperation-heading label { margin: 0; }
+.desperation-heading output { color: var(--pink); font: 13px var(--mono); }
+#roll-desperation { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--pink); cursor: pointer; }
+.desperation-labels { display: flex; justify-content: space-between; color: var(--muted); font: 11px var(--mono); }

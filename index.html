@@ -8,7 +8,9 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <meta name="tracker-base" content="./">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./potty_chart/embedded.css">
   <title>Little Log · lidoll.dev</title>
   <script type="module" src="./app.js"></script>
 </head>
@@ -37,7 +39,7 @@
         <a href="#history" data-page="history" class="nav-item"><svg class="icon"><use href="#i-clock"/></svg><span>Record archive</span><small>02</small></a>
         <a href="#settings" data-page="settings" class="nav-item"><svg class="icon"><use href="#i-sliders"/></svg><span>Settings & data</span><small>03</small></a>
         <a href="#about" data-page="about" class="nav-item"><svg class="icon"><use href="#i-info"/></svg><span>About</span><small>04</small></a>
-        <a href="./potty_chart/" class="nav-item" id="growth-chart-nav"><svg class="icon"><use href="#i-grid"/></svg><span>Potty chart</span><small>05</small></a>
+        <a href="#potty-chart" data-page="potty-chart" class="nav-item" id="growth-chart-nav"><svg class="icon"><use href="#i-grid"/></svg><span>Potty chart</span><small>05</small></a>
         <a href="./admin/" class="nav-item" id="admin-nav" hidden><svg class="icon"><use href="#i-lock"/></svg><span>Admin console</span><small>06</small></a>
       </nav>
       <div class="sidebar-bottom"><div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><strong>RECORD ACCESS</strong><p>Sign in to sync with lidoll.dev. The organizer can access synced records for analysis.</p></div><a class="site-link" href="https://lidoll.dev">RETURN TO LIDOLL.DEV <span>↗</span></a></div>
@@ -88,6 +90,11 @@
           <div class="right-column">
             <section class="card roll-card" data-mobile-panel="roll" aria-labelledby="roll-title"><div class="card-heading"><div><h2 id="roll-title" tabindex="-1">Roll for a result</h2><p>Uses your daily chance. Saves only the roll.</p></div><svg class="icon"><use href="#i-dice"/></svg></div>
               <fieldset class="position-field"><legend>Your position</legend><div class="segmented position-options"><label><input type="radio" name="position" value="standing"><span>Standing</span></label><label><input type="radio" name="position" value="sitting" checked><span>Sitting</span></label><label><input type="radio" name="position" value="laying-down"><span>Laying down</span></label></div></fieldset>
+              <div class="desperation-control">
+                <div class="desperation-heading"><label for="roll-desperation">Desperation</label><output id="roll-desperation-value" for="roll-desperation" aria-hidden="true">Low</output></div>
+                <input id="roll-desperation" name="desperation" type="range" min="0" max="3" step="1" value="0" aria-valuetext="Low">
+                <div class="desperation-labels" aria-hidden="true"><span>Low</span><span>Med</span><span>High</span><span>Crisis</span></div>
+              </div>
               <div class="probability-box"><div class="probability-heading"><label for="probability">Calculated chance of a “pee” result</label><div class="probability-number"><input id="probability" name="probability" readonly aria-label="Calculated pee probability percentage" type="number" min="20" max="80" step="1" value="50" required inputmode="numeric"><span>%</span></div></div></div>
               <p class="field-help"><a href="#about" class="text-link">About the daily protocol</a></p>
               <p id="cooldown-status" class="field-help" role="timer" aria-live="off"></p><p class="prompt-note">A random prompt, never permission. Use the bathroom whenever you need. A result doesn't add a wetting.</p>
@@ -100,6 +107,98 @@
           </div>
         </div>
       </section>
+      <!-- BEGIN EMBEDDED POTTY CHART -->
+      <section id="page-potty-chart" class="page" hidden aria-labelledby="potty-page-title">
+        <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // GROWTH RECORD</p><h1 id="potty-page-title" tabindex="-1">POTTY CHART<span>.</span></h1><p class="subtitle">Your rows, gold stars, and weekly progress.</p></div></div>
+<section class="chart-card" aria-labelledby="chart-heading">
+      <div class="chart-ribbon" aria-hidden="true"></div>
+
+      <div class="chart-head">
+        <h2 id="chart-heading">Look how well you are doing!</h2>
+        <p class="chart-sub">Chrysalis Nursery Services &mdash; Rosy Reform &amp; Healing</p>
+
+        <p class="name-line">
+          <label for="chart-name">This chart belongs to</label>
+          <input id="chart-name" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="your name, sweetie">
+          <span class="name-star" aria-hidden="true">&#9733;</span>
+        </p>
+      </div>
+
+
+      <div class="week-nav">
+        <button class="week-step" id="week-prev" type="button" aria-label="Show the previous week">&#8592;</button>
+        <p class="week-label" id="week-label" role="status" aria-live="polite">Week of&hellip;</p>
+        <button class="week-step" id="week-next" type="button" aria-label="Show the next week">&#8594;</button>
+        <button class="action ghost week-today" id="week-today" type="button">This week</button>
+      </div>
+
+
+      <div class="progress-block">
+        <div class="progress-rail">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-read">
+          <span id="progress-count">0 / 42</span>
+          <span class="progress-label">gold stars this week</span>
+        </p>
+        <p class="praise-line" id="praise-line" role="status" aria-live="polite">A brand new week, all made up and waiting just for you.</p>
+      </div>
+
+
+      <div class="grid-wrap">
+        <div class="star-grid" id="star-grid" role="grid" aria-labelledby="chart-heading"></div>
+      </div>
+
+      <div class="row-add-bar">
+        <button class="action ghost" id="add-row" type="button"><span aria-hidden="true">&#43;</span> Add a row</button>
+      </div>
+
+      <p class="fineprint" id="fineprint">Tap a box to award a gold star, and use <span aria-hidden="true">&#9998;</span> to rename a row or <span aria-hidden="true">&times;</span> to remove one. Every week you fill in stays on file in this browser. Signing in automatically saves it to your Chrysalis file.</p>
+
+
+      <aside class="ledger-stamp" id="ledger-stamp" hidden>
+        <p class="ledger-line">Batch 014 &mdash; Welcome Fee &mdash; <span id="ledger-name">[your name]</span> &mdash; 2,000 gold.</p>
+        <p class="ledger-margin">Worth every coin. <span aria-hidden="true">&#9825;</span></p>
+      </aside>
+
+
+      <aside class="friend-note" id="friend-note" hidden>
+        <p>Do not go down to the playpen. Go to the dungeon instead. The little door behind the tapestry.</p>
+        <p>Go now, before you stop wanting to. Do not say goodbye.</p>
+        <p class="friend-sign">&mdash; a friend</p>
+        <a class="action primary slide-cta" href="/">Take the slide &#8595;</a>
+      </aside>
+
+
+      <section class="history-block" aria-labelledby="history-heading">
+        <h3 id="history-heading">Your file</h3>
+        <p class="history-summary" id="history-summary">Nothing on file yet. We will start one for you today.</p>
+        <ul class="history-list" id="history-list"></ul>
+      </section>
+
+      <div class="chart-foot">
+        <button class="action ghost" id="reset-button" type="button">Clear chart &amp; reset rows</button>
+        <button class="action ghost" id="share-button" type="button">Copy my week</button>
+      </div>
+    </section>
+
+    <section class="account-card" id="chart-account" aria-labelledby="chart-account-heading">
+      <h2 id="chart-account-heading">Chart sync</h2>
+      <p>Signing in with LiD0llID automatically links this chart to the same account as your Little Log observations and syncs your name, rows, stars and chart history. On a fresh device, your saved chart loads automatically. The organizer can access linked charts; other participants cannot.</p>
+      <p id="chart-account-status" role="status">Checking your account?</p>
+      <div class="promo-actions">
+        <a class="action" id="chart-sign-in" href="/tracker/auth/login?returnTo=growth-chart">Sign in with LiD0llID</a>
+        <a class="action" id="chart-register" href="/tracker/auth/register?returnTo=growth-chart">Create account</a>
+        <a class="action" id="chart-tracker" href="/tracker/">Little Log</a>
+        <button class="action" id="chart-sync" type="button" hidden>Sync chart</button>
+        <button class="action" id="chart-backup" type="button">Download chart backup</button>
+        <button class="action" id="chart-logout" type="button" hidden>Sign out &amp; clear this browser chart</button>
+      </div>
+
+      <p>Manage your shared account in <a href="#settings">Settings &amp; data</a>. Edits, row removals and stars sync automatically while Little Log is open. Offline changes retry when you reconnect. Changes from other devices are combined automatically. Signing out ends the shared Little Log app session; the identity-provider sign-in may remain active.</p>
+    </section>
+      </section>
+      <!-- END EMBEDDED POTTY CHART -->
       <section id="page-history" class="page" hidden><div class="page-heading"><div><p class="eyebrow">CHRYSALIS // RECORD RETRIEVAL</p><h1>RECORD ARCHIVE<span>.</span></h1><p class="subtitle">Every check-in, with room to make corrections.</p></div><button id="export-csv" class="button secondary"><svg class="icon"><use href="#i-download"/></svg>Export CSV</button></div><section class="card"><div class="history-filters"><div><label for="filter-from">From</label><input id="filter-from" type="date"></div><div><label for="filter-to">To</label><input id="filter-to" type="date"></div><div><label for="filter-result">Result</label><select id="filter-result"><option value="all">All observations</option><option value="wetting">Wettings</option><option value="diaper-change">Diaper changes</option><option value="observation">Check-ins</option><option value="pee">Pee</option><option value="hold">Hold</option></select></div><button id="clear-filters" class="text-button">Clear filters</button></div><p id="history-count" class="field-help" role="status"></p><div class="table-scroll"><table class="history-table"><thead><tr><th scope="col">Date & time</th><th scope="col">Liquids</th><th scope="col">Position</th><th scope="col">Diaper</th><th scope="col">Wettings</th><th scope="col">Chance</th><th scope="col">Result</th><th scope="col">Actions</th></tr></thead><tbody id="history-body"></tbody></table></div><div id="history-empty" class="empty-state" hidden>No observations match this view. Save a check-in or adjust the filters.</div><button id="load-more" class="button secondary" hidden>Show more</button></section></section>
       <section id="page-settings" class="page" hidden>
         <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // TERMINAL CONFIGURATION</p><h1>SETTINGS & DATA<span>.</span></h1><p class="subtitle">Account access, local defaults, and your records.</p></div></div>

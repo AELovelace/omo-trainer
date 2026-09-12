@@ -32,12 +32,23 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await fill(page, '#liquids', '123');
   await page.click('.roll-card input[value="standing"]');
+  await page.focus('#roll-desperation');
+  assert.equal(await page.$eval('#roll-desperation',input=>input.getAttribute('aria-valuetext')),'Low');
+  for(const label of ['Med','High','Crisis']) {
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.$eval('#roll-desperation',input=>input.getAttribute('aria-valuetext')),label);
+    assert.equal(await page.$eval('#roll-desperation-value',output=>output.value),label);
+  }
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await page.$eval('#probability',input=>input.value),'50','Desperation does not change probability');
   await page.click('.roll-button');
   assert.equal(await page.$eval('#liquids', input => input.value), '123', 'Rolling preserves the unsaved observation');
   let state = await saved(page);
   assert.equal(state.entries.filter(entry => entry.kind === 'roll').length, 1);
   assert.equal(state.entries.find(entry => entry.kind === 'roll').probability, 50);
   assert.equal(state.entries.find(entry => entry.kind === 'roll').position, 'standing');
+  assert.equal(state.entries.find(entry => entry.kind === 'roll').desperation, 'high');
+  assert.match(await page.$eval('#recent-list',node=>node.textContent),/Desperation: High/);
   assert.equal(state.entries.find(entry => entry.kind === 'roll').rolledAt, '2026-09-20T13:05:47+00:00');
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true);
   await page.$eval('.roll-button', button => button.dispatchEvent(new Event('click')));
@@ -111,7 +122,7 @@ try {
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true, 'Deleting a failure cannot bypass its saved deadline');
   for (const width of [320, 390, 680, 768, 1024, 1440]) {
     await page.setViewport({ width, height: 1000 });
-    for (const route of ['overview', 'history', 'settings', 'about']) {
+    for (const route of ['overview', 'history', 'settings', 'about', 'potty-chart']) {
       await page.click(`[data-page="${route}"]`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} overflows at ${width}px`);
     }
@@ -132,6 +143,8 @@ try {
   await fill(page, '#wetting-category', 'voluntary');
   await selectAction('change');
   await fill(page, '#diaper-change-wettings', '7');
+  await selectAction('roll');
+  await page.focus('#roll-desperation'); await page.keyboard.press('End');
   const entriesBeforeNavigation = (await saved(page)).entries.length;
   for (const width of [320, 390, 680]) {
     await page.setViewport({ width, height: 844 });
@@ -143,6 +156,8 @@ try {
       assert.equal(await page.$$eval('.mobile-actions a', links => links.every(link => link.getBoundingClientRect().height >= 44)), true, 'Every action has a touch-sized target');
     }
   }
+  await selectAction('roll');
+  assert.equal(await page.$eval('#roll-desperation',input=>input.getAttribute('aria-valuetext')),'Crisis','Navigation preserves desperation draft');
   await selectAction('change');
   assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '7', 'Switching keeps the change draft');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'diaper-change-title');

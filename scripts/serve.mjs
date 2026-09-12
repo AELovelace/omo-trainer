@@ -18,7 +18,7 @@ const files = new Map([
   ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
   ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
   ['lib/training.js', 'text/javascript; charset=utf-8'], ['lib/diapers.js', 'text/javascript; charset=utf-8'],
-  ...['index.html', 'style.css', 'app.js', 'account.js', 'crt-init.js', 'pwa.js', 'icons/icon-192.png', 'icons/icon-512.png'].map(name => [`potty_chart/${name}`, name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.css') ? 'text/css; charset=utf-8' : name.endsWith('.png') ? 'image/png' : 'text/javascript; charset=utf-8']),
+  ...['index.html', 'style.css', 'embedded.css', 'app.js', 'merge.js', 'account.js', 'crt-init.js', 'pwa.js', 'icons/icon-192.png', 'icons/icon-512.png'].map(name => [`potty_chart/${name}`, name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.css') ? 'text/css; charset=utf-8' : name.endsWith('.png') ? 'image/png' : 'text/javascript; charset=utf-8']),
   ['admin/index.html', 'text/html; charset=utf-8'], ['admin/app.js', 'text/javascript; charset=utf-8'], ['admin/admin.css', 'text/css; charset=utf-8'],
   ['lib/admin-format.js', 'text/javascript; charset=utf-8'], ['lib/admin-analytics.js', 'text/javascript; charset=utf-8'],
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
@@ -41,7 +41,7 @@ export const server = http.createServer(async (request, response) => { // Serves
   }
   if (!pathname.startsWith(base)) { response.writeHead(404); return response.end('Not found'); }
   if (pathname === `${base}admin`) { response.writeHead(308, { Location: `${base}admin/` }); return response.end(); }
-  if (pathname === `${base}potty_chart`) { response.writeHead(308, { Location: `${base}potty_chart/` }); return response.end(); }
+  if ([`${base}potty_chart`, `${base}potty_chart/`, `${base}potty_chart/index.html`].includes(pathname)) { response.writeHead(308, { Location: `${base}#potty-chart` }); return response.end(); } // Old chart bookmarks now open the integrated view.
   const filename = pathname.slice(base.length) === 'admin/' ? 'admin/index.html' : pathname.slice(base.length) === 'potty_chart/' ? 'potty_chart/index.html' : pathname.slice(base.length) || 'index.html';
   if (!files.has(filename)) { response.writeHead(404); return response.end('Not found'); }
   try {

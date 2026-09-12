@@ -145,7 +145,7 @@ try {
   await page.setOfflineMode(false);
 
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
-  for (const route of ['overview', 'history', 'settings', 'about']) {
+  for (const route of ['overview', 'history', 'settings', 'about', 'potty-chart']) {
     await page.click(`[data-page="${route}"]`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} must not overflow the phone viewport`);
   }

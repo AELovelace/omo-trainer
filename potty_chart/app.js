@@ -340,7 +340,12 @@
 
   function saveState(notifyAccount = true) {
     try {
-      if (localStorage.getItem(STORAGE_KEY) !== lastStored) throw new Error("Another tab changed this chart. Export your current chart before reloading.");
+      const latest=localStorage.getItem(STORAGE_KEY);
+      if(latest!==lastStored && latest && lastStored) {
+        const remote=JSON.parse(latest),base=JSON.parse(lastStored);
+        if(remote.sync?.participant.id!==state.sync?.participant.id) throw new Error("Another account changed this browser chart.");
+        state={...window.mergeGrowthCharts({base,local:state,remote}),sync:remote.sync}; // Combine another tab's saved edits before writing this tab's next edit.
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));   // Persists the whole file in one write.
       lastStored = JSON.stringify(state);
       storageFailed = false;
@@ -891,11 +896,14 @@
     }
   }
 
+  if(!document.querySelector("#page-potty-chart")) { // Little Log owns the shared CRT control when the chart is embedded.
   setCrtEnabled(!document.documentElement.classList.contains("crt-disabled"), false); // Syncs with the early check.
 
   crtToggle.addEventListener("click", () => {
     setCrtEnabled(crtToggle.getAttribute("aria-pressed") !== "true"); // Flips the current accessible state.
   });
+
+  }
 
   /* -- Start ---------------------------------------------------------------- */
 
@@ -905,15 +913,24 @@
   showWeek(currentWeekStart);                                     // Builds and paints the live week.
 
   function replaceChart(next) { // Apply an explicitly selected or clean remote chart and repaint its editable rows.
+    const draft=editingRowId?{id:editingRowId,label:grid.querySelector('.row-edit-label')?.value,note:grid.querySelector('.row-edit-note')?.value}:null;
+    const focused=document.activeElement?.classList.contains('row-edit-label')?'row-edit-label':document.activeElement?.classList.contains('row-edit-note')?'row-edit-note':null;
     state = next;
     state.rows = sanitizeRows(state.rows);
     nameField.value = state.name;
-    editingRowId = null;
-    showWeek(viewWeekStart);
+    editingRowId = draft && state.rows.some(row=>row.id===draft.id)?draft.id:null;
+    buildGrid(); refresh(); // Refresh the same week without closing its row editor.
+    if(editingRowId) { // Background pulls must preserve an unfinished row editor and its focus.
+      grid.querySelector('.row-edit-label').value=draft.label;
+      grid.querySelector('.row-edit-note').value=draft.note;
+      if(focused) grid.querySelector('.'+focused).focus({preventScroll:true});
+    }
   }
 
   account = window.createGrowthChartAccount({
     get: () => state,
+    embedded: Boolean(document.querySelector("#page-potty-chart")),
+    blank: () => ({...blankState(),rows:sanitizeRows(cloneDefaultRows())}),
     isBlank: () => state.name.trim() === "" && Object.keys(state.stars).length === 0 && state.refusals === 0 && !state.escaped
       && JSON.stringify(state.rows) === JSON.stringify(sanitizeRows(cloneDefaultRows())), // Only untouched charts may be replaced automatically with the account's saved chart.
     persist: () => saveState(false),
@@ -935,5 +952,6 @@
     showWeek(wasLive ? currentWeekStart : viewWeekStart);
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshCalendar(); });
+  window.addEventListener("little-log-chart-visible", refreshCalendar);
   setInterval(refreshCalendar, 30000);
 })();

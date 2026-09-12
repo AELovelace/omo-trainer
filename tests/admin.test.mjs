@@ -104,10 +104,13 @@ test('admin API requires authorization before reading or parsing data, CSRF for 
   const get=(route,cookie)=>fetch(login.origin+'/'+route,{headers:cookie?{Cookie:cookie}:{}});
   try {
     assert.equal((await get('admin/users')).status,401);
-    for(const route of ['admin/users','admin/data','admin/audit']) assert.equal((await get(route,ordinary)).status,403);
+    for(const route of ['admin/users','admin/data','admin/charts','admin/audit']) assert.equal((await get(route,ordinary)).status,403);
     const response=await get('admin/users',token);
     assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.status,200);
     const {csrf}=await response.json();
+    const charts=await get('admin/charts',token);
+    assert.equal(charts.status,200); assert.equal(charts.headers.get('cache-control'),'no-store');
+    assert.ok((await charts.json()).users.every(user=>user.growthChart && !('records' in user)));
     const post=headers=>fetch(login.origin+'/admin/user',{method:'POST',headers:{Cookie:token,'Content-Type':'application/json',...headers},body:JSON.stringify({id:alice.id,action:'revoke',version:0})});
     assert.equal((await post({Origin:login.origin})).status,403);
     assert.equal((await post({Origin:'https://wrong.example','X-CSRF-Token':csrf})).status,403);
@@ -131,7 +134,7 @@ test('analytics separate participant-day intake, actual events, random draws and
   assert.equal(view.graphs.find(g=>g.id==='classification').rows.find(row=>row[0]==='semi-forced')[1],1);
   assert.equal(view.chartRows.filter(row=>row[2]==='custom').length,2);
   assert.equal(new Set(view.chartRows.filter(row=>row[2]==='custom').map(row=>row[3])).size,2);
-  assert.equal(view.graphs.length,23);
+  assert.equal(view.graphs.length,24);
   assert.equal(analyzeDataset(data,{from:'2026-09-12'}).totals.wettings,0);
 });
 

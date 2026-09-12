@@ -33,7 +33,7 @@
     {
       "name": "Potty chart",
       "short_name": "Potty chart",
-      "url": "./potty_chart/",
+      "url": "./#potty-chart",
       "description": "Open the Growth Chart in your Chrysalis file"
     }
   ]

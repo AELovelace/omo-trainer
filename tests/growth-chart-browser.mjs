@@ -53,8 +53,8 @@ async function signIn(page) { // Exercise the real OIDC redirect, password, cons
     await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('button[type="submit"]')]);
   }
   if (page.url().startsWith(issuer)) await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('button[type="submit"]')]);
-  assert.equal(page.url(), origin + '/tracker/potty_chart/');
-  await page.waitForFunction(() => !document.querySelector('#chart-sync').hidden || !document.querySelector('#chart-conflict').hidden);
+  assert.equal(page.url(), origin + '/tracker/#potty-chart');
+  await page.waitForFunction(() => !document.querySelector('#chart-sync').hidden);
 }
 
 try {
@@ -63,7 +63,12 @@ try {
   const first = await context.newPage(), second = await secondContext.newPage();
   for (const page of [first, second]) { page.on('pageerror', error => errors.push(error.message)); await page.setViewport({ width: 390, height: 844 }); }
   await first.goto(origin + '/tracker/', { waitUntil: 'networkidle0' });
-  await Promise.all([first.waitForNavigation({ waitUntil: 'networkidle0' }), first.click('#growth-chart-nav')]);
+  await first.evaluate(()=>{window.integrationMarker='same-document';});
+  await first.click('#growth-chart-nav');
+  await first.waitForFunction(()=>!document.querySelector('#page-potty-chart').hidden);
+  assert.equal(await first.evaluate(()=>window.integrationMarker),'same-document','Chart navigation must not reload Little Log');
+  assert.equal(await first.$('iframe'),null);
+  assert.equal(await first.$$eval('[id]',nodes=>nodes.length-new Set(nodes.map(node=>node.id)).size),0,'Integrated IDs must remain unique');
   assert.equal(await first.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Chart must fit a phone viewport');
   await fill(first, 'Device chart');
   await first.click('.star-cell:not(.is-locked):not(.is-future)');
@@ -82,6 +87,14 @@ try {
 
   const alice = db.ensureParticipant(issuer, aliceSubject, 'alice');
   assert.equal(db.growthChart(alice.id).chart, null, 'An anonymous chart stays local before sign-in');
+  await first.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
+  await first.$eval('.row-edit-note',node=>{node.value='Draft kept inside Little Log';});
+  await first.click('[data-page="overview"]');
+  await first.$eval('#liquids',node=>{node.value='123';node.dispatchEvent(new Event('input',{bubbles:true}));});
+  await first.click('#growth-chart-nav');
+  assert.equal(await first.$eval('.row-edit-note',node=>node.value),'Draft kept inside Little Log');
+  await first.click('.row-edit-cancel');
+  assert.equal(await first.$eval('#liquids',node=>node.value),'123');
   await signIn(first); await settled(first);
   assert.equal(await first.$('#chart-link'), null, 'Sign-in must link without an extra button');
   assert.equal((await saved(first)).name, 'Device chart');
@@ -90,9 +103,9 @@ try {
   assert.deepEqual(db.growthChart(alice.id).chart.rows, authored.rows, 'OAuth upload must include renamed and custom row labels and notes');
   assert.deepEqual(db.growthChart(alice.id).chart.stars, authored.stars);
   assert.equal((await saved(first)).sync.participant.id, alice.id);
-  assert.equal((await first.evaluate(async () => (await (await fetch('../api/session')).json()).participant.id)), alice.id, 'Observations and chart share one participant');
+  assert.equal((await first.evaluate(async () => (await (await fetch('./api/session')).json()).participant.id)), alice.id, 'Observations and chart share one participant');
 
-  await second.goto(origin + '/tracker/potty_chart/', { waitUntil: 'networkidle0' });
+  await second.goto(origin + '/tracker/#potty-chart', { waitUntil: 'networkidle0' });
   await signIn(second);
   await settled(second); // A fresh device automatically links and restores the existing file.
   assert.equal((await saved(second)).name, 'Device chart');
@@ -104,41 +117,52 @@ try {
   await second.reload({ waitUntil: 'networkidle0' }); await settled(second);
   assert.equal((await saved(second)).name, 'Device chart', 'An existing app session must link and restore without signing in again');
 
+  const sibling=await context.newPage();
+  await sibling.goto(origin+'/tracker/#potty-chart',{waitUntil:'networkidle0'}); await settled(sibling);
+  await first.bringToFront();
+  await first.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
+  await first.$eval('.row-edit-note',node=>{node.value='Unfinished editor draft';});
+  await sibling.bringToFront();
+  await fill(sibling,'Updated in another tab'); await settled(sibling);
+  await first.bringToFront();
+  await first.waitForFunction(()=>document.querySelector('#chart-name').value==='Updated in another tab');
+  assert.equal(await first.$eval('.row-edit-note',node=>node.value),'Unfinished editor draft','Automatic pulls keep an unfinished row editor');
+  await first.click('.row-edit-cancel');
+  await sibling.bringToFront();
+  await fill(sibling,'Device chart'); await settled(sibling);
+  await first.bringToFront();
+  await first.waitForFunction(()=>document.querySelector('#chart-name').value==='Device chart');
+  await sibling.close();
+
   const thirdContext = await browser.createBrowserContext(), third = await thirdContext.newPage();
   third.on('pageerror', error => errors.push(error.message));
-  await third.goto(origin + '/tracker/potty_chart/', { waitUntil: 'networkidle0' });
+  await third.goto(origin + '/tracker/#potty-chart', { waitUntil: 'networkidle0' });
   await third.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
   await third.$eval('.row-edit-note', element => { element.value = 'Guest row note'; });
   await third.click('.row-edit-save'); // Custom rows alone are meaningful, even without a name or stars.
   const guestRows = (await saved(third)).rows, beforeConflict = db.growthChart(alice.id).version;
   await signIn(third);
-  const choiceReady = () => third.waitForFunction(() => !document.querySelector('#chart-conflict').hidden && !document.querySelector('#chart-use-file').disabled);
-  await choiceReady();
-  assert.equal((await saved(third)).sync.participant.id, alice.id, 'Sign-in links ownership even when content needs a choice');
-  assert.equal((await saved(third)).sync.needsChoice, true);
-  assert.deepEqual((await saved(third)).rows, guestRows);
-  await third.reload({ waitUntil: 'networkidle0' }); await choiceReady();
-  await third.click('#chart-sync'); await choiceReady();
-  assert.equal((await saved(third)).sync.needsChoice, true, 'Reloads and retries must preserve the first-link choice');
-  assert.equal(db.growthChart(alice.id).version, beforeConflict, 'A first-link conflict must not silently replace the saved file');
-  await third.click('#chart-use-file'); await settled(third);
-  assert.equal((await saved(third)).name, 'Device chart');
-  assert.equal((await saved(third)).sync.needsChoice, undefined);
+  await settled(third);
+  assert.equal((await saved(third)).sync.participant.id,alice.id);
+  assert.ok((await saved(third)).rows.some(row=>row.note==='Guest row note'),'First link retains the guest row meaning');
+  assert.ok((await saved(third)).rows.some(row=>row.label==='Morning routine'),'First link retains the saved account rows');
+  assert.equal(Object.keys((await saved(third)).stars).length,2);
+  assert.ok(db.growthChart(alice.id).version>beforeConflict);
+  assert.equal(await third.$('#chart-conflict'),null,'Ordinary sync needs no whole-chart choice');
+  await third.reload({waitUntil:'networkidle0'}); await settled(third);
   await thirdContext.close();
 
   await first.setOfflineMode(true); await fill(first, 'Offline chart');
-  await first.reload({ waitUntil: 'load' });
+  await first.goto(origin+'/tracker/potty_chart/',{waitUntil:'load'});
+  assert.equal(first.url(),origin+'/tracker/#potty-chart','Old chart bookmarks resolve inside the offline PWA');
   assert.equal((await saved(first)).name, 'Offline chart');
   await fill(second, 'Second device'); await settled(second);
   await first.setOfflineMode(false);
-  await first.waitForFunction(() => !document.querySelector('#chart-sync').disabled);
-  await first.click('#chart-sync');
-  await first.waitForFunction(() => !document.querySelector('#chart-conflict').hidden && !document.querySelector('#chart-use-file').disabled);
-  assert.equal((await saved(first)).name, 'Offline chart', 'A conflict must retain the local edit');
-  await first.click('#chart-use-file'); await settled(first);
-  assert.equal((await saved(first)).name, 'Second device');
+  await settled(first);
+  assert.equal((await saved(first)).name,'Offline chart','Pending local field edits automatically rebase over a newer file');
+  assert.equal(db.growthChart(alice.id).chart.name,'Offline chart');
 
-  let dropped = false, editDuringUpload = false;
+  let dropped = false, editDuringUpload = false, raceRemote=false;
   await first.setRequestInterception(true);
   first.on('request', async request => {
     if (!dropped && request.method() === 'POST' && request.url().endsWith('/api/growth-chart')) {
@@ -150,6 +174,10 @@ try {
         editDuringUpload = false;
         await fill(first, 'Newer edit'); // Edit while the previous chart snapshot is still in flight.
       }
+      if(raceRemote && request.method()==='POST' && request.url().endsWith('/api/growth-chart')) {
+        raceRemote=false; const current=db.growthChart(alice.id);
+        db.saveGrowthChart(alice.id,{baseVersion:current.version,mutationId:'concurrent-server-save',chart:{...current.chart,refusals:current.chart.refusals+1}});
+      }
       await request.continue();
     }
   });
@@ -159,9 +187,15 @@ try {
     return state.sync.pending && !document.querySelector('#chart-sync').disabled;
   });
   const revision = db.growthChart(alice.id).version;
-  await first.click('#chart-sync'); await settled(first);
+  await settled(first); // Lost responses retry automatically using the same mutation receipt.
   assert.equal(db.growthChart(alice.id).version, revision, 'Retrying the lost response must not create another revision');
   assert.equal(db.growthChart(alice.id).chart.name, 'Lost response');
+
+  const beforeRace=db.growthChart(alice.id).chart.refusals;
+  raceRemote=true;
+  await fill(first,'Racing edit'); await settled(first);
+  assert.equal(db.growthChart(alice.id).chart.name,'Racing edit');
+  assert.equal(db.growthChart(alice.id).chart.refusals,beforeRace+1,'409 retry preserves the intervening server edit');
 
   const beforeEdit = db.growthChart(alice.id).version;
   editDuringUpload = true;
@@ -182,8 +216,15 @@ try {
   await first.click('#reset-button'); await settled(first);
   assert.deepEqual(db.growthChart(alice.id).chart.stars, {});
   await first.screenshot({ path: resolve(directory, 'chart-phone.png'), fullPage: true });
+  const centralBeforeLogout=db.growthChart(alice.id);
+  await first.click('[data-page="settings"]');
+  first.once('dialog',dialog=>dialog.accept());
+  await first.click('#disconnect-account');
+  await first.waitForFunction(()=>JSON.parse(localStorage.getItem('ldq-growth-chart-v2')).sync===null);
+  assert.equal((await saved(first)).name,'','Shared sign-out clears the integrated chart');
+  assert.deepEqual(db.growthChart(alice.id),centralBeforeLogout,'Sign-out keeps the server chart');
   assert.deepEqual(errors, []);
-  console.log('PASS: real OAuth callback, automatic linking, shared file identity, second-device restore, offline conflict, lost-response retry, account isolation, clear and phone layout.');
+  console.log('PASS: real OAuth callback, automatic linking, shared file identity, second-device restore, automatic guest/offline merge, lost-response retry, account isolation, clear and phone layout.');
 } finally {
   if (browser) await browser.close();
   db.close();

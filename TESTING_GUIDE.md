@@ -101,8 +101,8 @@ installed Puppeteer module and `CHROME_PATH` pointing to installed Chrome.
 It creates temporary local auth/tracker services and synthetic accounts under
 artifacts/, exercises real OAuth/consent and the chart callback, verifies
 automatic linking, renamed/custom row and star restoration on a second device,
-fresh-device/session restore, durable first-link conflicts,
-offline conflicts, lost-response
+fresh-device/session restore, automatic first-link merging,
+automatic offline merging, lost-response
 retries, account isolation, clearing and phone layout. It does not contact or
 change production. A restricted environment may need permission to start the
 headless browser. Actual installation and shared browser/installed-app storage
@@ -115,3 +115,9 @@ Admin chart legends: at desktop and 320px widths, verify every chart has readabl
 Admin Potty charts tab: the four chart graphs and row-meaning table live beside participant drilldowns. Statistics respect cohort/date filters; the read-only weekly chart and expandable row histories show the complete current saved chart. Missing charts are explicit, and authorization loss clears chart details from memory and the page. `tests/admin-browser.mjs` checks chart navigation, weekly stars, participant switching, date-filter separation and phone layouts.
 
 Admin chart freshness regression: change a participant chart through its own UI after the admin dataset loads, wait for sync, then open View chart. Verify renamed/new rows and all saved stars match the participant chart and database. Drilldowns and participant selections fetch current data; failed reads must not silently display the older snapshot.
+
+Automatic chart synchronization: Chart sync now combines unsynced edits against the last acknowledged base, retries failed uploads with the same mutation receipt, and refreshes across tabs and every 15 visible seconds. Independent row fields and star additions/removals merge; a pending local edit wins a simultaneous edit to the same field. First-link guest rows with different meanings receive separate IDs and keep their stars. Account mismatches still block upload; storage or combined-size limits report an error without discarding either copy. A closed PWA must reopen to upload offline edits. Admin chart views poll the protected chart-only endpoint every 15 seconds while visible, and refresh on focus or same-origin save notifications. No observation datasets are polled. The shared merge.js asset must ship in both chart shells and offline caches. Browser regression coverage includes actual saved chart edits reaching the admin view, cross-tab draft preservation, automatic guest/offline merges, 409 retries and lost-response receipts.
+
+Potty chart is a native Little Log view at #potty-chart. Navigation keeps the same document and preserves drafts; the app header shows chart sync status on this route. Existing ldq-growth-chart-v2 saves are reused. Old chart URLs and the PWA shortcut lead to the integrated view, and OAuth returns there. Run node scripts/embed-growth-chart.mjs after editing bundled chart markup/styles; the source importer also runs it. Commit index.html and potty_chart/embedded.css with the matching chart scripts and worker. Static deployments must include the updated nginx chart redirects.
+
+Roll desperation: the four-step slider records low/medium/high/crisis on each new roll (displayed Low/Med/High/Crisis), without changing probability or cooldown. History, JSON/CSV backups, database sync and admin exports retain the field. Older rolls omit it and appear as Not recorded in the admin distribution. The chosen level stays selected while switching views and after saving; a new page starts at Low. Tests/desperation.test.mjs covers validation, sync and export round trips; tests/training-browser.mjs checks keyboard steps, saving and mobile draft retention.

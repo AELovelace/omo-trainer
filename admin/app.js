@@ -7,7 +7,8 @@ const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
-let chartUserId='',chartWeek='',chartRequest=0; // Keep drilldown state only in memory alongside the authorized dataset.
+let chartUserId='',chartWeek='',chartRequest=0,chartRefreshing=false;
+const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('little-log-chart-updates'):null; // Keep drilldown state only in memory alongside the authorized dataset.
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
@@ -195,8 +196,39 @@ function navigate() {
   const route=['analytics','potty-charts','users','transfer','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
+  if(route==='potty-charts') void refreshCharts();
   if(route==='audit' && actor) void renderAudit().catch(error=>status(error.message));
 }
+async function refreshCharts() { // Refresh visible chart statistics in the background without disturbing import previews or observation records.
+  if(!actor || loading || chartRefreshing || location.hash!=='#potty-charts' || $('#potty-detail').getAttribute('aria-busy')==='true') return;
+  const epoch=accessEpoch,sequence=chartRequest;
+  chartRefreshing=true;
+  try {
+    const latest=await request('charts');
+    if(!dataset || epoch!==accessEpoch || sequence!==chartRequest || loading || document.activeElement?.id==='potty-week-date') return;
+    const saved=new Map(latest.users.map(user=>[user.id,user.growthChart]));
+    let changed=false;
+    dataset.users=dataset.users.map(user=>{
+      const next=saved.get(user.id);
+      if(!next || JSON.stringify(next)===JSON.stringify(user.growthChart)) return user;
+      changed=true; return {...user,growthChart:next};
+    });
+    if(changed) {
+      const open=[...document.querySelectorAll('.potty-row-details details')].map(node=>node.open);
+      const scrolls=[...document.querySelectorAll('#potty-detail .table-scroll')].map(node=>[node.scrollLeft,node.scrollTop]);
+      const focused=document.activeElement,weekControl=focused?.dataset.chartWeek;
+      renderAnalytics();
+      document.querySelectorAll('.potty-row-details details').forEach((node,i)=>{node.open=Boolean(open[i]);});
+      document.querySelectorAll('#potty-detail .table-scroll').forEach((node,i)=>{if(scrolls[i]){node.scrollLeft=scrolls[i][0];node.scrollTop=scrolls[i][1];}});
+      if(weekControl) $('#potty-detail [data-chart-week="'+weekControl+'"]').focus({preventScroll:true});
+      status('Potty charts updated automatically.');
+    }
+  } catch(error) { if(dataset) status('Automatic chart refresh will retry. '+error.message); }
+  finally { chartRefreshing=false; }
+}
+if(chartUpdates) chartUpdates.onmessage=()=>void refreshCharts();
+window.addEventListener('focus',()=>void refreshCharts());
+setInterval(()=>{if(!document.hidden)void refreshCharts();},15000);
 function resetPreview() { preview=null; $('#import-preview').textContent=''; $('#apply-import').hidden=true; }
 async function refresh() { // Fetch shared records only after a successful server-side admin check.
   if(loading) return;
@@ -285,7 +317,7 @@ async function checkAccess() { // Revalidate access without erasing a file previ
   if(!actor || loading) return;
   try { await request('users'); } catch(error) { status(error.message); }
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkAccess();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){void checkAccess();void refreshCharts();}});
 setInterval(()=>{if(!document.hidden)void checkAccess();},60000);
 const today=new Date(),start=new Date(); start.setDate(start.getDate()-29);
 const date=value=>new Date(value.getTime()-value.getTimezoneOffset()*60000).toISOString().slice(0,10);

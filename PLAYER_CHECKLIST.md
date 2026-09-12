@@ -47,11 +47,15 @@ During a server update, offline check-ins remain on the device and retry afterwa
 - [ ] Sign in; confirm the browser chart links and uploads automatically.
 - [ ] Check that its file ID matches your observation participant.
 - [ ] On a fresh second device, confirm the saved chart loads automatically.
-- [ ] Sign in with a different guest chart; confirm the version choice survives reloads.
-- [ ] Edit offline, reopen, reconnect and resolve conflicting versions explicitly.
+- [ ] Sign in with a different guest chart; confirm automatic merging retains both sets of row meanings and stars.
+- [ ] Edit offline, reopen and reconnect; confirm automatic merging and retries complete without a version-choice prompt.
 - [ ] Download a chart backup before clearing or replacing content you want to keep.
 - [ ] Confirm switching accounts cannot upload the previous account's chart.
 - [ ] Clear chart & reset rows, sync, and confirm cleared stars stay cleared.
 - [ ] Sign out & clear this browser chart only removes this chart's local copy.
 
 On mobile, use Record change in the bottom bar to save a completed diaper and its final wetting count. Switching tabs preserves your unsaved form.
+
+Potty chart is a native Little Log view at #potty-chart. Navigation keeps the same document and preserves drafts; the app header shows chart sync status on this route. Existing ldq-growth-chart-v2 saves are reused. Old chart URLs and the PWA shortcut lead to the integrated view, and OAuth returns there. Run node scripts/embed-growth-chart.mjs after editing bundled chart markup/styles; the source importer also runs it. Commit index.html and potty_chart/embedded.css with the matching chart scripts and worker. Static deployments must include the updated nginx chart redirects.
+
+Roll desperation: the four-step slider records low/medium/high/crisis on each new roll (displayed Low/Med/High/Crisis), without changing probability or cooldown. History, JSON/CSV backups, database sync and admin exports retain the field. Older rolls omit it and appear as Not recorded in the admin distribution. The chosen level stays selected while switching views and after saving; a new page starts at Low. Tests/desperation.test.mjs covers validation, sync and export round trips; tests/training-browser.mjs checks keyboard steps, saving and mobile draft retention.
