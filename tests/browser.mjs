@@ -23,7 +23,7 @@ async function fill(page, selector, value) { // Updates native controls and fire
 }
 
 async function saved(page) { // Reads synthetic test records from the app's single storage namespace.
-  return page.evaluate(() => { const state = JSON.parse(localStorage.getItem('lidoll.little-log.v1')); if (state) state.entries = state.entries.filter(entry => entry.kind !== 'protocol'); return state; });
+  return page.evaluate(() => { const state = JSON.parse(localStorage.getItem('lidoll.little-log.v1')); if (state) state.entries = state.entries.filter(entry => entry.kind === 'observation'); return state; });
 }
 
 try {
@@ -48,21 +48,21 @@ try {
 
   await fill(page, '#liquids', 250);
   await fill(page, '#wettings', 2);
-  await fill(page, '#manual-result', 'hold');
-  await page.click('button[value="manual"]');
-  assert.equal((await saved(page)).entries[0].result, 'hold');
+
+  await page.click('#save-observation');
+  assert.equal((await saved(page)).entries[0].kind, 'observation');
   assert.equal((await saved(page)).entries[0].wettingsCount, 2);
   await page.click('#new-diaper');
   assert.equal(await page.$eval('#diaper', element => element.value), '2');
   assert.equal(await page.$eval('#wettings', element => element.value), '0');
   await fill(page, '#liquids', 600);
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
-  await page.click('.roll-button');
+  await page.click('#save-observation');
   let state = await saved(page);
   assert.equal(state.entries.length, 2);
-  assert.equal(state.entries[1].result, 'pee');
+  assert.equal(state.entries[1].kind, 'observation');
   assert.equal(state.entries[1].wettingsCount, 0);
-  assert.equal(await page.$eval('#stat-liquids', element => element.textContent), '600');
+  assert.equal(await page.$eval('#stat-liquids', element => element.textContent), '850');
   await page.reload({ waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
   assert.equal(await page.$eval('#diaper', element => element.value), '2');
@@ -77,11 +77,11 @@ try {
   assert.equal(await page.$eval('#liquids', element => element.value), '0');
   await fill(page, '#liquids', 400);
   assert.equal(await page.$eval('#probability', element => element.readOnly), true);
-  await fill(page, '#manual-result', 'hold');
-  await page.click('button[value="manual"]');
+
+  await page.click('#save-observation');
   state = await saved(page);
-  assert.equal(state.entries[2].source, 'manual');
-  assert.equal(state.entries[2].probability, 50);
+  assert.equal(state.entries[2].kind, 'observation');
+  assert.equal('result' in state.entries[2], false);
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
 
   await page.click('[data-metric="liquids"]');
@@ -90,14 +90,14 @@ try {
   assert.equal(await page.$$eval('#chart-data tr', elements => elements.length), 30);
   await page.click('[data-page="history"]');
   assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 3);
-  await fill(page, '#filter-result', 'pee');
-  assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 1);
-  await page.click('[data-edit]');
+  await fill(page, '#filter-result', 'observation');
+  assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 3);
+  await page.click(`[data-edit="${state.entries[1].id}"]`);
   await fill(page, '#edit-liquids', 650);
   await page.click('#edit-form button[type="submit"]');
   state = await saved(page);
-  assert.equal(state.entries.find(entry => entry.result === 'pee').liquidsMl, 650);
-  assert.equal(state.entries.find(entry => entry.result === 'pee').edited, true);
+  assert.equal(state.entries.find(entry => entry.id === state.entries[1].id).liquidsMl, 650);
+  assert.equal(state.entries.find(entry => entry.id === state.entries[1].id).edited, true);
   await page.click('#clear-filters');
 
   const cdp = await page.createCDPSession();
@@ -122,9 +122,9 @@ try {
   assert.equal((await saved(page)).entries.length, 3);
 
   const badBackup = resolve(artifacts, 'invalid-backup.json');
-  await writeFile(badBackup, JSON.stringify({ ...backup, entries: [{ ...backup.entries.find(entry => !entry.kind), position: '<img src=x onerror=alert(1)>' }] }));
+  await writeFile(badBackup, JSON.stringify({ ...backup, entries: [{ ...backup.entries.find(entry => entry.kind === 'observation'), position: '<img src=x onerror=alert(1)>' }] }));
   await (await page.$('#import-file')).uploadFile(badBackup);
-  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('supported position'));
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('position'));
   assert.equal((await saved(page)).entries.length, 3);
 
   assert.equal(await page.$('#default-probability'), null);
@@ -139,12 +139,12 @@ try {
   await page.screenshot({ path: resolve(artifacts, 'offline.png'), fullPage: true });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
-  await page.click('.roll-button');
+  await page.click('#save-observation');
   assert.equal((await saved(page)).entries.length, 4);
   await page.setOfflineMode(false);
 
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
-  for (const route of ['overview', 'history', 'settings']) {
+  for (const route of ['overview', 'history', 'settings', 'about']) {
     await page.click(`[data-page="${route}"]`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} must not overflow the phone viewport`);
   }
@@ -161,7 +161,7 @@ try {
   const before = await saved(page);
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException('Storage full', 'QuotaExceededError'); }; });
   await page.click('[data-page="overview"]');
-  await page.click('.roll-button');
+  await page.click('#save-observation');
   assert.deepEqual(await saved(page), before);
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
   await page.reload({ waitUntil: 'networkidle0' });
@@ -169,7 +169,7 @@ try {
   await page.evaluate(() => localStorage.setItem('lidoll.little-log.v1', 'invalid JSON recovery test'));
   await page.reload({ waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
-  await page.click('.roll-button');
+  await page.click('#save-observation');
   assert.equal(await page.evaluate(() => localStorage.getItem('lidoll.little-log.v1')), 'invalid JSON recovery test');
   await page.click('[data-page="settings"]');
   page.once('dialog', dialog => dialog.accept());

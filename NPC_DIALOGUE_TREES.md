@@ -4,7 +4,7 @@ No NPC dialogue system or dialogue assets are present in this tracker. Current i
 
 Chrysalis presentation copy uses brief archival labels: observation, record archive, terminal, and identity gateway. The anonymous margin note in `index.html` is fictional interface flavor, not dialogue attributed to a game character. Keep this flavor outside factual status, consent, deletion, and error messages. Registration, sign-in, and consent copy live in `auth/views.mjs`; server validation feedback lives in `scripts/auth-server.mjs` and `auth/store.mjs`.
 
-Keep check-in confirmations explicit about whether a result was rolled or entered manually, whether saving succeeded, and whether wettings changed. Preserve clear error and recovery messages when updating the app's tone. Document actual NPC trees here only when the original game's source becomes available.
+Confirm observations, rolls and actual wettings separately. A saved observation has no pee/hold result; a standalone roll records no liquid intake or diaper snapshot. Describe new liquids as consumed since the previous check-in, and old cumulative measurements explicitly as legacy daily totals. Preserve clear error and recovery messages when updating the app's tone. Document actual NPC trees here only when the original game's source becomes available.
 
 The daily protocol uses factual category labels and countdown/status messages in `index.html` and `app.js`. A classification records one actual event; a random result never creates one. Empty-day increases describe the absence of recorded events, not an inferred bodily outcome. Keep archive flavor separate from these distinctions.
 

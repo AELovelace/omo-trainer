@@ -1,6 +1,6 @@
 # Quest integration status
 
-This standalone tracker does not contain quests, a game runtime, or a quest editor. No quest assets were supplied. Its main daily probability protocol records check-ins and classified wetting events independently of any future game progression. GENERATION_TUNING_GUIDE.md documents the protocol; manual logging remains available during random-roll cooldowns.
+This standalone tracker does not contain quests, a game runtime, or a quest editor. No quest assets were supplied. Its main daily probability protocol records check-ins and classified wetting events independently of any future game progression. GENERATION_TUNING_GUIDE.md documents the protocol; observation and wetting logging remain available during random-roll cooldowns. Rolling and saving observations are separate actions.
 
 The recovered Chrysalis terminal styling references the public site's diagnostic-archive presentation. Its terminal code and margin note are decorative interface fiction, not implemented quests, unlock conditions, or new canonical game events.
 

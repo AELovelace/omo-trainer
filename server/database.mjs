@@ -155,7 +155,9 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
       COALESCE(json_extract(payload_json, '$.kind'), 'roll') AS kind, json_extract(payload_json, '$.category') AS category,
       json_extract(payload_json, '$.rolledAt') AS rolled_at, json_extract(payload_json, '$.rolledResult') AS rolled_result,
       json_extract(payload_json, '$.protocolVersion') AS protocol_version, json_extract(payload_json, '$.timeZone') AS time_zone,
-      json_extract(payload_json, '$.lastFailureAt') AS last_failure_at
+      json_extract(payload_json, '$.lastFailureAt') AS last_failure_at,
+      CASE WHEN json_extract(payload_json, '$.kind') IS NULL THEN 'cumulative'
+        ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 

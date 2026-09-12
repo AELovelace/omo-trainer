@@ -10,6 +10,8 @@ These cover all 101 probability settings, rejection sampling, cumulative snapsho
 
 `tests/training.test.mjs` covers daily ties, empty days, both bounds and movement away from them, completed-day-only adjustments, legacy snapshots, DST/timezones, deterministic enrollment selection, cooldown boundaries, original results surviving corrections, typed event backups/exports, multi-device synchronization, and migration from SQLite version 1 without losing records or retry receipts.
 
+`tests/observations.test.mjs` verifies interval sums, overlapping legacy cumulative snapshots, date attribution, separation of draw and observation fields, measurement-mode validation/exports, retry idempotency, second-device synchronization and totals after edits/deletions. The browser workflow verifies observation editing and intake reset; the protocol browser workflow checks that rolling preserves an unfinished observation and that saving during cooldown never creates another roll.
+
 `tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
 
 ## Deployment regression checks
@@ -31,9 +33,9 @@ node tests/training-browser.mjs
 
 `TEST_URL` defaults to `http://127.0.0.1:4173/tracker/`. The runner uses an isolated browser context and synthetic data, so it does not access normal Chrome-profile records. It writes screenshots and test-only backup files to ignored `artifacts/`.
 
-The workflow covers random/manual logging, daily carry-forward/reset, independent wetting counts, persistence after reload, charts, filters, editing, JSON/CSV downloads, valid and invalid imports, preferences, offline reload and saving, 390px phone layout, deletion, quota errors, and corrupt-data recovery. Screenshot fixtures are synthetic; the application ships with an empty history.
+The workflow covers independent observation logging and interval intake totals, daily carry-forward/reset, independent wetting counts, persistence after reload, charts, filters, editing, JSON/CSV downloads, valid and invalid imports, preferences, offline reload and saving, 390px phone layout, deletion, quota errors, and corrupt-data recovery. Screenshot fixtures are synthetic; the application ships with an empty history.
 
-The protocol browser workflow uses a controlled clock and deterministic test-only RNG to verify blocked repeat rolls, exact countdown expiry, wetting/manual logging during cooldown, offline reload, midnight decreases, empty-day increases, retrospective corrections, historical probability preservation, wetting filters/deletion, and all routes at six viewport widths. It writes `artifacts/protocol-desktop.png` and `artifacts/protocol-mobile.png`.
+The protocol browser workflow uses a controlled clock and deterministic test-only RNG to verify blocked repeat rolls, exact countdown expiry, wetting/observation logging during cooldown, preservation of unsaved intake during a roll, offline reload, midnight decreases, empty-day increases, retrospective corrections, historical probability preservation, wetting filters/deletion, and all routes at six viewport widths. It writes `artifacts/protocol-desktop.png` and `artifacts/protocol-mobile.png`.
 
 It also checks that the Chrysalis CRT toggle persists through reload, switches off under reduced motion, and restores the saved preference when that media setting clears. For visual releases, inspect desktop and phone screenshots, chart/legend colors, visible focus rings, dark native date/select controls, and sign-in/consent contrast. Check all four routes (Overview, Record archive, Settings, and About) at 320, 390, 680, 768, 1024, and 1440 pixels for document overflow. The icon generator and HTTP tests cover all install-icon sizes; visual inspection verifies the sigil itself.
 

@@ -6,7 +6,7 @@ The interface is styled as a recovered **Chrysalis observation terminal**, using
 
 The main protocol starts at 50%, applies a ten-minute cooldown after a random Hold, and adjusts the chance by five percentage points per completed day within 20-80%. Each actual wetting is classified separately. Nonempty days with Forced + Voluntary >= Semi-involuntary + Involuntary decrease the chance; other days, including days with no recorded wettings, increase it. See [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md) for day boundaries, enrollment, offline behavior and upgrade details.
 
-Each check-in stores its timestamp, cumulative liquids, position, diaper number, cumulative wetting snapshot, probability, and random/manual result. New random draws also retain their original time and result. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
+Each check-in stores its timestamp, liquids consumed since the previous check-in, position, diaper number, and cumulative wetting snapshot. Rolling is a separate action that records only its actual time, calculated probability, and result. Saving a check-in never rolls; rolling leaves unsaved check-in fields untouched. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
 
 The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
 
@@ -59,7 +59,7 @@ Session credentials live in HttpOnly cookies, never in localStorage or JSON expo
 
 Export before clearing unsynced data. Import validates the entire backup, adds new IDs, skips exact duplicates, keeps current defaults, and rejects conflicting IDs without a partial import. Connected imports queue new records for upload. CSV follows the history filters; JSON includes the device's records and defaults without credentials.
 
-Daily liquid summaries use the highest cumulative snapshot, never the sum of repeated snapshots. Counters are snapshots rather than measured volumes. Entries keep their recorded local day and offset after travel. Editing an unchanged timestamp preserves its original offset; changing it uses the device timezone for the chosen date.
+Daily liquid summaries sum interval intake on the recorded check-in date. On days containing older cumulative records, they use the highest legacy cumulative amount plus interval intake recorded after the latest legacy snapshot, avoiding overlap. History, editors and exports label the measurement mode explicitly. Intake spanning midnight is assigned to the date of the check-in; the app does not guess when each drink occurred. Counters are snapshots rather than measured volumes. Entries keep their recorded local day and offset after travel. Editing an unchanged timestamp preserves its original offset; changing it uses the device timezone for the chosen date.
 
 ## Retrieve the dataset and make backups
 

@@ -85,7 +85,7 @@ try {
   await alice.goto(`${origin}/tracker/`, { waitUntil: 'networkidle0' });
   await fill(alice, '#liquids', 400);
   await alice.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
-  await alice.click('.roll-button');
+  await alice.click('#save-observation');
   await alice.click('[data-page="settings"]');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
   await alice.waitForSelector('#confirm-password');
@@ -142,7 +142,7 @@ try {
   await second.click('[data-page="overview"]');
   await fill(second, '#liquids', 700);
   await second.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; }); // Keeps this queue-size assertion independent of an additional failure-deadline update.
-  await second.click('.roll-button');
+  await second.click('#save-observation');
   assert.equal((await saved(second)).sync.queue.length, 1);
   await second.reload({ waitUntil: 'networkidle0' });
   assert.equal((await saved(second)).entries.length, 2);
