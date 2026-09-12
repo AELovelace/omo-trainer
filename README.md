@@ -133,3 +133,5 @@ Administrators can edit the scrolling home reminder in **Admin console > Reminde
 **Admin console > Reminders > Margin note** controls the separate home-page tips card. Notes support 2,000 characters with line breaks, preview, and a show/hide toggle. They update open online pages automatically, like the scrolling header.
 
 External games can connect to the shared LiDollCoin wallet using the [LiDollCoin API](LIDOLLCOIN_API.md). LiDollQuest links through Settings, then uses online earnings and spending instead of uploading its saved gold balance.
+
+LiDollQuest browser sign-in uses the first-party wallet session described in LIDOLLCOIN_API.md: same-tab LiD0llID sign-in, first consent, automatic return and restore. Deploy the Node service plus public coins/browser.js before the rebuilt game. Browser grants and remembered permissions live only in market.sqlite (schema 4); the external bearer API and scientific-data storage remain separate.

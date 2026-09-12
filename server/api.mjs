@@ -1,3 +1,4 @@
+import {coinBrowserApi} from './coin-browser-api.mjs';
 import {coinApi} from './coin-api.mjs';
 import { ApiError } from './database.mjs';
 
@@ -22,6 +23,7 @@ async function body(request, limit = 256 * 1024) { // Bounds uploads before pars
 export function createApi(database, login) { // Resolves each app session to an OIDC identity and isolates all data by that identity.
   return async (request, response, route) => {
     try {
+      if(route.startsWith('lidollcoin/browser/'))return coinBrowserApi(database,login,request,response,route.slice('lidollcoin/browser/'.length));
       if(route.startsWith('lidollcoin/v1/'))return coinApi(database,login,request,response,route.slice('lidollcoin/v1/'.length));
       const origin = request.headers.origin;
       if (request.headers['sec-fetch-site'] === 'cross-site' || (origin && origin !== login.origin)) throw new ApiError(403, 'This origin is not allowed.');

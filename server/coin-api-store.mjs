@@ -21,6 +21,8 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
     CREATE TABLE IF NOT EXISTS coin_game_operations(client TEXT NOT NULL,owner TEXT NOT NULL,id TEXT NOT NULL,kind TEXT NOT NULL,amount INTEGER NOT NULL,created_at INTEGER NOT NULL,fingerprint TEXT NOT NULL,result TEXT NOT NULL,PRIMARY KEY(client,owner,id));
     CREATE TABLE IF NOT EXISTS coin_refunds(client TEXT NOT NULL,owner TEXT NOT NULL,original TEXT NOT NULL,PRIMARY KEY(client,owner,original));
     CREATE INDEX IF NOT EXISTS coin_game_daily ON coin_game_operations(owner,client,created_at);
+    CREATE TABLE IF NOT EXISTS coin_browser_grants(grant_id TEXT PRIMARY KEY REFERENCES coin_grants(id));
+    CREATE TABLE IF NOT EXISTS coin_browser_permissions(owner TEXT NOT NULL,client TEXT NOT NULL,PRIMARY KEY(owner,client));
     CREATE TABLE IF NOT EXISTS coin_rate_limits(key TEXT PRIMARY KEY,starts INTEGER NOT NULL,count INTEGER NOT NULL);
   `);
   function app(id) {const value=apps.find(item=>item.id===id);if(!value)fail(401,'Unknown external app.','invalid_client');return value;} // Resolve only pre-registered app IDs.
@@ -77,7 +79,23 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
   }
   function balance(secret) {const value=grant(secret,'wallet:read');return {currency:'LiDollCoin',balance:wallet(value.owner).coins,account_id:hash(value.client+':'+value.owner)};}
   function connections(owner) {return db.prepare('SELECT id,client,scope,created_at AS createdAt,expires FROM coin_grants WHERE owner=? AND revoked=0 AND expires>? ORDER BY created_at DESC').all(owner,now()).map(value=>({...value,name:apps.find(a=>a.id===value.client)?.name??value.client}));}
-  function revoke(owner,id) {db.prepare('UPDATE coin_grants SET revoked=1 WHERE owner=? AND id=?').run(owner,id);return {ok:true};}
+  function revoke(owner,id) {if(db.prepare('SELECT 1 FROM coin_browser_grants b JOIN coin_grants g ON g.id=b.grant_id WHERE g.owner=? AND g.id=?').get(owner,id))db.prepare('DELETE FROM coin_browser_permissions WHERE owner=? AND client=?').run(owner,'lidollquest');db.prepare('UPDATE coin_grants SET revoked=1 WHERE owner=? AND id=?').run(owner,id);return {ok:true};}
+  function browserApproved(owner) {return Boolean(db.prepare('SELECT 1 FROM coin_browser_permissions WHERE owner=? AND client=?').get(owner,'lidollquest'));}
+  function browserIssue(owner,previous) { // Reuse the same wallet ledger and receipts, but never expose this session secret to game code.
+    if(!enabled(owner))fail(403,'Account access is disabled.');app('lidollquest');
+    return atomic(()=>{const secret=randomBytes(32).toString('base64url'),id=randomUUID();
+      if(typeof previous==='string')db.prepare('UPDATE coin_grants SET revoked=1 WHERE token_hash=? AND id IN (SELECT grant_id FROM coin_browser_grants)').run(hash(previous)); // Rotate only this browser session; other connected devices stay signed in.
+      db.prepare('INSERT INTO coin_grants VALUES (?,?,?,?,?,?,?,0)').run(id,hash(secret),owner,'lidollquest','wallet:read wallet:write',now(),now()+30*86400000);
+      db.prepare('INSERT INTO coin_browser_grants VALUES (?)').run(id);
+      db.prepare('INSERT OR IGNORE INTO coin_browser_permissions VALUES (?,?)').run(owner,'lidollquest');
+      return secret;
+    });
+  }
+  function browserSession(secret) { // A native bearer grant cannot be used as a browser session cookie.
+    const value=grant(secret,'wallet:read');
+    if(!db.prepare('SELECT 1 FROM coin_browser_grants WHERE grant_id=?').get(value.id))fail(401,'Sign in to connect this browser.','invalid_token');
+    return {...balance(secret),linked:true,csrf:hash('browser-csrf:'+secret)};
+  }
   function operation(secret,input) { // Apply relative game earnings/spending; never accept a saved absolute balance.
     const identity=grant(secret,'wallet:write'),client=app(identity.client);
     if(!input||!/^[A-Za-z0-9_-]{1,80}$/.test(input.request_id??'')||!['credit','debit','refund'].includes(input.kind))fail(400,'Supply a request_id and credit, debit or refund kind.');
@@ -105,5 +123,5 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
       db.prepare('INSERT INTO coin_game_operations VALUES (?,?,?,?,?,?,?,?)').run(client.id,identity.owner,input.request_id,input.kind,Math.abs(delta),now(),fingerprint,JSON.stringify(result));return result;
     });
   }
-  return {app,begin,inspect,approve,token,grant,balance,connections,revoke,operation};
+  return {app,begin,inspect,approve,token,grant,balance,connections,revoke,operation,browserApproved,browserIssue,browserSession};
 }

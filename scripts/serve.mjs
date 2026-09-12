@@ -19,6 +19,7 @@ const stickerAssets = stickerCatalog();
 const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
   ...stickerAssets.map(item => [item.url, item.mime]),
+  ['coins/browser.js','text/javascript; charset=utf-8'],
   ['coins/index.html','text/html; charset=utf-8'], ['coins/app.js','text/javascript; charset=utf-8'], ['coins/style.css','text/css; charset=utf-8'],
   ['lib/economy.js', 'text/javascript; charset=utf-8'],
   ['lib/reminder.js', 'text/javascript; charset=utf-8'],

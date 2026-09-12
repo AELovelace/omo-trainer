@@ -143,3 +143,5 @@ The reminder suites also cover margin-note publishing, independent versions and 
 Stickerbank purchase removal: economy tests verify that rejected bank purchases leave balances, stock, demand and history unchanged. The economy browser check confirms purchase controls are absent while bank sales and peer purchases still work.
 
 LiDollCoin API: `tests/coin-api.test.mjs` checks relative operations, receipts/refunds, consent, scopes, persistence, account isolation, token expiry, polling backoff, CSRF and CORS. `tests/coin-browser.mjs` checks the signed-in approval and revocation interface with actual local API requests and mobile widths.
+
+LiDollQuest browser sign-in uses the first-party wallet session described in LIDOLLCOIN_API.md: same-tab LiD0llID sign-in, first consent, automatic return and restore. Deploy the Node service plus public coins/browser.js before the rebuilt game. Browser grants and remembered permissions live only in market.sqlite (schema 4); the external bearer API and scientific-data storage remain separate.

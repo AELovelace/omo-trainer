@@ -84,12 +84,25 @@ Errors return **error** and **error_description**. Common HTTP statuses: 400 inv
 
 ## Game behavior
 
-In the save/settings menu, click **Link LiDollCoins** or press **L**. Finish the browser approval, then return to the game. The inventory and shop display LiDollCoins while linked. Rewards, dialogue/narrative gold, quests, room events, trap rewards and shop sales use the online operation queue. Purchases wait for server confirmation before delivering the item; an interrupted purchase without its original in-memory item context refunds instead of guessing a delivery.
+In the browser game, choose **Link account** on the title screen; LiD0llID sign-in returns automatically to the game after first-time approval. Native builds retain the code-based Link LiDollCoins control or **L**. The inventory and shop display LiDollCoins while linked. Rewards, dialogue/narrative gold, quests, room events, trap rewards and shop sales use the online operation queue. Purchases wait for server confirmation before delivering the item; an interrupted purchase without its original in-memory item context refunds instead of guessing a delivery.
 
-The connection and pending operation journal live in **lidollcoin_wallet.json** in GameMaker's app storage, with a .bak recovery copy. This contains a credential; do not share it. No account token is written into save slots. Do not delete the journal while operations are pending. Save/load, switching connections and returning to title wait for pending wallet changes to settle. Cached balances are informational while disconnected; linked purchases require an available wallet.
+Native builds keep the connection and pending operation journal in **lidollcoin_wallet.json** in GameMaker's app storage, with a .bak recovery copy. That native file contains a credential; do not share it. Browser builds use a credential-free localStorage journal and a separate HttpOnly session cookie. No account token is written into save slots. Do not delete the journal while operations are pending. Save/load, switching connections and returning to title wait for pending wallet changes to settle. Cached balances are informational while disconnected; linked purchases require an available wallet.
 
 This does not make game-world saves and the online database one atomic transaction. Loading older game saves can replay gameplay rewards, and a crash after an item is delivered but before a world save can lose that local item. The wallet itself never accepts the saved absolute gold balance. Stronger game-state verification remains a future feature.
 
 ## Verification
 
 Run **npm test** for device consent/expiry/backoff, scopes, CSRF/CORS, revocation, account isolation, persistence, integer validation, overdrafts, receipts and refunds. Run **node tests/coin-browser.mjs** with PUPPETEER_MODULE and CHROME_PATH configured for the browser approval workflow, wallet operations and revocation against disposable local accounts.
+
+## First-party browser game sessions
+
+LiDollQuest at `/game/` uses same-tab LiD0llID sign-in through `/tracker/api/lidollcoin/browser/connect`. The existing OIDC callback accepts the allowlisted `returnTo=game-wallet` destination and returns to the consent page. Approval sets a separate thirty-day HttpOnly, Secure, SameSite=Lax cookie scoped to `/tracker/api/lidollcoin/browser/`, then redirects only to `/game/`. Cancel returns to `/game/?wallet=cancelled`. No token is included in a redirect or returned to browser JavaScript. Reusing approved access rotates this browser's session while retaining other devices' sessions.
+
+- GET `session` returns `{linked:false}` when signed out, otherwise `{linked:true,currency,balance,account_id,csrf}`. It never creates a link from a Little Log cookie alone.
+- POST `operations` uses the same relative operation and receipt contract as the bearer API. Require the wallet cookie, matching `Origin`, and `X-CSRF-Token` from GET session.
+- POST `revoke` uses the same protections, revokes this browser grant, and clears its cookie.
+- GET/POST `connect` use the separate Little Log session for first-time permission. Consent POST requires its form CSRF token and the same origin. Existing approved access submits the same protected form automatically using public `coins/browser.js`.
+
+These routes expose no scientific data and do not enable credentialed cross-origin access. Public external-app bearer routes remain unchanged. Pending game receipts remain keyed by app, account and request ID across browser session rotation. Market schema 4 adds browser-grant and remembered-permission tables; no scientific payload is copied into them. A revoked browser grant also removes remembered wallet approval so a future reconnect asks again.
+
+Deploy the backend and `coins/browser.js` before deploying the matching game. Static tracker hosting must copy that script alongside the existing coin assets; API and OIDC callback paths already use the Node proxy. Rebuild the whole game package, including its LiDollBrowser JavaScript extension. The browser game's connection flow is tested with the actual GX runtime and a real local OIDC provider by the game repository's `ps/Test-CoinWalletBrowser.ps1`.
