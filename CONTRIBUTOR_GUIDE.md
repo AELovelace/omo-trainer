@@ -6,7 +6,7 @@ This repository currently contains a standalone browser tracker, not the origina
 - The desktop dashboard groups observation and wetting forms in `.left-column`; rolling, charts and recent records use `.right-column`. Both columns stack at the existing narrow-screen breakpoint.
 - `#about` in `index.html`, routed by `navigate()` in `app.js`, contains the protocol explanation and daily adjustment history. The tracker keeps the live roll probability and cooldown beside its controls.
 - `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
-- New `kind: observation` records use `liquidsMode: interval` and carry no roll outcome; standalone `kind: roll` records contain only draw metadata. Keep their UI actions, validation, exports and summary contributions separate. Untyped legacy records retain cumulative intake semantics.
+- New `kind: observation` records use `liquidsMode: interval` and carry no roll outcome; standalone `kind: roll` records contain draw metadata and selected position. New check-ins omit position and wetting count; wetting events own the count. Keep those optional historical fields when validating older records. Keep their UI actions, validation, exports and summary contributions separate. Untyped legacy records retain cumulative intake semantics.
 - `lib/training.js`: enrollment, stable reporting timezone, completed-day adjustments and original-draw cooldowns; see GENERATION_TUNING_GUIDE.md for rules and migration limits.
 - `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection.
 - `lib/sync.js`: local queue, remote reconciliation, tombstones, and explicit conflict resolution.

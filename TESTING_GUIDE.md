@@ -12,6 +12,8 @@ These cover all 101 probability settings, rejection sampling, cumulative snapsho
 
 `tests/observations.test.mjs` verifies interval sums, overlapping legacy cumulative snapshots, date attribution, separation of draw and observation fields, measurement-mode validation/exports, retry idempotency, second-device synchronization and totals after edits/deletions. The browser workflow verifies observation editing and intake reset; the protocol browser workflow checks that rolling preserves an unfinished observation and that saving during cooldown never creates another roll.
 
+Relocated-field coverage verifies that roll position and wetting diaper totals survive SQLite, exports and second-device sync; older observation fields remain intact. Browser checks select a roll position, save a wetting total, verify its next suggested count and edit the saved total without multiplying daily category counts.
+
 `tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
 
 ## Deployment regression checks

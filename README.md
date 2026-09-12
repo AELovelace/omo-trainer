@@ -6,7 +6,7 @@ The interface is styled as a recovered **Chrysalis observation terminal**, using
 
 The main protocol starts at 50%, applies a ten-minute cooldown after a random Hold, and adjusts the chance by five percentage points per completed day within 20-80%. Each actual wetting is classified separately. Nonempty days with Forced + Voluntary >= Semi-involuntary + Involuntary decrease the chance; other days, including days with no recorded wettings, increase it. See [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md) for day boundaries, enrollment, offline behavior and upgrade details.
 
-Each check-in stores its timestamp, liquids consumed since the previous check-in, position, diaper number, and cumulative wetting snapshot. Rolling is a separate action that records only its actual time, calculated probability, and result. Saving a check-in never rolls; rolling leaves unsaved check-in fields untouched. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
+Each check-in stores its timestamp, liquids consumed since the previous check-in and diaper number. Rolling is a separate action that records its actual time, selected position, calculated probability, and result. Saving a check-in never rolls; rolling leaves unsaved check-in fields untouched. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
 
 The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
 

@@ -7,6 +7,30 @@ import { deviceState, connectAccount, reconcile } from '../lib/sync.js';
 const observation = (id, hour, liquidsMl) => ({ id, kind: 'observation', occurredAt: `2026-09-11T${hour}:00:00+00:00`, liquidsMl, liquidsMode: 'interval', position: 'sitting', diaperNumber: 1, wettingsCount: 2, edited: false });
 const draw = { id: 'draw', kind: 'roll', occurredAt: '2026-09-11T12:00:00+00:00', probability: 50, result: 'hold', source: 'random', rolledAt: '2026-09-11T12:00:00+00:00', rolledResult: 'hold' };
 
+test('relocated fields round-trip on their own records and preserve older observations', () => {
+  const old = observation('old', '09', 100);
+  const { position, wettingsCount, ...checkIn } = observation('new', '10', 200);
+  const roll = { ...draw, position: 'standing' };
+  const wetting = { id: 'wetting', kind: 'wetting', occurredAt: draw.occurredAt, category: 'forced', position: 'sitting', diaperNumber: 1, edited: false, wettingsCount: 3 };
+  const entries = [old, checkIn, roll, wetting];
+  for (const entry of entries) assert.deepEqual(validateEntry(entry), entry);
+  assert.throws(() => validateEntry({ ...roll, position: 'unsupported' }));
+  assert.throws(() => validateEntry({ ...wetting, wettingsCount: -1 }));
+  const db = openDatabase(':memory:');
+  try {
+    const participant = db.ensureParticipant('issuer', 'moved-fields', 'Person');
+    const device = connectAccount(deviceState({ ...emptyState(), entries }), participant, []);
+    const response = db.sync(participant.id, device.sync.queue);
+    assert.deepEqual(db.sync(participant.id, device.sync.queue).ack, response.ack);
+    assert.deepEqual(connectAccount(deviceState(emptyState()), participant, db.records(participant.id)).entries, entries);
+    const rows = db.exportRows();
+    assert.equal(rows.find(row => row.entry_id === 'draw').position, 'standing');
+    assert.equal(rows.find(row => row.entry_id === 'wetting').wettings_count, 3);
+    assert.equal(rows.find(row => row.entry_id === 'new').position, null);
+    assert.equal(rows.find(row => row.entry_id === 'new').wettings_count, null);
+  } finally { db.close(); }
+});
+
 test('independent observations sum intake and independent rolls contribute no intake or check-in', () => {
   const entries = [observation('one', '10', 250), observation('two', '11', 400), draw];
   const summary = daySummary(entries, '2026-09-11');

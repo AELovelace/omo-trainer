@@ -51,17 +51,18 @@ try {
 
   await page.click('#save-observation');
   assert.equal((await saved(page)).entries[0].kind, 'observation');
-  assert.equal((await saved(page)).entries[0].wettingsCount, 2);
+  assert.equal((await saved(page)).entries[0].wettingsCount, undefined);
   await page.click('#new-diaper');
-  assert.equal(await page.$eval('#diaper', element => element.value), '2');
-  assert.equal(await page.$eval('#wettings', element => element.value), '0');
+  assert.equal(await page.$eval('#wetting-diaper', element => element.value), '2');
+  await fill(page, '#diaper', 2);
+  assert.equal(await page.$eval('#wettings', element => element.value), '1');
   await fill(page, '#liquids', 600);
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await page.click('#save-observation');
   let state = await saved(page);
   assert.equal(state.entries.length, 2);
   assert.equal(state.entries[1].kind, 'observation');
-  assert.equal(state.entries[1].wettingsCount, 0);
+  assert.equal(state.entries[1].wettingsCount, undefined);
   assert.equal(await page.$eval('#stat-liquids', element => element.textContent), '850');
   await page.reload({ waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
