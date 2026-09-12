@@ -141,3 +141,5 @@ Admin reminders: `npm test` includes persistence, input validation, stale-edit p
 The reminder suites also cover margin-note publishing, independent versions and drafts, preserved line breaks, hidden-draft redaction, authorization, reload persistence and text wrapping in both themes.
 
 Stickerbank purchase removal: economy tests verify that rejected bank purchases leave balances, stock, demand and history unchanged. The economy browser check confirms purchase controls are absent while bank sales and peer purchases still work.
+
+LiDollCoin API: `tests/coin-api.test.mjs` checks relative operations, receipts/refunds, consent, scopes, persistence, account isolation, token expiry, polling backoff, CSRF and CORS. `tests/coin-browser.mjs` checks the signed-in approval and revocation interface with actual local API requests and mobile widths.

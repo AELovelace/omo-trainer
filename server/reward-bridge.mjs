@@ -17,10 +17,10 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     if(marketPath!==':memory:')mkdirSync(dirname(marketPath),{recursive:true,mode:0o700});
     market=new DatabaseSync(marketPath);
     try {
-      if(market.prepare('PRAGMA user_version').get().user_version>2)throw Error('The market database requires a newer service version.');
+      if(market.prepare('PRAGMA user_version').get().user_version>3)throw Error('The market database requires a newer service version.');
       market.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=100;');
       store=createEconomy(market,options.stickerCatalog,id=>Boolean(science.prepare('SELECT p.id FROM participants p LEFT JOIN participant_access a ON a.participant_id=p.id WHERE p.id=? AND COALESCE(a.disabled,0)=0').get(id)),options.stickerDuplicates);
-      market.exec('PRAGMA user_version=2');
+      market.exec('PRAGMA user_version=3');
       return store;
     } catch(error) {market.close();market=null;store=null;throw error;}
   }
@@ -71,6 +71,10 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     act(owner,input) { // A market action is independent of scientific transactions; ordinary validation errors retain their status.
       let economy;try {economy=open();}catch {throw Object.assign(new Error('The market is temporarily unavailable. Try again shortly.'),{status:503});}
       return economy.act(owner,input);
+    },
+    coins(method,...args) { // External wallet operations use only the market database and live account access checks.
+      let economy;try {economy=open();}catch {throw Object.assign(new Error('The wallet is temporarily unavailable.'),{status:503});}
+      return economy.coins[method](...args);
     },
     backup(destination) {open();return backup(market,destination);},
     close() {market?.close();market=null;store=null;},

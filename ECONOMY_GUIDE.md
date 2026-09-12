@@ -49,3 +49,5 @@ Market schema version 2 merges duplicate types 13-16 into 1-4 on initialization.
 ## Sale dialog
 
 Choose **Sell this sticker** in your gallery to open the sale dialog with that type selected. Choose the quantity and either sell to the bank, list for coins, or offer a swap. Opening or closing the dialog never submits a transaction. A successful exchange closes it; errors and pending retries stay visible. Bank buying controls have been removed. Older clients receive an explicit rejection for new bank purchases; retries of already completed purchases return the existing receipt without transferring anything again. The standalone selling card has been removed.
+
+Linked external games use the same coin balance through LIDOLLCOIN_API.md. Their grants and operation receipts are in market schema version 3. Game credits are separately recorded as `game credit` ledger entries; the stickerbank issuance counter covers bank-issued coins only. Game tokens cannot access scientific records or spend chart stars.

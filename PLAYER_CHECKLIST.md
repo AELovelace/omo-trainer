@@ -76,3 +76,5 @@ Open Settings and choose **Little Tracker** for soft pastels or **Caregiver Trac
 - Administrators: open Admin console > Reminders, enter up to 500 characters, enable Show this reminder, then Save reminder. Turn Show off and save to hide it while retaining the text. Published reminders are visible to signed-out visitors too.
 
 - Administrators: **Admin console > Reminders > Margin note** edits the home-page tips separately from the scrolling header. Enter up to 2,000 characters, keep line breaks if wanted, and save. Use **Show this margin note** to publish or hide it.
+
+- **Settings > Manage connected games** lets you approve a LiDollQuest connection code or disconnect an app. A linked game earns/spends from the same LiDollCoin wallet; saved local gold is not deposited.

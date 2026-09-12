@@ -1,3 +1,4 @@
+import {createCoinApiStore} from './coin-api-store.mjs';
 import {randomInt,randomUUID,createHash} from 'node:crypto';
 import {stickerCatalog} from './sticker-catalog.mjs';
 import {mergeStickerDuplicates} from './sticker-duplicates.mjs';
@@ -156,5 +157,5 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.exec('COMMIT');return data;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }
-  return {awardRecord,awardStars,snapshot,act};
+  return {awardRecord,awardStars,snapshot,act,coins:createCoinApiStore(db,wallet,adjust,enabled)};
 }

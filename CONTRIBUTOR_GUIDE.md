@@ -89,3 +89,5 @@ Admin reminders replace the home page's recovered-interface strip. The scientifi
 New wettings use `diaperAtTime` to assign their diaper number automatically at save time, including backdated events. Untouched event times retain seconds so a wetting immediately after a change belongs to the next diaper. Historical wetting numbers remain editable in History.
 
 Margin notes share the notice editor and live refresh mechanism with the header, but use a separate `margin-note` key and version in `admin_settings`. `GET api/margin-note` exposes only published text; `GET/POST api/admin/margin-note` enforce admin access, with CSRF on writes. Notes allow 2,000 characters and preserve line breaks. Existing installations start with the original margin quote until an administrator changes or hides it.
+
+External wallet routes are isolated in `server/coin-api.mjs` and `server/coin-api-store.mjs`. They use app-scoped device grants and the market database only. Never introduce an absolute balance setter or accept these bearer credentials on scientific endpoints. See LIDOLLCOIN_API.md for consent, CORS, integer transactions and replay/refund contracts.

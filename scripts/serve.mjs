@@ -19,6 +19,7 @@ const stickerAssets = stickerCatalog();
 const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
   ...stickerAssets.map(item => [item.url, item.mime]),
+  ['coins/index.html','text/html; charset=utf-8'], ['coins/app.js','text/javascript; charset=utf-8'], ['coins/style.css','text/css; charset=utf-8'],
   ['lib/economy.js', 'text/javascript; charset=utf-8'],
   ['lib/reminder.js', 'text/javascript; charset=utf-8'],
   ['lib/theme.js', 'text/javascript; charset=utf-8'], ['theme-init.js', 'text/javascript; charset=utf-8'], ['themes.css', 'text/css; charset=utf-8'],
@@ -47,9 +48,10 @@ export const server = http.createServer(async (request, response) => { // Serves
     return response.end();
   }
   if (!pathname.startsWith(base)) { response.writeHead(404); return response.end('Not found'); }
+  if (pathname === `${base}coins`) {response.writeHead(308,{Location:`${base}coins/`});return response.end();}
   if (pathname === `${base}admin`) { response.writeHead(308, { Location: `${base}admin/` }); return response.end(); }
   if ([`${base}potty_chart`, `${base}potty_chart/`, `${base}potty_chart/index.html`].includes(pathname)) { response.writeHead(308, { Location: `${base}#potty-chart` }); return response.end(); } // Old chart bookmarks now open the integrated view.
-  const filename = pathname.slice(base.length) === 'admin/' ? 'admin/index.html' : pathname.slice(base.length) === 'potty_chart/' ? 'potty_chart/index.html' : pathname.slice(base.length) || 'index.html';
+  const filename = pathname.slice(base.length) === 'coins/' ? 'coins/index.html' : pathname.slice(base.length) === 'admin/' ? 'admin/index.html' : pathname.slice(base.length) === 'potty_chart/' ? 'potty_chart/index.html' : pathname.slice(base.length) || 'index.html';
   if (!files.has(filename)) { response.writeHead(404); return response.end('Not found'); }
   try {
     const assetPath = stickerPaths.get(filename) ?? filename;

@@ -1,3 +1,4 @@
+import {coinApi} from './coin-api.mjs';
 import { ApiError } from './database.mjs';
 
 function send(response, status, body) { // Keeps every authenticated response out of browser, proxy, and service-worker caches.
@@ -21,6 +22,7 @@ async function body(request, limit = 256 * 1024) { // Bounds uploads before pars
 export function createApi(database, login) { // Resolves each app session to an OIDC identity and isolates all data by that identity.
   return async (request, response, route) => {
     try {
+      if(route.startsWith('lidollcoin/v1/'))return coinApi(database,login,request,response,route.slice('lidollcoin/v1/'.length));
       const origin = request.headers.origin;
       if (request.headers['sec-fetch-site'] === 'cross-site' || (origin && origin !== login.origin)) throw new ApiError(403, 'This origin is not allowed.');
       if (!['GET', 'POST'].includes(request.method)) throw new ApiError(405, 'Method not allowed.');
@@ -32,6 +34,10 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if(route==='coin-connections'&&request.method==='GET')return send(response,200,{participant,csrf,connections:database.economy.coins('connections',participant.id)});
+      if(route==='coin-inspect'&&request.method==='POST')return send(response,200,database.economy.coins('inspect',participant.id,(await body(request,4096)).user_code));
+      if(route==='coin-approve'&&request.method==='POST')return send(response,200,database.economy.coins('approve',participant.id,await body(request,4096)));
+      if(route==='coin-revoke'&&request.method==='POST')return send(response,200,database.economy.coins('revoke',participant.id,(await body(request,4096)).id));
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
         const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';

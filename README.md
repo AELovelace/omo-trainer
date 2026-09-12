@@ -103,7 +103,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v38-bank-sales-only. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v39-connected-wallet. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 
@@ -131,3 +131,5 @@ Settings ? Theme offers **Little Tracker**, the default pastel design, and **Car
 Administrators can edit the scrolling home reminder in **Admin console > Reminders**. Save text with **Show this reminder** enabled to publish it to everyone, including signed-out visitors; disable and save to hide it. Notices start hidden, support up to 500 characters, and update visible online pages within 30 seconds.
 
 **Admin console > Reminders > Margin note** controls the separate home-page tips card. Notes support 2,000 characters with line breaks, preview, and a show/hide toggle. They update open online pages automatically, like the scrolling header.
+
+External games can connect to the shared LiDollCoin wallet using the [LiDollCoin API](LIDOLLCOIN_API.md). LiDollQuest links through Settings, then uses online earnings and spending instead of uploading its saved gold balance.
