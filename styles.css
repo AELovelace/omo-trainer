@@ -1282,7 +1282,7 @@ dialog .primary {
   }
   .nav-item {
     flex: 1;
-    flex-direction: column; /* Keeps all four destinations readable within a phone-width navigation row. */
+    flex-direction: column; /* Stack each icon over its one-word destination label. */
     min-width: 0;
     text-align: center;
     justify-content: center;
@@ -1599,7 +1599,10 @@ dialog .primary {
 #economy-history { padding-left:20px; overflow-wrap:anywhere; }
 #page-stickers .card { margin-bottom:20px; }
 
+/* Keep administrator access separate from the six participant destinations. */
+.admin-shortcut { position:fixed; right:max(12px,env(safe-area-inset-right,0px)); bottom:max(16px,env(safe-area-inset-bottom,0px)); z-index:8; min-height:44px; background:var(--panel); box-shadow:0 2px 8px #0008; }
 @media (max-width: 680px) {
-  .sidebar nav { flex-wrap:wrap; }
-  .sidebar nav .nav-item { flex:1 0 calc(33.333% - 10px); }
+  .sidebar nav { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px; }
+  .sidebar nav .nav-item { padding:10px 1px; white-space:nowrap; }
+  .admin-shortcut { bottom:calc(var(--mobile-actions-height) + env(safe-area-inset-bottom,0px) + 12px); }
 }

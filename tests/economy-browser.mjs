@@ -30,7 +30,8 @@ try {
   }
   const [a,b]=pages;
   assert.equal(await a.$eval('#economy-total',el=>el.textContent),'3');await a.bringToFront();
-  assert.equal(await a.$$eval('#sticker-gallery img',images=>images.length),stickerCatalog().length);
+  assert.equal(await a.$$eval('#sticker-gallery img',images=>images.length),1,'Only the owned sticker type appears in the gallery');
+  assert.equal(await a.$eval('#economy-content',el=>el.lastElementChild.contains(document.querySelector('#sticker-gallery'))),true,'Gallery is the last card');
   await a.$$eval('#sticker-gallery img',images=>images.forEach(img=>{img.loading='eager';}));
   await a.waitForFunction(()=>[...document.querySelectorAll('#sticker-gallery img')].every(img=>img.complete&&img.naturalWidth>0));
   for(const width of [320,390,680,1024,1440]) {

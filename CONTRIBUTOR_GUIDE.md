@@ -77,3 +77,5 @@ Roll desperation: the four-step slider records low/medium/high/crisis on each ne
 ## Account economy
 
 `server/reward-bridge.mjs` delivers the scientific database outbox to a separate `market.sqlite`. `server/economy.mjs` owns all integer balances, reward receipts, escrow and transfer transactions. `server/sticker-catalog.mjs` allowlists images from `sprites/`; `lib/economy.js` mounts the gallery and market. Keep health payloads out of the market database and preserve request IDs across uncertain network results. See ECONOMY_GUIDE.md before changing currency rules or backups.
+
+The six mobile header destinations use one-word labels (Home, History, Settings, Chart, Stickers, About) in a fixed six-column grid. Keep `#admin-nav` outside that grid: it is a role-controlled shortcut fixed at the bottom right, above the mobile recording bar. Its visibility still comes from the server session role.
