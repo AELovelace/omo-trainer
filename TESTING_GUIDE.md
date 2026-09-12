@@ -8,6 +8,8 @@ node --test tests/*.test.mjs
 
 These cover all 101 probability settings, rejection sampling, cumulative snapshots, calendar boundaries, schema/import validation, CSV fields, SQLite persistence and backups, participant isolation, idempotent retries, transaction rollback, version conflicts, deletion tombstones, app sessions, password hashing/reset/disable, OIDC adapter persistence, and login throttling. HTTP checks verify public assets, redirects, headers, and rejection of unauthenticated or cross-origin data access. Databases use isolated directories under ignored `artifacts/`.
 
+`tests/training.test.mjs` covers daily ties, empty days, both bounds and movement away from them, completed-day-only adjustments, legacy snapshots, DST/timezones, deterministic enrollment selection, cooldown boundaries, original results surviving corrections, typed event backups/exports, multi-device synchronization, and migration from SQLite version 1 without losing records or retry receipts.
+
 `tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
 
 ## Deployment regression checks
@@ -24,11 +26,14 @@ Start `node scripts/serve.mjs` in another terminal. The optional browser runner 
 
 ```sh
 node tests/browser.mjs
+node tests/training-browser.mjs
 ```
 
 `TEST_URL` defaults to `http://127.0.0.1:4173/tracker/`. The runner uses an isolated browser context and synthetic data, so it does not access normal Chrome-profile records. It writes screenshots and test-only backup files to ignored `artifacts/`.
 
 The workflow covers random/manual logging, daily carry-forward/reset, independent wetting counts, persistence after reload, charts, filters, editing, JSON/CSV downloads, valid and invalid imports, preferences, offline reload and saving, 390px phone layout, deletion, quota errors, and corrupt-data recovery. Screenshot fixtures are synthetic; the application ships with an empty history.
+
+The protocol browser workflow uses a controlled clock and deterministic test-only RNG to verify blocked repeat rolls, exact countdown expiry, wetting/manual logging during cooldown, offline reload, midnight decreases, empty-day increases, retrospective corrections, historical probability preservation, wetting filters/deletion, and all routes at six viewport widths. It writes `artifacts/protocol-desktop.png` and `artifacts/protocol-mobile.png`.
 
 It also checks that the Chrysalis CRT toggle persists through reload, switches off under reduced motion, and restores the saved preference when that media setting clears. For visual releases, inspect desktop and phone screenshots, chart/legend colors, visible focus rings, dark native date/select controls, and sign-in/consent contrast. Check all three routes at 320, 390, 680, 768, 1024, and 1440 pixels for document overflow. The icon generator and HTTP tests cover all install-icon sizes; visual inspection verifies the sigil itself.
 
@@ -45,6 +50,8 @@ This runner starts its own isolated tracker and identity services on ports 43173
 Alice is created through the web registration form, while Bob uses administrator provisioning. The browser verifies password-confirmation errors, duplicate-name rejection, 320/390px layout, consent after signup, explicit local-record upload, and subsequent sign-in on another device. Registration screenshots are saved alongside the other synthetic artifacts before entering passwords.
 
 The second device signs in using the header button from Record archive. The suite confirms that authenticated but unconnected users see **Connect device**, that it opens and focuses the Settings connection action, and that the header button disappears once connected.
+
+The connected suite also syncs enrollment and a classified wetting to the second device, compares displayed chances, and verifies those typed records appear in the central analysis export.
 
 ## Release checks on the target host
 

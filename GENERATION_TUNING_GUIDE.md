@@ -1,11 +1,26 @@
-# Probability and defaults
+# Daily protocol and probability
 
-The Chrysalis observation theme changes presentation only. Archive labels, the terminal seal, and the CRT display preference do not affect roll probabilities, recorded values, or aggregation.
+The main mode starts at 50% on the first new observation. A synced `kind: protocol` record fixes enrollment time, reporting timezone, and protocol version 1. Existing unclassified snapshots are preserved without inventing classifications or charging days before enrollment. Concurrent offline enrollments use the earliest timestamp, then ID as a tie-breaker.
 
-The probability is the integer percentage chance of a **pee** result. It accepts all values from 0 through 100 inclusive. Zero always yields hold; 100 always yields pee. The other probabilities use `crypto.getRandomValues` with rejection sampling over 100 equally likely outcomes. Every roll is independent; the app does not increase difficulty, create streak penalties, or learn from records.
+Each actual wetting is a separate `kind: wetting` record with a timestamp, category, position, and diaper number. Categories are forced, voluntary, semi-involuntary, and involuntary. Repeated cumulative snapshots never count as classified events.
 
-Set initial preferences in `DEFAULT_SETTINGS` in `lib/model.js`; each person can override them in Settings. Per-entry controls can override those defaults. Liquids, position, diaper number, and wetting count do not affect probability. A manual result records the selected result and probability without generating randomness.
+For every completed calendar day in the enrollment timezone:
 
-Probability results are generated once on the device and stored with each entry. Sync retries must upload the stored result without rerolling. Defaults stay per device; saved per-entry probabilities and results are included in central analysis exports. The server validates probabilities using the same shared model code as the browser.
+- No recorded wettings: increase by 5 percentage points.
+- Forced + Voluntary >= Semi-involuntary + Involuntary: decrease by 5 points.
+- Otherwise: increase by 5 points.
+- Clamp after each day to 20 through 80 inclusive.
 
-The 1,000,000 mL and 10,000 counter limits are technical bounds for data validation, not real-world recommendations. Changing them requires matching HTML controls and validation. Changing the schema requires migration and import compatibility work. Run `node --test tests/model.test.mjs` after any change to roll behavior or aggregation.
+lib/training.js derives the chance by replaying completed days. Empty days accrue while the app is closed. Today's events affect tomorrow; an earlier correction recalculates later days without rewriting saved roll probabilities. The interface shows the latest 90 adjustment rows, but calculations include every day since enrollment. JSON and administrator exports include enrollment and all events for reproduction of this calculation. A missing day is missing data, not evidence that no wettings occurred.
+
+A random Hold starts a ten-minute cooldown for random rolls. rolledAt and rolledResult preserve the actual draw time and original result separately from editable observation metadata. Backdating a check-in cannot shorten the cooldown, and changing its displayed result does not remove the original failure. The enrollment record also retains lastFailureAt, so deleting an individual failed observation does not remove the deadline. Manual logging and recording wettings remain available. Legacy random Hold records use their observation timestamp until expired.
+
+This is an offline-capable, client-enforced protocol, not an anti-cheat system. Each device uses its clock and most recently synced records. Disconnected or concurrently used devices can have different knowledge; sync before switching devices. Correcting/deleting data may change derived probability. Deleting the whole dataset resets enrollment and its deadline. No browser implementation can enforce a shared offline lock against another disconnected device. Central SQLite stores the self-reported observations and draw metadata for analysis.
+
+The generic RNG still supports 0-100 for legacy validation and mathematical tests. The main interface uses the calculated 20-80 chance and has no probability override. It uses rejection sampling with crypto.getRandomValues; retries upload the saved outcome without drawing again. Snapshot liquids, positions and counters do not directly change probability. Local settings now configure only the default position; the old probability preference remains readable for backup compatibility.
+
+SQLite schema version 2 adds payload_json while retaining old typed columns and mutation receipts. New JSON records travel through the existing authenticated, participant-scoped sync queue, revisions and conflict resolution. Participant JSON backups retain envelope version 1 with new discriminated record kinds; old apps reject these kinds, so close old tabs and reopen the updated PWA before logging. Administrator exports use schema version 2 and include kind, category, original draw metadata, protocol version and timezone.
+
+Use the deployment updater's pre-activation backup when upgrading. A code rollback to an older build that only supports SQLite version 1 cannot open a migrated database. Preserve the migrated database and resolve the code issue or explicitly plan a restore; never silently replace it with an older backup and lose newer observations.
+
+Run node --test tests/*.test.mjs and the browser workflows in TESTING_GUIDE.md after changes to these rules. Version future protocol changes explicitly so researchers can distinguish them.

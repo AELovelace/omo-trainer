@@ -9,7 +9,10 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - Check the time and enter total liquids consumed so far that day in mL.
 - Choose your position, diaper number for that day, and wettings in that diaper.
 - **New diaper** increases the selected number and resets its wettings to zero; save a check-in to record the change.
-- Set a whole-number pee probability. **Roll & save check-in** generates and saves a random prompt. **Save without rolling** records your selected pee/hold result.
+- The main protocol starts at 50% with your first new observation. **Roll & save check-in** uses the displayed daily chance; a Hold pauses random rolls for ten minutes. **Save without rolling** remains available throughout.
+- In **Record a wetting**, classify each actual event once as Forced, Voluntary, Semi-involuntary, or Involuntary, including events without a roll. This is separate from the cumulative wetting snapshot in a check-in.
+- Completed days with F + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no wettings recorded, increase it by 5 points. The chance stays between 20% and 80%. Review the daily adjustment history above the forms.
+- Today affects tomorrow. Correcting a past wetting recalculates later days; recorded roll probabilities stay unchanged. Day boundaries use the timezone saved at enrollment, even on another device.
 - Use the bathroom whenever needed. The random result is optional and does not record a wetting automatically.
 - Review Charts or History. Edit mistakes or delete individual records in History.
 - Download JSON backups in Settings. Import restores new records without duplicating identical entries. CSV exports the current history selection for spreadsheets.
@@ -20,6 +23,6 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 
 Daily defaults reset when the selected local date changes. Today's liquid summary shows the highest cumulative snapshot, not the sum of all entries. Historical timestamps retain their recorded local day and timezone offset.
 
-Defaults are device-specific; entry records sync. You can register yourself or use an account created by the lidoll.dev administrator. No email address is collected; contact the administrator for password resets.
+Default position is device-specific; enrollment, wettings and check-in records sync. Sync before switching devices: an offline device cannot know about another device's pending records or cooldown. You can register yourself or use an account created by the lidoll.dev administrator. No email address is collected; contact the administrator for password resets.
 
 During a server update, offline check-ins remain on the device and retry afterward. After a frontend update, close old Little Log tabs and reopen to let the new app version activate.

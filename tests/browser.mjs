@@ -23,7 +23,7 @@ async function fill(page, selector, value) { // Updates native controls and fire
 }
 
 async function saved(page) { // Reads synthetic test records from the app's single storage namespace.
-  return page.evaluate(() => JSON.parse(localStorage.getItem('lidoll.little-log.v1')));
+  return page.evaluate(() => { const state = JSON.parse(localStorage.getItem('lidoll.little-log.v1')); if (state) state.entries = state.entries.filter(entry => entry.kind !== 'protocol'); return state; });
 }
 
 try {
@@ -48,15 +48,15 @@ try {
 
   await fill(page, '#liquids', 250);
   await fill(page, '#wettings', 2);
-  await fill(page, '#probability', 0);
-  await page.click('.roll-button');
+  await fill(page, '#manual-result', 'hold');
+  await page.click('button[value="manual"]');
   assert.equal((await saved(page)).entries[0].result, 'hold');
   assert.equal((await saved(page)).entries[0].wettingsCount, 2);
   await page.click('#new-diaper');
   assert.equal(await page.$eval('#diaper', element => element.value), '2');
   assert.equal(await page.$eval('#wettings', element => element.value), '0');
   await fill(page, '#liquids', 600);
-  await fill(page, '#probability', 100);
+  await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await page.click('.roll-button');
   let state = await saved(page);
   assert.equal(state.entries.length, 2);
@@ -76,12 +76,12 @@ try {
   assert.equal(await page.$eval('#diaper', element => element.value), '1');
   assert.equal(await page.$eval('#liquids', element => element.value), '0');
   await fill(page, '#liquids', 400);
-  await fill(page, '#probability', 37);
+  assert.equal(await page.$eval('#probability', element => element.readOnly), true);
   await fill(page, '#manual-result', 'hold');
   await page.click('button[value="manual"]');
   state = await saved(page);
   assert.equal(state.entries[2].source, 'manual');
-  assert.equal(state.entries[2].probability, 37);
+  assert.equal(state.entries[2].probability, 50);
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
 
   await page.click('[data-metric="liquids"]');
@@ -114,7 +114,7 @@ try {
   }
   const backupPath = resolve(downloadDirectory, downloads.find(name => /^little-log-.*\.json$/.test(name)));
   const backup = JSON.parse(await readFile(backupPath, 'utf8'));
-  assert.equal(backup.entries.length, 3);
+  assert.equal(backup.entries.length, 4);
   const csvPath = resolve(downloadDirectory, downloads.find(name => /^little-log-.*\.csv$/.test(name)));
   assert.match(await readFile(csvPath, 'utf8'), /"liquidsMl"/);
   await (await page.$('#import-file')).uploadFile(backupPath);
@@ -122,23 +122,23 @@ try {
   assert.equal((await saved(page)).entries.length, 3);
 
   const badBackup = resolve(artifacts, 'invalid-backup.json');
-  await writeFile(badBackup, JSON.stringify({ ...backup, entries: [{ ...backup.entries[0], position: '<img src=x onerror=alert(1)>' }] }));
+  await writeFile(badBackup, JSON.stringify({ ...backup, entries: [{ ...backup.entries.find(entry => !entry.kind), position: '<img src=x onerror=alert(1)>' }] }));
   await (await page.$('#import-file')).uploadFile(badBackup);
   await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('supported position'));
   assert.equal((await saved(page)).entries.length, 3);
 
-  await fill(page, '#default-probability', 25);
+  assert.equal(await page.$('#default-probability'), null);
   await fill(page, '#default-position', 'standing');
   await page.click('#settings-form button');
-  assert.equal((await saved(page)).settings.probability, 25);
+  assert.equal((await saved(page)).settings.probability, 50);
   await page.click('[data-page="overview"]');
-  assert.equal(await page.$eval('#probability', element => element.value), '25');
+  assert.equal(await page.$eval('#probability', element => element.value), '50');
 
   await page.setOfflineMode(true);
   await page.reload({ waitUntil: 'networkidle0' });
   await page.screenshot({ path: resolve(artifacts, 'offline.png'), fullPage: true });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
-  await fill(page, '#probability', 100);
+  await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await page.click('.roll-button');
   assert.equal((await saved(page)).entries.length, 4);
   await page.setOfflineMode(false);
@@ -175,8 +175,8 @@ try {
   page.once('dialog', dialog => dialog.accept());
   await page.click('#delete-all');
   assert.equal(await saved(page), null);
-  assert.equal(await page.$eval('#default-probability', element => element.value), '50');
+  assert.equal(await page.$eval('#probability', element => element.value), '50');
 
   assert.deepEqual(errors, [], 'Browser should not raise JavaScript errors');
-  console.log('Browser checks passed: logging, boundary rolls, daily defaults, edits, filters, charts, exports, imports, settings, offline reload/save, mobile layout, deletes, quota errors, and corrupt-data recovery.');
+  console.log('Browser checks passed: logging, protocol rolls, daily defaults, edits, filters, charts, exports, imports, settings, offline reload/save, mobile layout, deletes, quota errors, and corrupt-data recovery.');
 } finally { await browser.close(); }

@@ -17,6 +17,7 @@ const api = createApi(database, login);
 const files = new Map([
   ['index.html', 'text/html; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8'],
   ['app.js', 'text/javascript; charset=utf-8'], ['lib/model.js', 'text/javascript; charset=utf-8'], ['lib/sync.js', 'text/javascript; charset=utf-8'],
+  ['lib/training.js', 'text/javascript; charset=utf-8'],
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
   ['icons/icon.svg', 'image/svg+xml'], ['icons/icon-192.png', 'image/png'],
   ['icons/icon-512.png', 'image/png'], ['icons/maskable-512.png', 'image/png'], ['icons/apple-touch-icon.png', 'image/png'],

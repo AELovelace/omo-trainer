@@ -1,5 +1,5 @@
-const CACHE = `little-log-v5-header-signin-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
-const SHELL = ['./', './index.html', './styles.css', './app.js', './lib/model.js', './lib/sync.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
+const CACHE = `little-log-v6-protocol-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
+const SHELL = ['./', './index.html', './styles.css', './app.js', './lib/model.js', './lib/sync.js', './lib/training.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
 self.addEventListener('install', event => { // Installs an entire app version before it can become active.

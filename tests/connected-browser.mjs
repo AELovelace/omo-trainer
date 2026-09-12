@@ -43,11 +43,11 @@ async function service(script, environment, readyText) { // Runs isolated test s
 async function fill(page, selector, value) { // Updates synthetic form data without relying on browser-specific typing shortcuts.
   await page.$eval(selector, (element, next) => { element.value = next; element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true })); }, String(value));
 }
-const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('lidoll.little-log.v1')));
+const saved = page => page.evaluate(() => { const state = JSON.parse(localStorage.getItem('lidoll.little-log.v1')); if (state) state.entries = state.entries.filter(entry => entry.kind !== 'protocol'); return state; });
 async function settled(page, count) { // Waits for both the expected local count and a confirmed server acknowledgement.
   await page.waitForFunction(expected => {
     const state = JSON.parse(localStorage.getItem('lidoll.little-log.v1'));
-    return state?.sync.participant && state.entries.length === expected && state.sync.queue.length === 0 && state.sync.conflicts.length === 0;
+    return state?.sync.participant && state.entries.filter(entry => entry.kind !== 'protocol').length === expected && state.sync.queue.length === 0 && state.sync.conflicts.length === 0;
   }, { timeout: 20000 }, count).catch(async error => { throw new Error(`${error.message}: ${await page.$eval('#sync-status', element => element.textContent)}; ${JSON.stringify(await saved(page))}`); });
 }
 async function signIn(page, username, fromHeader = false) { // Exercises both sign-in entry points through the real shared identity and callback flow.
@@ -84,7 +84,7 @@ try {
   alice.on('pageerror', error => errors.push(error.message));
   await alice.goto(`${origin}/tracker/`, { waitUntil: 'networkidle0' });
   await fill(alice, '#liquids', 400);
-  await fill(alice, '#probability', 100);
+  await alice.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await alice.click('.roll-button');
   await alice.click('[data-page="settings"]');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
@@ -141,6 +141,7 @@ try {
   await second.setOfflineMode(true);
   await second.click('[data-page="overview"]');
   await fill(second, '#liquids', 700);
+  await second.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; }); // Keeps this queue-size assertion independent of an additional failure-deadline update.
   await second.click('.roll-button');
   assert.equal((await saved(second)).sync.queue.length, 1);
   await second.reload({ waitUntil: 'networkidle0' });
@@ -197,9 +198,27 @@ try {
   await assert.rejects(() => oidc.authorizationCodeGrant(client, callback, { pkceCodeVerifier: verifier, expectedNonce: nonce, expectedState: state, idTokenExpected: true }));
   console.log('PASS: a second OIDC app reuses the account; authorization codes cannot be replayed');
 
+  await alice.bringToFront(); // The SSO tab was active; foreground this device before interacting with its native date form.
+  await alice.click('[data-page="overview"]');
+  await fill(alice, '#wetting-category', 'semi-involuntary');
+  await alice.click('#wetting-form button[type="submit"]');
+  console.log('Wetting submitted on the first device');
+  await settled(alice, 3);
+  await second.bringToFront();
+  await second.click('#sync-now');
+  await settled(second, 3);
+  assert.equal((await saved(second)).entries.find(entry => entry.kind === 'wetting').category, 'semi-involuntary');
+  await second.click('[data-page="overview"]');
+  assert.equal(await second.$eval('#protocol-probability', element => element.textContent), await alice.$eval('#protocol-probability', element => element.textContent));
+  await alice.bringToFront();
+  await alice.click('[data-page="settings"]');
+  console.log('PASS: classified wettings and enrollment sync to the second device');
+
   const database = openDatabase(resolve(dataDirectory, 'little-log.sqlite'));
   const rows = database.exportRows();
-  assert.equal(rows.length, 2);
+  assert.equal(rows.length, 4);
+  assert.equal(rows.filter(row => row.kind === 'protocol').length, 1);
+  assert.equal(rows.find(row => row.kind === 'wetting').category, 'semi-involuntary');
   assert.ok(rows.some(row => row.liquids_ml === 900));
   assert.ok(rows.every(row => row.participant_id === (rows[0].participant_id)));
   database.close();

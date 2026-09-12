@@ -14,7 +14,7 @@ export class ApiError extends Error { // Carries expected client errors without 
 export function openDatabase(filename = databasePath()) { // Opens a persistent, transactional database outside the public asset allowlist.
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(filename);
-  if (db.prepare('PRAGMA user_version').get().user_version > 1) { db.close(); throw new Error('This database was created by a newer app version.'); }
+  if (db.prepare('PRAGMA user_version').get().user_version > 2) { db.close(); throw new Error('This database was created by a newer app version.'); }
   db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL;`);
   db.exec(`
     CREATE TABLE IF NOT EXISTS participants (
@@ -39,8 +39,14 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
     CREATE TABLE IF NOT EXISTS login_attempts (
       token_hash TEXT PRIMARY KEY, payload TEXT NOT NULL, expires INTEGER NOT NULL
     );
-    PRAGMA user_version = 1;
   `);
+  if (db.prepare('PRAGMA user_version').get().user_version < 2) { // Adds structured events without rewriting legacy snapshots or mutation receipts.
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      if (db.prepare('PRAGMA user_version').get().user_version < 2) db.exec('ALTER TABLE entries ADD COLUMN payload_json TEXT; PRAGMA user_version = 2;');
+      db.exec('COMMIT'); // Rechecks under the write lock if an administrator and service start concurrently.
+    } catch (error) { db.exec('ROLLBACK'); db.close(); throw error; }
+  }
 
   function ensureParticipant(issuer, subject, label) { // Maps an OIDC identity to an app-specific pseudonym, never to a browser-supplied participant ID.
     const existing = db.prepare('SELECT id FROM participants WHERE issuer = ? AND subject = ?').get(issuer, subject);
@@ -79,7 +85,7 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
   function recordFromRow(row) { // Converts typed SQL columns to the shared API schema; deletions expose only a tombstone.
     return {
       id: row.id, version: row.version,
-      entry: row.deleted_at ? null : validateEntry({
+      entry: row.deleted_at ? null : row.payload_json ? validateEntry(JSON.parse(row.payload_json)) : validateEntry({
         id: row.id, occurredAt: row.occurred_at, liquidsMl: row.liquids_ml, position: row.position,
         diaperNumber: row.diaper_number, wettingsCount: row.wettings_count, probability: row.probability,
         result: row.result, source: row.source, edited: Boolean(row.edited),
@@ -123,15 +129,16 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
         }
         if (!row && db.prepare('SELECT COUNT(*) AS total FROM entries WHERE participant_id = ?').get(participantId).total >= MAX_ENTRIES) throw new ApiError(400, 'This participant has reached the 50,000-record storage limit. Ask the organizer to archive the dataset.');
         const entry = change.entry, now = new Date().toISOString();
-        db.prepare(`INSERT INTO entries (participant_id, id, occurred_at, liquids_ml, position, diaper_number, wettings_count, probability, result, source, edited, version, created_at, updated_at, deleted_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        db.prepare(`INSERT INTO entries (participant_id, id, occurred_at, liquids_ml, position, diaper_number, wettings_count, probability, result, source, edited, version, created_at, updated_at, deleted_at, payload_json)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(participant_id, id) DO UPDATE SET occurred_at=excluded.occurred_at, liquids_ml=excluded.liquids_ml,
           position=excluded.position, diaper_number=excluded.diaper_number, wettings_count=excluded.wettings_count,
           probability=excluded.probability, result=excluded.result, source=excluded.source, edited=excluded.edited,
-          version=excluded.version, updated_at=excluded.updated_at, deleted_at=excluded.deleted_at`).run(
+          version=excluded.version, updated_at=excluded.updated_at, deleted_at=excluded.deleted_at, payload_json=excluded.payload_json`).run(
           participantId, change.id, entry?.occurredAt ?? null, entry?.liquidsMl ?? null, entry?.position ?? null,
           entry?.diaperNumber ?? null, entry?.wettingsCount ?? null, entry?.probability ?? null, entry?.result ?? null,
-          entry?.source ?? null, entry ? Number(entry.edited) : null, change.baseVersion + 1, now, now, entry ? null : now,
+          entry?.source ?? null, entry ? Number(entry.edited ?? false) : null, change.baseVersion + 1, now, now, entry ? null : now,
+          entry ? JSON.stringify(entry) : null,
         );
         db.prepare('INSERT INTO mutations (participant_id, id, request_hash, created_at) VALUES (?, ?, ?, ?)').run(participantId, change.mutationId, fingerprint, now);
         ack.push(change.mutationId);
@@ -144,7 +151,11 @@ export function openDatabase(filename = databasePath()) { // Opens a persistent,
 
   function exportRows() { // Exposes analysis columns to a server-local administrator without credentials or public export endpoints.
     return db.prepare(`SELECT participant_id, id AS entry_id, occurred_at, substr(occurred_at, 1, 10) AS local_date,
-      liquids_ml, position, diaper_number, wettings_count, probability, result, source, edited, version, created_at, updated_at
+      liquids_ml, position, diaper_number, wettings_count, probability, result, source, edited, version, created_at, updated_at,
+      COALESCE(json_extract(payload_json, '$.kind'), 'roll') AS kind, json_extract(payload_json, '$.category') AS category,
+      json_extract(payload_json, '$.rolledAt') AS rolled_at, json_extract(payload_json, '$.rolledResult') AS rolled_result,
+      json_extract(payload_json, '$.protocolVersion') AS protocol_version, json_extract(payload_json, '$.timeZone') AS time_zone,
+      json_extract(payload_json, '$.lastFailureAt') AS last_failure_at
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 

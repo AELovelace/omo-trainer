@@ -1531,3 +1531,10 @@ dialog .primary {
     opacity: 0;
   }
 }
+/* Protocol records share the existing terminal cards and stay readable on narrow screens. */
+.protocol-card { margin-bottom: 24px; }
+.protocol-card .stat-value { color: var(--pink, #ff96c8); }
+.wetting-card { padding: 24px; }
+.wetting-card .button { margin-top: 18px; width: 100%; }
+.probability-number input[readonly] { cursor: default; }
+.roll-button:disabled { opacity: .6; cursor: wait; }

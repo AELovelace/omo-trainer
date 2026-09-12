@@ -4,7 +4,9 @@ A phone-friendly PWA for **lidoll.dev/tracker/** with central SQLite storage and
 
 The interface is styled as a recovered **Chrysalis observation terminal**, using [lidoll.dev](https://lidoll.dev)'s plum, pink, and pale framed borders. The dashboard, record archive, shared sign-in screens, and install icons share the theme. Optional static CRT texture follows the main site's saved preference and respects reduced motion. All fonts and tracker assets are local, including offline use.
 
-Each check-in stores timestamp with timezone offset, cumulative daily liquids in mL, position, diaper number that day, wettings in that diaper, whole-number pee probability (0–100%), and pee/hold result. Records also have IDs, random/manual source, edit flags, and server revisions.
+The main protocol starts at 50%, applies a ten-minute cooldown after a random Hold, and adjusts the chance by five percentage points per completed day within 20-80%. Each actual wetting is classified separately. Nonempty days with Forced + Voluntary >= Semi-involuntary + Involuntary decrease the chance; other days, including days with no recorded wettings, increase it. See [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md) for day boundaries, enrollment, offline behavior and upgrade details.
+
+Each check-in stores its timestamp, cumulative liquids, position, diaper number, cumulative wetting snapshot, probability, and random/manual result. New random draws also retain their original time and result. Enrollment and classified events sync to participant-scoped SQLite alongside check-ins. Existing 0-100% legacy observations remain readable.
 
 The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
 
@@ -37,7 +39,7 @@ Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](dep
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
 2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.lidoll.dev** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, and icons/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, and icons/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 

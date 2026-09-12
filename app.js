@@ -1,9 +1,14 @@
 import { STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
+import { isRoll } from './lib/model.js';
+import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemaining, instantTimestamp } from './lib/training.js';
 
 const $ = selector => document.querySelector(selector); // Keeps DOM lookups short while remaining dependency-free.
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
+const categories = { forced: 'Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
+let editedWetting = null;
+let protocolView;
 let state = deviceState(emptyState());
 let persistedRaw = null;
 let storageBlocked = false;
@@ -198,11 +203,34 @@ function seedForm(day = localDay()) { // Carries forward the latest same-day cou
 }
 
 function setDefaults() { // Applies saved preferences only at startup or when the user explicitly saves defaults.
-  $('#probability').value = state.settings.probability;
-  $('#probability-slider').value = state.settings.probability;
   $(`input[name="position"][value="${state.settings.position}"]`).checked = true;
-  $('#default-probability').value = state.settings.probability;
+  $('#wetting-position').value = state.settings.position;
   $('#default-position').value = state.settings.position;
+}
+
+function enroll(entries, now = new Date()) { // Enrollment starts on the first new observation, and survives deleting individual observations.
+  return protocolFor(entries) ? entries : [...entries, protocolRecord(now)];
+}
+
+function renderCooldown() { // Uses wall-clock deadlines rather than decrementing a timer that pauses in background tabs.
+  const remaining = cooldownRemaining(state.entries);
+  $('.roll-button').disabled = remaining > 0 || storageBlocked;
+  const seconds = Math.ceil(remaining / 1000);
+  const message = remaining > 0 ? `Next roll in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}. Wetting and manual logging remain available.` : 'Ready to roll. A Hold result starts a 10-minute roll cooldown.';
+  const status = $('#cooldown-status');
+  if (status.textContent !== message) status.textContent = message;
+}
+
+function renderProtocol() { // Shows the current chance and an auditable daily breakdown, counting actual events only.
+  protocolView = trainingState(state.entries);
+  const view = protocolView, counts = view.counts;
+  $('#probability').value = view.probability;
+  $('#probability-slider').value = view.probability;
+  $('#protocol-probability').textContent = `${view.probability}%`;
+  $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's chance is fixed by completed days.` : 'Starts at 50% with your first new observation. Earlier, unclassified snapshots are kept in your archive.';
+  $('#protocol-today').textContent = `Today: F ${counts.forced} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
+  $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
+  renderCooldown();
 }
 
 function formEntry(form, original = null) { // Reads a snapshot; editing an unchanged timestamp preserves its exact original offset and seconds.
@@ -262,29 +290,36 @@ function renderChart() { // Draws real daily data and supplies an equivalent tab
   $('#chart-caption').textContent = count ? (isLiquid ? 'Daily totals use the highest logged cumulative amount.' : `${count} check-ins over ${days} days. Pee and hold results shown by day.`) : 'No observations yet. Your first check-in starts the record.';
 }
 
-function renderRecent() { // Displays a compact recent list without inserting free-form user content as HTML.
-  const recent = sortedEntries(state.entries).slice(0, 4);
-  $('#recent-list').innerHTML = recent.length ? recent.map(entry => `<div class="recent-entry"><span class="entry-icon ${entry.result}"><svg class="icon"><use href="#i-${entry.result === 'pee' ? 'drop' : 'clock'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${entry.liquidsMl.toLocaleString()} mL · ${positions[entry.position]} · Diaper #${entry.diaperNumber}</p></div><span class="result-pill ${entry.result}">${entry.result === 'pee' ? 'Pee' : 'Hold'}</span></div>`).join('') : '<div class="empty-state"><svg class="empty-sigil" aria-hidden="true"><use href="#i-sigil"/></svg>NO OBSERVATIONS FILED<br>Your saved check-ins will appear here.</div>';
+function renderRecent() { // Lists both observation types while keeping enrollment metadata out of the activity feed.
+  const recent = sortedEntries(state.entries.filter(entry => entry.kind !== 'protocol')).slice(0, 4);
+  $('#recent-list').innerHTML = recent.length ? recent.map(entry => {
+    const wetting = entry.kind === 'wetting';
+    const label = wetting ? categories[entry.category] : entry.result === 'pee' ? 'Pee' : 'Hold';
+    const icon = wetting || entry.result === 'pee' ? 'drop' : 'clock';
+    const description = wetting ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL';
+    return `<div class="recent-entry"><span class="entry-icon ${entry.result ?? 'pee'}"><svg class="icon"><use href="#i-${icon}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${description} &middot; ${positions[entry.position]} &middot; Diaper #${entry.diaperNumber}</p></div><span class="result-pill ${entry.result ?? 'pee'}">${label}</span></div>`;
+  }).join('') : '<div class="empty-state"><svg class="empty-sigil" aria-hidden="true"><use href="#i-sigil"/></svg>NO OBSERVATIONS FILED<br>Your saved observations will appear here.</div>';
 }
 
 function filteredEntries() { // Applies inclusive calendar-day filters using each entry's recorded local date.
   const from = $('#filter-from').value, to = $('#filter-to').value, result = $('#filter-result').value;
-  return sortedEntries(state.entries).filter(entry => {
+  return sortedEntries(state.entries).filter(entry => entry.kind !== 'protocol').filter(entry => {
     const day = entry.occurredAt.slice(0, 10);
-    return (!from || day >= from) && (!to || day <= to) && (result === 'all' || result === entry.result);
+    return (!from || day >= from) && (!to || day <= to) && (result === 'all' || result === (entry.kind ?? entry.result));
   });
 }
 
 function renderHistory() { // Limits initial table size while keeping filters and CSV export over the full matching set.
   const entries = filteredEntries();
   const visible = entries.slice(0, historyLimit);
-  $('#history-count').textContent = $('#filter-from').value && $('#filter-to').value && $('#filter-from').value > $('#filter-to').value ? 'Choose an end date on or after the start date.' : `${entries.length} matching check-ins · ${visible.length} shown. CSV exports all matching entries.`;
+  $('#history-count').textContent = $('#filter-from').value && $('#filter-to').value && $('#filter-from').value > $('#filter-to').value ? 'Choose an end date on or after the start date.' : `${entries.length} matching observations · ${visible.length} shown. CSV exports all matching entries.`;
   $('#history-empty').hidden = entries.length > 0;
   $('#load-more').hidden = entries.length <= historyLimit;
-  $('#history-body').innerHTML = visible.map(entry => `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} · UTC${entry.occurredAt.slice(-6)}</small></td><td>${entry.liquidsMl.toLocaleString()} mL</td><td>${positions[entry.position]}</td><td>#${entry.diaperNumber}</td><td>${entry.wettingsCount}</td><td>${entry.probability}%</td><td><span class="result-pill ${entry.result}">${entry.result === 'pee' ? 'Pee' : 'Hold'}</span><small>${entry.source === 'random' ? 'Rolled' : 'Manual'}${entry.edited ? ' · edited' : ''}</small></td><td><button class="text-button" data-edit="${entry.id}" aria-label="Edit check-in ${dateLabel(entry.occurredAt)}">Edit</button><button class="text-button" data-delete="${entry.id}" aria-label="Delete check-in ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`).join('');
+  $('#history-body').innerHTML = visible.map(entry => `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} · UTC${entry.occurredAt.slice(-6)}</small></td><td>${entry.kind === 'wetting' ? '\u2014' : entry.liquidsMl.toLocaleString() + ' mL'}</td><td>${positions[entry.position]}</td><td>#${entry.diaperNumber}</td><td>${entry.kind === 'wetting' ? '1 event' : entry.wettingsCount}</td><td>${entry.kind === 'wetting' ? '\u2014' : entry.probability + '%'}</td><td><span class="result-pill ${entry.result}">${entry.kind === 'wetting' ? categories[entry.category] : entry.result === 'pee' ? 'Pee' : 'Hold'}</span><small>${entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled' : 'Manual'}${entry.edited ? ' · edited' : ''}</small></td><td><button class="text-button" data-edit="${entry.id}" aria-label="Edit check-in ${dateLabel(entry.occurredAt)}">Edit</button><button class="text-button" data-delete="${entry.id}" aria-label="Delete check-in ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`).join('');
 }
 
 function render() { // Refreshes derived views without erasing unsaved form inputs or settings changes.
+  renderProtocol();
   renderSummary();
   renderChart();
   renderRecent();
@@ -321,9 +356,19 @@ $('#log-form').addEventListener('submit', event => { // Validates, draws once, a
   try {
     const base = formEntry(event.currentTarget);
     const source = event.submitter?.value === 'manual' ? 'manual' : 'random';
-    const candidate = validateEntry({ ...base, source, result: 'hold' });
+    refreshStoredState();
+    const now = new Date();
+    if (source === 'random' && cooldownRemaining(state.entries, now) > 0) throw new Error('The previous Hold result is still in its 10-minute cooldown.');
+    const entries = enroll(state.entries, now);
+    const probability = trainingState(entries, now).probability;
+    const candidate = validateEntry({ ...base, probability, source, result: 'hold' });
     candidate.result = source === 'random' ? rollResult(candidate.probability) : $('#manual-result').value;
-    commit({ ...state, entries: [...state.entries, candidate] });
+    if (source === 'random') { candidate.rolledAt = instantTimestamp(now); candidate.rolledResult = candidate.result; }
+    const enrollment = protocolFor(entries);
+    const savedEntries = source === 'random' && candidate.result === 'hold'
+      ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: candidate.rolledAt } : entry)
+      : entries; // Retains the deadline even when an individual failed observation is later deleted.
+    commit({ ...state, entries: [...savedEntries, candidate] });
     $('#roll-result').textContent = `${source === 'random' ? 'Rolled' : 'Logged'}: ${candidate.result === 'pee' ? 'Pee' : 'Hold'} · ${candidate.probability}% pee chance. Check-in saved. You're always free to use the bathroom.`;
     $('#roll-result').hidden = false;
     $('#occurred-at').value = localInput();
@@ -335,6 +380,37 @@ $('#log-form').addEventListener('submit', event => { // Validates, draws once, a
 $('#occurred-at').addEventListener('change', event => { // Resets daily counters only when the selected date changes.
   const day = event.target.value.slice(0, 10);
   if (day && day !== formDay) seedForm(day);
+});
+$('#wetting-time').addEventListener('input', event => { event.target.dataset.edited = 'true'; }); // Keeps backdated event times stable while the live clock advances.
+$('#wetting-form').addEventListener('submit', event => { // Saves one classified event without rolling, even during a cooldown or while offline.
+  event.preventDefault();
+  try {
+    refreshStoredState();
+    const values = new FormData(event.currentTarget);
+    const entry = validateEntry({ id: crypto.randomUUID(), kind: 'wetting', occurredAt: timestampFromInput(values.get('occurredAt')),
+      category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')) });
+    if (Date.parse(entry.occurredAt) > Date.now()) throw new Error('A wetting must describe an event that has already happened.');
+    commit({ ...state, entries: [...enroll(state.entries), entry] });
+    $('#wetting-category').value = '';
+    $('#wetting-time').value = localInput();
+    delete $('#wetting-time').dataset.edited;
+    notify('Wetting saved. One event added to the daily classification totals.');
+  } catch (error) { notify(error.message); }
+});
+$('#close-wetting-edit').addEventListener('click', () => $('#wetting-edit-dialog').close());
+$('#wetting-edit-form').addEventListener('submit', event => { // Corrects event metadata through the existing durable queue and conflict protection.
+  event.preventDefault();
+  try {
+    const current = state.entries.find(entry => entry.id === editedWetting?.id);
+    if (!current || JSON.stringify(current) !== JSON.stringify(editedWetting)) throw new Error('This wetting changed. Close and reopen the editor.');
+    const values = new FormData(event.currentTarget), input = values.get('occurredAt');
+    const next = validateEntry({ ...current, occurredAt: input === current.occurredAt.slice(0, 16) ? current.occurredAt : timestampFromInput(input),
+      category: values.get('category'), position: values.get('position'), diaperNumber: Number(values.get('diaperNumber')), edited: true });
+    if (Date.parse(next.occurredAt) > Date.now()) throw new Error('A wetting must describe an event that has already happened.');
+    commit({ ...state, entries: state.entries.map(entry => entry.id === next.id ? next : entry) });
+    $('#wetting-edit-dialog').close();
+    notify('Wetting corrected. Daily probability recalculated.');
+  } catch (error) { notify(error.message); }
 });
 $('#new-diaper').addEventListener('click', () => { // Advances the day's diaper number and starts its wetting count at zero.
   const current = Number($('#diaper').value);
@@ -372,6 +448,14 @@ $('#history-body').addEventListener('click', event => { // Delegates actions so 
   if (edit) {
     editedEntry = state.entries.find(entry => entry.id === edit.dataset.edit);
     if (!editedEntry) return;
+    if (editedEntry.kind === 'wetting') {
+      editedWetting = editedEntry;
+      const form = $('#wetting-edit-form');
+      for (const key of ['category', 'position', 'diaperNumber']) form.elements.namedItem(key).value = editedWetting[key];
+      $('#wetting-edit-time').value = editedWetting.occurredAt.slice(0, 16);
+      $('#wetting-edit-dialog').showModal();
+      return;
+    }
     for (const key of ['id', 'liquidsMl', 'position', 'diaperNumber', 'wettingsCount', 'probability', 'result']) $('#edit-form').elements.namedItem(key).value = editedEntry[key];
     $('#edit-time').value = editedEntry.occurredAt.slice(0, 16);
     $('#edit-dialog').showModal();
@@ -387,7 +471,7 @@ $('#edit-form').addEventListener('submit', event => { // Marks corrections expli
   try {
     const current = state.entries.find(entry => entry.id === editedEntry?.id);
     if (!current || JSON.stringify(current) !== JSON.stringify(editedEntry)) throw new Error('This entry changed in another tab. Close the editor and open it again.');
-    const next = validateEntry({ ...formEntry(event.currentTarget, editedEntry), source: editedEntry.source, result: new FormData(event.currentTarget).get('result'), edited: true });
+    const next = validateEntry({ ...editedEntry, ...formEntry(event.currentTarget, editedEntry), source: editedEntry.source, result: new FormData(event.currentTarget).get('result'), edited: true });
     commit({ ...state, entries: state.entries.map(entry => entry.id === next.id ? next : entry) });
     $('#edit-dialog').close();
     notify('Changes saved.');
@@ -396,7 +480,7 @@ $('#edit-form').addEventListener('submit', event => { // Marks corrections expli
 $('#settings-form').addEventListener('submit', event => { // Persists preferences with the same validation and storage protections as entries.
   event.preventDefault();
   try {
-    commit({ ...state, settings: { probability: Number($('#default-probability').value), position: $('#default-position').value } });
+    commit({ ...state, settings: { probability: state.settings.probability, position: $('#default-position').value } });
     setDefaults();
     notify('Your defaults are saved.');
   } catch (error) { notify(error.message); }
@@ -476,12 +560,15 @@ function refreshClock() { // Advances untouched live timestamps and resets autom
     input.value = localInput();
     if (changedDay) seedForm(today);
   }
-  if (changedDay) { activeDay = today; render(); }
+  if (changedDay || (protocolView && protocolView.today !== protocolDay(new Date(), protocolView.timeZone))) { activeDay = today; render(); }
+  const wettingTime = $('#wetting-time');
+  if (!wettingTime.dataset.edited && document.activeElement !== wettingTime) wettingTime.value = localInput();
+  renderCooldown();
 }
 $('#occurred-at').addEventListener('input', () => { $('#occurred-at').dataset.edited = 'true'; });
 $('#log-form').addEventListener('submit', () => { if ($('#occurred-at').value === localInput()) delete $('#occurred-at').dataset.edited; });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshClock(); });
-setInterval(refreshClock, 30000);
+setInterval(refreshClock, 1000);
 setInterval(() => { if (!document.hidden) void syncNow(); }, 30000);
 window.addEventListener('online', () => { void checkSession(); });
 
@@ -531,6 +618,7 @@ $('#disconnect-account').addEventListener('click', async () => { // Clears this 
 });
 
 loadState();
+$('#wetting-time').value = localInput();
 $('#occurred-at').value = localInput();
 setDefaults();
 seedForm();

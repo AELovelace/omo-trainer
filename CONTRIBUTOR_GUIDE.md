@@ -4,6 +4,7 @@ This repository currently contains a standalone browser tracker, not the origina
 
 - `index.html` and `styles.css`: accessible forms and responsive dashboard.
 - `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
+- `lib/training.js`: enrollment, stable reporting timezone, completed-day adjustments and original-draw cooldowns; see GENERATION_TUNING_GUIDE.md for rules and migration limits.
 - `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection.
 - `lib/sync.js`: local queue, remote reconciliation, tombstones, and explicit conflict resolution.
 - `server/database.mjs`: participant-scoped SQLite records, mutation receipts, app sessions, and administrator exports.
