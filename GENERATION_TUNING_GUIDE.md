@@ -11,7 +11,7 @@ For every completed calendar day in the enrollment timezone:
 - Otherwise: increase by 5 points.
 - Clamp after each day to 20 through 80 inclusive.
 
-lib/training.js derives the chance by replaying completed days. Empty days accrue while the app is closed. Today's events affect tomorrow; an earlier correction recalculates later days without rewriting saved roll probabilities. The interface shows the latest 90 adjustment rows, but calculations include every day since enrollment. JSON and administrator exports include enrollment and all events for reproduction of this calculation. A missing day is missing data, not evidence that no wettings occurred.
+lib/training.js derives the chance by replaying completed days. Empty days accrue while the app is closed. Today's events affect tomorrow; an earlier correction recalculates later days without rewriting saved roll probabilities. The About page explains the protocol and shows the latest 90 adjustment rows, but calculations include every day since enrollment. JSON and administrator exports include enrollment and all events for reproduction of this calculation. A missing day is missing data, not evidence that no wettings occurred.
 
 A random Hold starts a ten-minute cooldown for random rolls. rolledAt and rolledResult preserve the actual draw time and original result separately from editable observation metadata. Backdating a check-in cannot shorten the cooldown, and changing its displayed result does not remove the original failure. The enrollment record also retains lastFailureAt, so deleting an individual failed observation does not remove the deadline. Manual logging and recording wettings remain available. Legacy random Hold records use their observation timestamp until expired.
 

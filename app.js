@@ -329,7 +329,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about'].includes(requested) ? requested : 'overview';
   document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `page-${page}`; });
   document.querySelectorAll('[data-page]').forEach(link => {
     const selected = link.dataset.page === page;
@@ -337,7 +337,7 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     if (selected) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.

@@ -3,6 +3,7 @@
 This repository currently contains a standalone browser tracker, not the original game.
 
 - `index.html` and `styles.css`: accessible forms and responsive dashboard.
+- `#about` in `index.html`, routed by `navigate()` in `app.js`, contains the protocol explanation and daily adjustment history. The tracker keeps the live roll probability and cooldown beside its controls.
 - `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
 - `lib/training.js`: enrollment, stable reporting timezone, completed-day adjustments and original-draw cooldowns; see GENERATION_TUNING_GUIDE.md for rules and migration limits.
 - `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection.

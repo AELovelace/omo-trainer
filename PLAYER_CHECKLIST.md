@@ -11,7 +11,7 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - **New diaper** increases the selected number and resets its wettings to zero; save a check-in to record the change.
 - The main protocol starts at 50% with your first new observation. **Roll & save check-in** uses the displayed daily chance; a Hold pauses random rolls for ten minutes. **Save without rolling** remains available throughout.
 - In **Record a wetting**, classify each actual event once as Forced, Voluntary, Semi-involuntary, or Involuntary, including events without a roll. This is separate from the cumulative wetting snapshot in a check-in.
-- Completed days with F + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no wettings recorded, increase it by 5 points. The chance stays between 20% and 80%. Review the daily adjustment history above the forms.
+- Completed days with F + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no wettings recorded, increase it by 5 points. The chance stays between 20% and 80%. Open **About** in the navigation to read the protocol rules and review your daily adjustment history.
 - Today affects tomorrow. Correcting a past wetting recalculates later days; recorded roll probabilities stay unchanged. Day boundaries use the timezone saved at enrollment, even on another device.
 - Use the bathroom whenever needed. The random result is optional and does not record a wetting automatically.
 - Review Charts or History. Edit mistakes or delete individual records in History.

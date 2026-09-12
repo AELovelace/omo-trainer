@@ -1296,6 +1296,9 @@ dialog .primary {
   }
   .nav-item {
     flex: 1;
+    flex-direction: column; /* Keeps all four destinations readable within a phone-width navigation row. */
+    min-width: 0;
+    text-align: center;
     justify-content: center;
     gap: 7px;
     font-size: 11px;

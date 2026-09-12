@@ -84,7 +84,7 @@ try {
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true, 'Deleting a failure cannot bypass its saved deadline');
   for (const width of [320, 390, 680, 768, 1024, 1440]) {
     await page.setViewport({ width, height: 1000 });
-    for (const route of ['overview', 'history', 'settings']) {
+    for (const route of ['overview', 'history', 'settings', 'about']) {
       await page.click(`[data-page="${route}"]`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} overflows at ${width}px`);
     }

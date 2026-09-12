@@ -24,6 +24,7 @@
     <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20S3 15 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 12-9 12Z"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
   </svg>
   <div class="app-shell">
@@ -34,6 +35,7 @@
         <a href="#overview" data-page="overview" class="nav-item active" aria-current="page"><svg class="icon"><use href="#i-grid"/></svg><span>Overview</span><small>01</small></a>
         <a href="#history" data-page="history" class="nav-item"><svg class="icon"><use href="#i-clock"/></svg><span>Record archive</span><small>02</small></a>
         <a href="#settings" data-page="settings" class="nav-item"><svg class="icon"><use href="#i-sliders"/></svg><span>Settings & data</span><small>03</small></a>
+        <a href="#about" data-page="about" class="nav-item"><svg class="icon"><use href="#i-info"/></svg><span>About</span><small>04</small></a>
       </nav>
       <div class="sidebar-bottom"><div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><strong>RECORD ACCESS</strong><p>Sign in to sync with lidoll.dev. The organizer can access synced records for analysis.</p></div><a class="site-link" href="https://lidoll.dev">RETURN TO LIDOLL.DEV <span>↗</span></a></div>
     </aside>
@@ -48,12 +50,6 @@
           <article class="stat-card"><div class="stat-top"><span>Liquids today</span><span class="stat-icon blue"><svg class="icon"><use href="#i-drop"/></svg></span></div><div class="stat-value"><span id="stat-liquids">0</span> <small>mL</small></div><span class="stat-foot">Highest logged daily total</span></article>
           <article class="stat-card"><div class="stat-top"><span>Latest diaper today</span><span class="stat-icon peach"><svg class="icon"><use href="#i-heart"/></svg></span></div><div class="stat-value" id="stat-diaper">—</div><span class="stat-foot" id="stat-wettings">No check-ins yet</span></article>
         </div>
-        <section class="card protocol-card" aria-labelledby="protocol-title">
-          <div class="card-heading"><div><p class="eyebrow">CHRYSALIS // ACTIVE PROTOCOL</p><h2 id="protocol-title">Daily probability</h2></div><strong id="protocol-probability" class="stat-value">50%</strong></div>
-          <p id="protocol-summary" class="section-copy"></p><p id="protocol-today" class="section-copy"></p>
-          <p class="field-help">Each completed day: F + V ≥ SI + I decreases the chance by 5 percentage points. F + V &lt; SI + I increases it by 5. A day with no wettings recorded also increases it by 5. Bounds: 20–80%.</p>
-          <details class="chart-details"><summary>Daily adjustment history</summary><div class="table-scroll"><table><thead><tr><th>Date</th><th>F</th><th>V</th><th>SI</th><th>I</th><th>Rule</th><th>Chance after day</th></tr></thead><tbody id="protocol-days"></tbody></table></div><p class="field-help">Showing the latest 90 completed days. Backdated corrections recalculate later days; saved roll probabilities stay as recorded.</p></details>
-        </section>
         <div class="dashboard-grid">
           <section class="card log-card" aria-labelledby="log-title">
             <div class="card-heading"><div><h2 id="log-title">Record an observation</h2><p>A snapshot of the present. Filed for later.</p></div><span class="pill lavender">FORM 01</span></div>
@@ -64,6 +60,7 @@
               <div class="field-pair wetting-row"><div><label for="wettings">Wettings in this diaper</label><input id="wettings" name="wettingsCount" type="number" min="0" max="10000" step="1" value="0" required inputmode="numeric"></div><button class="button secondary new-diaper" id="new-diaper" type="button">＋ New diaper</button></div>
               <p class="field-help">The wetting count above is a cumulative snapshot saved with this check-in. Classified events are recorded separately in Form 02.</p>
               <div class="probability-box"><div class="probability-heading"><label for="probability">Chance of a “pee” result</label><div class="probability-number"><input id="probability" name="probability" readonly aria-label="Pee probability percentage" type="number" min="20" max="80" step="1" value="50" required inputmode="numeric"><span>%</span></div></div><input id="probability-slider" aria-label="Protocol probability" type="range" min="20" max="80" disabled step="1" value="50"><div class="range-labels"><span>20% minimum</span><span>80% maximum</span></div></div>
+              <p class="field-help"><a href="#about" class="text-link">About the daily protocol</a></p>
               <p id="cooldown-status" class="field-help" role="timer" aria-live="off"></p><p class="prompt-note">A random prompt, never permission. Use the bathroom whenever you need. A result doesn't add a wetting.</p>
               <button class="button primary roll-button" type="submit" name="action" value="roll"><svg class="icon"><use href="#i-dice"/></svg>Roll & save check-in <span>↗</span></button>
               <div class="manual-row"><label class="sr-only" for="manual-result">Result to log manually</label><select id="manual-result"><option value="pee">Pee</option><option value="hold">Hold</option></select><button class="text-button" type="submit" name="action" value="manual">Save without rolling <span>→</span></button></div>
@@ -103,6 +100,16 @@
           <section class="card"><h2>Take the terminal with you</h2><p class="section-copy">On iPhone or iPad: open in Safari, tap Share, then Add to Home Screen. On Android or desktop: use your browser's Install app option.</p><p class="section-copy">After the first successful visit, logging works offline. Signing in and syncing need an internet connection. Installation requires HTTPS (or localhost for development).</p><p id="offline-status" class="field-help" role="status">Checking offline support…</p></section>
           <section class="card"><h2>Delete your entries</h2><p class="section-copy">When connected, deleting entries also deletes them from the central database after syncing. Offline devices receive those deletions on their next sync. Previously exported files or server backups may still contain older copies.</p><p class="section-copy">Use Sign out & clear device to remove only this device's copy. Download a backup before deleting anything you want to keep.</p><button id="delete-all" class="button danger">Delete all entries</button></section>
         </div>
+      </section>
+      <section id="page-about" class="page" hidden>
+        <div class="page-heading"><div><p class="eyebrow">CHRYSALIS // PROTOCOL REFERENCE</p><h1>ABOUT LITTLE LOG<span>.</span></h1><p class="subtitle">How the daily protocol works, and how your chance changes.</p></div></div>
+        <section class="card protocol-card" aria-labelledby="protocol-title">
+          <div class="card-heading"><div><p class="eyebrow">CHRYSALIS // ACTIVE PROTOCOL</p><h2 id="protocol-title">Daily probability</h2></div><strong id="protocol-probability" class="stat-value">50%</strong></div>
+          <p id="protocol-summary" class="section-copy"></p><p id="protocol-today" class="section-copy"></p>
+          <p class="field-help">Each completed day: F + V ≥ SI + I decreases the chance by 5 percentage points. F + V &lt; SI + I increases it by 5. A day with no wettings recorded also increases it by 5. Bounds: 20–80%.</p>
+          <details class="chart-details"><summary>Daily adjustment history</summary><div class="table-scroll"><table><thead><tr><th>Date</th><th>F</th><th>V</th><th>SI</th><th>I</th><th>Rule</th><th>Chance after day</th></tr></thead><tbody id="protocol-days"></tbody></table></div><p class="field-help">Showing the latest 90 completed days. Backdated corrections recalculate later days; saved roll probabilities stay as recorded.</p></details>
+        </section>
+        <a href="#overview" class="text-link">Return to tracker</a>
       </section>
       <footer><span>CHRYSALIS <span aria-hidden="true">✦</span> LITTLE LOG / LL-01</span><span>Offline when needed. Synced when connected.</span></footer>
     </main>
