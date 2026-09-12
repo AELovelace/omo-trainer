@@ -6,7 +6,7 @@ import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemain
 
 const $ = selector => document.querySelector(selector); // Keeps DOM lookups short while remaining dependency-free.
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
-const categories = { forced: 'Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
+const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
 let editedWetting = null;
 let protocolView;
 let state = deviceState(emptyState());
@@ -97,7 +97,7 @@ function renderSync() { // Separates local saving, pending uploads, conflicts, a
   if (!storageBlocked) $('.local-badge').lastChild.textContent = ` ${status}`;
   $('#sync-status').textContent = syncMessage || status;
   $('#account-status').textContent = sync.participant ? `Connected as ${sync.participant.label}. Participant ID: ${sync.participant.id}` : serverSession ? `Signed in as ${serverSession.participant.label}. Connect this device to upload its entries.` : 'Sign in with your shared SadGirlsClub account to save entries centrally.';
-  $('#connect-account').textContent = sync.participant ? 'Sign in again' : serverSession ? 'Connect & upload my entries' : 'Sign in with SadGirlsClub';
+  $('#connect-account').textContent = sync.participant ? 'Sign in again' : serverSession ? 'Connect & upload my entries' : 'Sign in with LidollID';
   $('#connect-account').hidden = Boolean(sync.participant && serverSession);
   $('#register-account').hidden = Boolean(sync.participant || serverSession);
   $('#topbar-sign-in').hidden = Boolean(sync.participant && serverSession);
@@ -226,8 +226,8 @@ function renderProtocol() { // Shows the current chance and an auditable daily b
   $('#probability').value = view.probability;
   $('#protocol-probability').textContent = `${view.probability}%`;
   $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's chance is fixed by completed days.` : 'Starts at 50% with your first saved check-in, wetting, or roll. Earlier, unclassified snapshots are kept in your archive.';
-  $('#protocol-today').textContent = `Today: F ${counts.forced} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
-  $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
+  $('#protocol-today').textContent = `Today: F ${counts.forced} · SF ${counts['semi-forced']} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
+  $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day['semi-forced']}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
   renderCooldown();
 }
 

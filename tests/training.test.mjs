@@ -103,3 +103,32 @@ test('version 1 database migration retains snapshots and idempotent retry receip
     assert.equal(db.records(person.id)[0].version, 1);
   } finally { db.close(); }
 });
+
+test('semi-forced classifications survive validation, backups, CSV, database sync and a second device', () => {
+  const event = wetting('sf-event', '01', 'semi-forced');
+  const state = { ...emptyState(), entries: [protocol(), event] };
+  assert.deepEqual(validateState(JSON.parse(JSON.stringify(state))), state);
+  assert.match(toCsv(state.entries), /semi-forced/);
+  const db = openDatabase(':memory:');
+  try {
+    const person = db.ensureParticipant('issuer', 'sf-user', 'SF user');
+    const device = connectAccount(deviceState(state), person, []);
+    const response = db.sync(person.id, device.sync.queue);
+    const second = connectAccount(deviceState(emptyState()), person, db.records(person.id));
+    assert.deepEqual(second.entries, reconcile(device, response).entries);
+    assert.equal(db.exportRows().find(row => row.kind === 'wetting').category, 'semi-forced');
+  } finally { db.close(); }
+});
+
+test('semi-forced counts with F/V, including SF-only days and ties with involuntary events', () => {
+  const single = trainingState([protocol(), wetting('sf', '01', 'semi-forced')], new Date('2026-09-02T00:00:00Z'));
+  assert.equal(single.days[0]['semi-forced'], 1);
+  assert.equal(single.probability, 45);
+  const tie = [protocol(), wetting('sf', '01', 'semi-forced'), wetting('i', '01', 'involuntary')];
+  assert.equal(trainingState(tie, new Date('2026-09-02T00:00:00Z')).probability, 45);
+  assert.equal(trainingState([...tie, wetting('si', '01', 'semi-involuntary')], new Date('2026-09-02T00:00:00Z')).probability, 55);
+  const today = trainingState([protocol(), wetting('sf', '01', 'semi-forced')], new Date('2026-09-01T14:00:00Z'));
+  assert.equal(today.counts['semi-forced'], 1);
+  assert.equal(today.probability, 50);
+  assert.equal(today.nextProbability, 45);
+});

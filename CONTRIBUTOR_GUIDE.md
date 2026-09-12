@@ -55,3 +55,5 @@ The browser chart and its retry/ownership metadata share one atomic save.
 Sign-in alone never links or uploads a guest chart. See GROWTH_CHART_GUIDE.md.
 Production auth defaults use auth.sadgirlsclub.wtf; existing issuer transitions
 require the explicit migration documented in AUTH_GUIDE.md.
+
+Classification includes `semi-forced` (Semi-Forced / SF), ordered between Forced and Voluntary in both create/edit menus. Keep the model allowlist, history labels and protocol counts aligned. SF joins F/V for daily adjustment; existing records are unchanged. Deploy matching frontend/backend files and close older PWA tabs before recording the new category.

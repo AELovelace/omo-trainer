@@ -42,7 +42,10 @@ try {
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true);
   await page.$eval('.roll-button', button => button.dispatchEvent(new Event('click')));
   assert.equal((await saved(page)).entries.length, 2, 'Programmatic submit cannot bypass the cooldown');
-  await fill(page, '#wetting-category', 'forced');
+  for (const selector of ['#wetting-category', '#wetting-edit-category']) {
+    assert.deepEqual(await page.$$eval(selector + ' option', options => options.filter(option => option.value).map(option => option.textContent)), ['Forced (F)', 'Semi-Forced (SF)', 'Voluntary (V)', 'Semi-involuntary (SI)', 'Involuntary (I)']);
+  }
+  await fill(page, '#wetting-category', 'semi-forced');
   await fill(page, '#wettings', '3');
   await page.click('#wetting-form button[type="submit"]');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'wetting').length, 1);
@@ -70,9 +73,11 @@ try {
   await clock(page, '2026-09-23T00:00:00Z');
   await chance(page, 55);
   state = await saved(page);
-  const first = state.entries.find(entry => entry.kind === 'wetting' && entry.category === 'forced');
+  const first = state.entries.find(entry => entry.kind === 'wetting' && entry.category === 'semi-forced');
   await page.click('[data-page="history"]');
+  assert.match(await page.$eval('#history-body', element => element.textContent), /Semi-Forced/);
   await page.click(`[data-edit="${first.id}"]`);
+  assert.equal(await page.$eval('#wetting-edit-category', element => element.value), 'semi-forced');
   await fill(page, '#wetting-edit-category', 'involuntary');
   await fill(page, '#wetting-edit-count', '5');
   await page.click('#wetting-edit-form button[type="submit"]');

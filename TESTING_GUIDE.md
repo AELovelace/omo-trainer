@@ -88,3 +88,5 @@ retries, account isolation, clearing and phone layout. It does not contact or
 change production. A restricted environment may need permission to start the
 headless browser. Actual installation and shared browser/installed-app storage
 still need testing on the intended phones. See GROWTH_CHART_GUIDE.md.
+
+Semi-Forced coverage in `tests/training.test.mjs` verifies JSON/CSV validation, participant-scoped SQLite sync and second-device restore, SF-only completed days, ties with involuntary events and today's next-day preview. Check both Classification menus show F, SF, V, SI, I in that order; saving/editing SF must retain its history label and About-page count.

@@ -9,7 +9,7 @@ chart through the login redirect.
 
 ## Account and storage behavior
 
-Sign in with SadGirlsClub. The existing authorization-code flow validates PKCE,
+Sign in with LidollID. The existing authorization-code flow validates PKCE,
 state, nonce, issuer, ID-token signature and userinfo subject. Login requests
 with `returnTo=growth-chart` return to the bundled chart using the existing
 `/tracker/auth/callback` registration. Arbitrary return URLs are not accepted.

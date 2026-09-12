@@ -2,7 +2,7 @@
 
 The main mode starts at 50% on the first saved check-in, wetting, or roll. A synced `kind: protocol` record fixes enrollment time, reporting timezone, and protocol version 1. Existing unclassified snapshots are preserved without inventing classifications or charging days before enrollment. Concurrent offline enrollments use the earliest timestamp, then ID as a tie-breaker.
 
-Each actual wetting is a separate `kind: wetting` record with a timestamp, category, position, diaper number, and an optional cumulative diaper wetting count. Categories are forced, voluntary, semi-involuntary, and involuntary. Repeated cumulative snapshots never count as classified events.
+Each actual wetting is a separate `kind: wetting` record with a timestamp, category, position, diaper number, and an optional cumulative diaper wetting count. Categories are forced, semi-forced, voluntary, semi-involuntary, and involuntary. Semi-Forced (SF) is stored as `semi-forced` and appears between Forced and Voluntary in both classification menus. Repeated cumulative snapshots never count as classified events.
 
 Observation and roll records are independent. `kind: observation` stores intake since the preceding saved check-in with `liquidsMode: interval` and diaper number; it has no probability or outcome. `kind: roll` stores the real draw time, computed probability, result and the position selected in the roll card, and takes no inputs from the observation form. Standalone roll metadata is not editable; individual draws can be deleted without clearing an active cooldown. Older observations retain any recorded position and wetting snapshot, and their edit form still exposes those historical fields. Legacy combined observations retain their original cumulative intake semantics. New wettings save a diaper total including that event; the total does not multiply its daily classification count. Older rolls may lack a position, and older wettings may lack a count. Those absent values remain absent when restoring or syncing.
 
@@ -11,7 +11,7 @@ Daily liquid totals add intervals by the check-in's recorded local date, includi
 For every completed calendar day in the enrollment timezone:
 
 - No recorded wettings: increase by 5 percentage points.
-- Forced + Voluntary >= Semi-involuntary + Involuntary: decrease by 5 points.
+- Forced + Semi-Forced + Voluntary >= Semi-involuntary + Involuntary: decrease by 5 points.
 - Otherwise: increase by 5 points.
 - Clamp after each day to 20 through 80 inclusive.
 
