@@ -53,3 +53,13 @@ test('browser wallet mutations enforce origin, CSRF, account isolation, replay a
   assert.equal(call('browserApproved',alice.id),false);
   const connection=call('grant',b);call('revoke',alice.id,connection.id);assert.equal(call('browserSession',b).linked,true,'another user cannot revoke Bob');
 }));
+
+test('embedded game linking preserves only its fixed website return through sign-in, consent and cancel',()=>fixture(async({db,alice,base,post})=>{
+  const guest=await fetch(base+'connect?view=embedded',{redirect:'manual'});assert.equal(guest.headers.get('location'),'/tracker/auth/login?returnTo=game-wallet-embedded');
+  const science=db.createSession(alice.id),headers={Cookie:'little_log='+science},csrf=db.session(science).csrf;
+  const page=await fetch(base+'connect?view=embedded',{headers});const html=await page.text();assert.match(html,/name="view" value="embedded"/);assert.match(html,/returnTo=game-wallet-embedded&amp;reauth=1/);assert.match(page.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+  const denied=await post('connect',{decision:'deny',csrf,view:'embedded'},headers);assert.equal(denied.headers.get('location'),'/?wallet=cancelled');
+  const allowed=await post('connect',{decision:'allow',csrf,view:'embedded'},headers);assert.equal(allowed.headers.get('location'),'/');assert.match(allowed.headers.get('set-cookie'),/HttpOnly/);
+  const malicious=await post('connect',{decision:'allow',csrf,view:'https://evil.example'},headers);assert.equal(malicious.headers.get('location'),'/game/');
+  const expired=await post('connect',{decision:'allow',csrf,view:'embedded'});assert.equal(expired.headers.get('location'),'/tracker/auth/login?returnTo=game-wallet-embedded');
+}));

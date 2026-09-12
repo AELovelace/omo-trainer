@@ -15,12 +15,14 @@ export async function coinBrowserApi(database,login,request,response,route) { //
     if((request.headers['sec-fetch-site']==='cross-site'&&!(route==='connect'&&request.method==='GET'))||(origin&&origin!==login.origin))fail(403,'Open this page from LiDollQuest.');
     if(!['GET','POST'].includes(request.method))fail(405,'Method not allowed.');
     if(route==='connect'&&request.method==='GET') {
+      const embedded=new URL(request.url,login.origin).searchParams.get('view')==='embedded';
+      const loginReturn=embedded?'game-wallet-embedded':'game-wallet'; // Two fixed destinations preserve the game's view through OIDC without accepting arbitrary URLs.
       const session=login.session(request);
-      if(!session)return redirect(base+'auth/login?returnTo=game-wallet');
+      if(!session)return redirect(base+'auth/login?returnTo='+loginReturn);
       call('app','lidollquest');
       const approved=call('browserApproved',session.participant.id);
       response.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store',Vary:'Cookie','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",'Referrer-Policy':'same-origin'});
-      return response.end(`<!doctype html><html lang="en" data-theme="little-tracker"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fff5fa"><title>Link LiDollQuest</title><link rel="stylesheet" href="${base}styles.css"><link rel="stylesheet" href="${base}themes.css"><link rel="stylesheet" href="${base}coins/style.css"><script defer src="${base}coins/browser.js"></script></head><body class="coins-connect"><main class="card"><h1>${approved?'Returning to LiDollQuest...':'Link LiDollQuest'}</h1><p>Signed in as <strong>${escape(session.participant.label)}</strong></p><p>${approved?'Your wallet access is already approved.':'Allow LiDollQuest to read, earn and spend your LiDollCoins.'}</p><form id="game-consent" method="post" action="${path}connect" data-approved="${approved}"><input type="hidden" name="csrf" value="${escape(session.csrf)}"><button name="decision" value="allow" id="allow">${approved?'Continue to game':'Allow and return to game'}</button><button name="decision" value="deny">Cancel</button></form><p><a href="${base}auth/login?returnTo=game-wallet&amp;reauth=1">Use another account</a></p></main></body></html>`);
+      return response.end(`<!doctype html><html lang="en" data-theme="little-tracker"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fff5fa"><title>Link LiDollQuest</title><link rel="stylesheet" href="${base}styles.css"><link rel="stylesheet" href="${base}themes.css"><link rel="stylesheet" href="${base}coins/style.css"><script defer src="${base}coins/browser.js"></script></head><body class="coins-connect"><main class="card"><h1>${approved?'Returning to LiDollQuest...':'Link LiDollQuest'}</h1><p>Signed in as <strong>${escape(session.participant.label)}</strong></p><p>${approved?'Your wallet access is already approved.':'Allow LiDollQuest to read, earn and spend your LiDollCoins.'}</p><form id="game-consent" method="post" action="${path}connect" data-approved="${approved}"><input type="hidden" name="view" value="${embedded?'embedded':'standalone'}"><input type="hidden" name="csrf" value="${escape(session.csrf)}"><button name="decision" value="allow" id="allow">${approved?'Continue to game':'Allow and return to game'}</button><button name="decision" value="deny">Cancel</button></form><p><a href="${base}auth/login?returnTo=${loginReturn}&amp;reauth=1">Use another account</a></p></main></body></html>`);
     }
     let input;
     if(request.method==='POST') {
@@ -35,11 +37,12 @@ export async function coinBrowserApi(database,login,request,response,route) { //
     }
     if(route==='connect'&&request.method==='POST') {
       const session=login.session(request);
-      if(!session)return redirect(base+'auth/login?returnTo=game-wallet');
+      if(!session)return redirect(base+'auth/login?returnTo='+(input.view==='embedded'?'game-wallet-embedded':'game-wallet'));
       if(input.csrf!==session.csrf)fail(403,'Refresh the sign-in page and try again.');
-      if(input.decision==='deny')return redirect('/game/?wallet=cancelled');
+      const gameReturn=input.view==='embedded'?'/':'/game/'; // Return embedded players to the website that hosts their game frame.
+      if(input.decision==='deny')return redirect(gameReturn+'?wallet=cancelled');
       if(input.decision!=='allow')fail(400,'Choose Allow or Cancel.');
-      return redirect('/game/',[sessionCookie(call('browserIssue',session.participant.id,cookie(request,name)),2592000)]); // Fixed return URL and HttpOnly cookie keep credentials out of game code and redirects.
+      return redirect(gameReturn,[sessionCookie(call('browserIssue',session.participant.id,cookie(request,name)),2592000)]); // Fixed return URL and HttpOnly cookie keep credentials out of game code and redirects.
     }
     const secret=cookie(request,name);
     let session;
