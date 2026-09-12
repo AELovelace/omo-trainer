@@ -8,7 +8,7 @@ This repository currently contains a standalone browser tracker, not the origina
 - `lib/model.js`: schema validation, timestamps, probability, summaries, import, CSV.
 - New `kind: observation` records use `liquidsMode: interval` and carry no roll outcome; standalone `kind: roll` records contain draw metadata and selected position. New check-ins omit position and wetting count; wetting events own the count. Keep those optional historical fields when validating older records. Keep their UI actions, validation, exports and summary contributions separate. Untyped legacy records retain cumulative intake semantics.
 - `lib/training.js`: enrollment, stable reporting timezone, completed-day adjustments and original-draw cooldowns; see GENERATION_TUNING_GUIDE.md for rules and migration limits.
-- `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection.
+- `app.js`: controls, charts, local persistence, durable sync, conflict review, and account connection. Intake can be entered in mL or US fl oz (29.5735295625 mL per fl oz). Keep the unit preference separate from records; preserve the unrounded draft during switches and round once to whole mL at save. Existing record editing and reports remain explicitly labeled mL.
 - `lib/sync.js`: local queue, remote reconciliation, tombstones, and explicit conflict resolution.
 - `server/database.mjs`: participant-scoped SQLite records, mutation receipts, app sessions, and administrator exports.
 - `server/login.mjs` and `server/api.mjs`: OIDC integration, HttpOnly sessions, CSRF enforcement, and authenticated sync.

@@ -28,6 +28,12 @@ Default position is device-specific; enrollment, wettings and check-in records s
 During a server update, offline check-ins remain on the device and retry afterward. After a frontend update, close old Little Log tabs and reopen to let the new app version activate.
 
 
+## Intake units
+
+- [ ] Switch mL / US fl oz with a draft amount and confirm switching back preserves it.
+- [ ] Enter decimal ounces, save, and verify history records the converted whole mL value.
+- [ ] Reopen offline and confirm the unit preference remains selected and new intake starts at zero.
+
 ## Mobile quick actions
 
 - [ ] Switch between Record observation, Record wetting, Roll and Pattern analysis using the bottom bar.

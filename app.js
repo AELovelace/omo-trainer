@@ -195,9 +195,50 @@ function dateLabel(timestamp, includeDate = true) { // Shows the recorded wall-c
   return date.toLocaleString(undefined, { timeZone: 'UTC', ...(includeDate ? { month: 'short', day: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' });
 }
 
+
+const INTAKE_UNIT_KEY = 'little-log.intake-unit';
+const ML_PER_US_FL_OZ = 29.5735295625; // US fluid ounces measure volume; saved observations continue to use whole milliliters.
+let intakeUnit = 'ml', intakeRendered = '', intakeDraftMl = null;
+try { if (localStorage.getItem(INTAKE_UNIT_KEY) === 'oz') intakeUnit = 'oz'; } catch { /* Unit switching still works without persistent browser storage. */ }
+
+function readIntakeMl() { // Preserve the exact draft while toggling; round only when committing an observation.
+  const input = $('#liquids');
+  if (!input.value || !Number.isFinite(input.valueAsNumber) || input.valueAsNumber < 0) throw new Error('Enter a valid, nonnegative intake amount.');
+  const amount = intakeDraftMl !== null && input.value === intakeRendered ? intakeDraftMl
+    : input.valueAsNumber * (intakeUnit === 'oz' ? ML_PER_US_FL_OZ : 1);
+  if (amount > 1000000) throw new Error('Intake must be at most 1,000,000 mL.');
+  return amount;
+}
+
+function displayIntake(amount) { // Update the field, its accessible unit label and decimal keyboard without changing stored records.
+  const input = $('#liquids');
+  input.step = intakeUnit === 'oz' ? 'any' : '1';
+  input.max = String(intakeUnit === 'oz' ? 1000000 / ML_PER_US_FL_OZ : 1000000);
+  input.inputMode = intakeUnit === 'oz' ? 'decimal' : 'numeric';
+  input.value = amount === null ? '' : String(intakeUnit === 'oz' ? Number((amount / ML_PER_US_FL_OZ).toFixed(2)) : Math.round(amount));
+  intakeRendered = input.value; intakeDraftMl = amount;
+  $('#intake-unit-label').textContent = intakeUnit === 'oz' ? 'US fl oz' : 'mL';
+  $('#intake-unit-toggle').textContent = intakeUnit === 'oz' ? 'Use mL' : 'Use fl oz';
+  $('#intake-unit-toggle').setAttribute('aria-label', intakeUnit === 'oz' ? 'Switch intake to milliliters' : 'Switch intake to US fluid ounces');
+  $('#intake-unit-help').textContent = intakeUnit === 'oz' ? 'US fluid ounces. 1 fl oz is about 29.57 mL.' : 'Milliliters.';
+}
+
+$('#liquids').addEventListener('input', () => { intakeDraftMl = null; }); // Typing a new value replaces any unrounded conversion draft.
+$('#intake-unit-toggle').addEventListener('click', () => {
+  const input = $('#liquids');
+  if (input.validity.badInput || (input.value && !input.reportValidity())) return;
+  try {
+    const amount = input.value ? readIntakeMl() : null;
+    intakeUnit = intakeUnit === 'ml' ? 'oz' : 'ml';
+    displayIntake(amount);
+    try { localStorage.setItem(INTAKE_UNIT_KEY, intakeUnit); } catch { /* An unavailable preference store never blocks recording. */ }
+  } catch (error) { notify(error.message); }
+});
+displayIntake(0);
+
 function seedForm(day = localDay(), resetLiquids = true) { // Carries forward the latest same-day counts and resets counts for a new day.
   const latest = daySummary(state.entries, day).latest;
-  if (resetLiquids) $('#liquids').value = 0;
+  if (resetLiquids) displayIntake(0);
   $('#diaper').value = latest?.diaperNumber ?? 1;
   formDay = day;
 }
@@ -239,7 +280,7 @@ function formEntry(form, original = null) { // Reads a snapshot; editing an unch
   return {
     id: original?.id ?? crypto.randomUUID(),
     occurredAt,
-    liquidsMl: Number(values.get('liquidsMl')),
+    liquidsMl: form.id === 'log-form' ? Math.round(readIntakeMl()) : Number(values.get('liquidsMl')), // Recording accepts either unit; the existing edit form explicitly uses mL.
     ...(values.has('position') ? { position: values.get('position') } : {}),
     diaperNumber: Number(values.get('diaperNumber')),
     ...(values.has('wettingsCount') ? { wettingsCount: Number(values.get('wettingsCount')) } : {}),

@@ -73,6 +73,13 @@ Nginx snippets are deployment templates; validate them against the real server c
 For a new auth proxy host, follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md): validate the HTTP bootstrap before certificate issuance, then validate the complete HTTPS configuration before reload. Check HTTP redirects to the fixed auth origin, certificate challenge URLs remain local, HTTPS discovery reports the correct issuer, and the real OIDC sign-in succeeds. Verify Certbot renewal with `certbot renew --dry-run` and confirm a renewal schedule and Nginx reload hook exist.
 
 
+## Intake units
+
+`tests/training-browser.mjs` checks conversion of 250 mL, saving 12.5 US fl oz as
+370 mL, repeated toggling without draft drift, blank and invalid amounts, the
+maximum allowed intake, reset after saving, preference after offline reload,
+and layout at 320px. Saved records and record editing continue to use whole mL.
+
 ## Mobile quick actions
 
 `tests/training-browser.mjs` checks the bottom bar at 320/390/680px, all four

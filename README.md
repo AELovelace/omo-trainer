@@ -18,6 +18,10 @@ On mobile (up to 680px wide), the bottom bar switches between **Record observati
 **Record wetting**, **Roll**, and **Pattern analysis**. Unsaved form values remain
 when switching. The links support browser Back/Forward and offline reopening.
 
+The observation intake field can switch between **mL** and **US fl oz**. The
+choice stays on this device; switching converts the draft amount, and saving
+rounds to the nearest whole mL for consistent history, analysis and exports.
+
 ## Run locally
 
 Install Node 24 or newer, then:
@@ -90,7 +94,7 @@ SQLite is intended for this small installation, with one tracker service and one
 
 Visit over HTTPS (localhost works for development) and wait until Settings reports offline support ready. The service worker caches public frontend assets only; it never caches login routes or API responses. Android/desktop browsers can offer installation; Safari uses Share → Add to Home Screen. Test actual installation on the intended phones.
 
-For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v18-lid0llid. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
+For each deployment changing frontend assets, increment the cache version in sw.js and deploy the complete matching set of public files. The current manual cache is v19-intake-units. Keep sw.js revalidated. New workers wait for existing app tabs to close, preventing mixed assets during a check-in.
 
 The Fedora scripts stamp the deployed service worker with the Git commit automatically. Manual deployments still need an explicit cache-version change.
 

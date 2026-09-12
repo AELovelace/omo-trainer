@@ -1527,6 +1527,7 @@ dialog .primary {
 .roll-button:disabled { opacity: .6; cursor: wait; }
 .roll-card { padding: 24px; }
 #save-observation { width: 100%; margin-top: 18px; }
+.intake-unit-toggle { width: 100%; margin-top: 8px; min-height: 44px; } /* Keep the unit switch easy to tap in narrow form columns. */
 
 /* Quick actions share the existing page routes; only phones switch between individual dashboard cards. */
 .mobile-actions { display: none; }

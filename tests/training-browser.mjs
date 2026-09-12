@@ -158,6 +158,41 @@ try {
   await selectAction('wetting'); // Tapping the current action returns to its heading.
 
   await page.screenshot({ path: resolve('artifacts/protocol-mobile.png'), fullPage: true });
+
+  await selectAction('observation');
+  await fill(page, '#liquids', '250');
+  await page.click('#intake-unit-toggle');
+  assert.equal(await page.$eval('#intake-unit-label', node => node.textContent), 'US fl oz');
+  assert.equal(await page.$eval('#liquids', node => node.value), '8.45');
+  await fill(page, '#liquids', '12.5');
+  for (let i = 0; i < 3; i++) {
+    await page.click('#intake-unit-toggle');
+    assert.equal(await page.$eval('#liquids', node => node.value), '370');
+    await page.click('#intake-unit-toggle');
+    assert.equal(await page.$eval('#liquids', node => node.value), '12.5', 'Repeated unit switches retain the exact draft');
+  }
+  await page.click('#save-observation');
+  const intakeEntries = (await saved(page)).entries.filter(entry => entry.kind === 'observation');
+  assert.equal(intakeEntries.at(-1).liquidsMl, 370, 'Decimal US ounces save as the nearest whole milliliter');
+  assert.equal(await page.$eval('#liquids', node => node.value), '0');
+  assert.equal(await page.$eval('#intake-unit-label', node => node.textContent), 'US fl oz');
+  await fill(page, '#liquids', '');
+  await page.click('#intake-unit-toggle');
+  assert.equal(await page.$eval('#liquids', node => node.value), '', 'Switching an empty field must not invent intake');
+  await fill(page, '#liquids', '1000000');
+  await page.click('#intake-unit-toggle'); await page.click('#intake-unit-toggle');
+  assert.equal(await page.$eval('#liquids', node => node.value), '1000000', 'Maximum intake survives a round trip');
+  await fill(page, '#liquids', '-1');
+  assert.equal(await page.$eval('#liquids', node => node.checkValidity()), false);
+  await fill(page, '#liquids', '0'); await page.click('#intake-unit-toggle');
+  await page.setOfflineMode(true); await page.reload({ waitUntil: 'networkidle0' });
+  assert.equal(await page.$eval('#intake-unit-label', node => node.textContent), 'US fl oz', 'Unit preference survives an offline reload');
+  assert.equal(await page.$eval('#liquids', node => node.value), '0');
+  await page.setViewport({ width: 320, height: 844 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Intake toggle fits a narrow phone');
+  await page.screenshot({ path: resolve('artifacts/intake-unit-mobile.png') });
+  await page.setOfflineMode(false);
+
   assert.deepEqual(errors, []);
   console.log('Protocol browser checks passed: cooldown boundary, offline reload, manual and wetting logging, midnight rules, corrections, history and six viewport widths.');
 } finally { await browser.close(); }
