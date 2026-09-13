@@ -163,3 +163,5 @@ The shared wallet API now supports explicitly authorized star credit/debit/refun
 
 ### Overnight diaper continuity
 `node tests/diapers-browser.mjs` starts an isolated local app and verifies mobile midnight rollover, an overnight wetting, reload persistence, changing the carried diaper, and backdated change suggestions. `npm test` includes day boundaries, old reset-number records and same-second change/wetting ordering. Current diaper numbers and their suggested totals carry across dates; only recorded changes today reset.
+
+The overnight regression also checks that the first morning change starts diaper #1, reload retains it, and a second change starts #2. Unit coverage includes skipped days and a first change after observation-only history.

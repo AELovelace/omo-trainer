@@ -12,7 +12,8 @@ The **Record a diaper change** card sits below **Record a wetting**, including
 in the mobile Wetting tab. Save the date/time, diaper number being changed and
 its final wetting count (including zero for a dry change). Daily totals count
 saved changes. The current diaper number carries across midnight until a change
-is recorded. Wetting suggestions cover the full period since the last change,
+is recorded. The first change on a later day starts the fresh diaper at #1;
+later changes that day advance to #2, #3, and so on. Wetting suggestions cover the full period since the last change,
 including overnight records; adjust for any unlogged wettings.
 New wetting events no longer store a per-diaper total. Historical totals remain
 editable, and changes sync and export as separate `diaper-change` records.

@@ -105,3 +105,5 @@ The shared wallet API now supports explicitly authorized star credit/debit/refun
 
 ### Current diaper across midnight
 `lib/diapers.js` derives the active diaper from the latest actual change and subsequent records, independent of calendar rollover. Suggested wetting totals span that wear period; daily statistics still count only changes saved on that date. The change form uses its exact event timestamp for backdated suggestions. No stored records or database schemas are rewritten.
+
+The first change after a date rollover starts the next diaper at #1, while the change record retains the completed diaper's prior number and final wetting count. Later changes on that recorded local date increment normally. No midnight event or database migration is introduced.

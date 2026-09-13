@@ -82,10 +82,25 @@ test('an overnight diaper keeps its number and wettings until an explicit change
   assert.equal(suggestedDiaperWettings(entries,'2026-09-12',7,'2026-09-12T23:30:00+00:00'),1);
   entries.push(at(change('morning','2026-09-13',2,7),'2026-09-13T08:00:00+00:00'));
   assert.equal(diaperAtTime(entries,'2026-09-13T07:59:00+00:00'),7,'Backdated changes must use their event-time diaper');
-  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:1,wettings:2,currentDiaper:8});
-  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',8),0);
-  entries.push(at(wetting('after-change',8),'2026-09-13T08:00:00+00:00'));
-  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',8),1,'Same-second wetting after the change belongs to the new diaper');
-  assert.equal(diaperSummary(entries,'2026-09-16').currentDiaper,8,'Several idle days never create changes');
+  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:1,wettings:2,currentDiaper:1});
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',1),0);
+  entries.push(at(wetting('after-change',1),'2026-09-13T08:00:00+00:00'));
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',1),1,'Same-second wetting after the change belongs to the new diaper');
+  assert.equal(diaperSummary(entries,'2026-09-16').currentDiaper,1,'Several idle days never create changes');
   assert.equal(diaperSummary(entries.filter(e=>e.id!=='morning'),'2026-09-13').changes,0,'Corrections derive from saved events');
+});
+
+
+test('only the first change after a date rollover starts diaper one; later changes increment normally',()=>{
+  const entries=[{...wetting('night',5),occurredAt:'2026-09-12T23:00:00+00:00'}];
+  assert.equal(diaperAtTime(entries,'2026-09-13T07:00:00+00:00'),5);
+  entries.push(change('first','2026-09-13',2,5));
+  assert.equal(diaperAtTime(entries,'2026-09-13T10:00:00+00:00'),1);
+  assert.equal(entries[1].diaperNumber,5,'The change keeps the identity of the completed overnight diaper');
+  entries.push({...change('second','2026-09-13',1,1),occurredAt:'2026-09-13T11:00:00+00:00'});
+  assert.equal(diaperAtTime(entries,'2026-09-13T11:00:00+00:00'),2);
+  assert.equal(diaperAtTime(entries,'2026-09-16T09:00:00+00:00'),2);
+  entries.push(change('next-day','2026-09-16',0,2));
+  assert.equal(diaperAtTime(entries,'2026-09-16T10:00:00+00:00'),1);
+  assert.deepEqual(diaperSummary(entries,'2026-09-16'),{changes:1,wettings:0,currentDiaper:1});
 });
