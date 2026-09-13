@@ -97,3 +97,7 @@ LiDollQuest browser sign-in uses the first-party wallet session described in LID
 ## Personal potty estimates
 
 Pattern analysis includes a per-profile next-wetting model using actual wetting intervals and, when chronological validation supports it, intake timing and a learned fluid-response delay. It runs offline from the existing scientific records and updates after changes or sync. See [PREDICTION_GUIDE.md](PREDICTION_GUIDE.md) for inputs, limits, validation, deployment and browser tests. No database migration or external model service is needed.
+
+
+### Connected-game stars
+The shared wallet API now supports explicitly authorized star credit/debit/refund operations in market schema 5. See LIDOLLCOIN_API.md for migration and deployment order. Run `npm test` for currency isolation, legacy receipts/consent migration, integer and balance limits, star scopes, chart preservation, ledger persistence, refunds and browser origin/CSRF checks.

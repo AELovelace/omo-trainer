@@ -1,6 +1,6 @@
 # LiDollCoin API v1
 
-LiDollQuest can link a Little Log account and use its existing **online LiDollCoin balance**. The game sends individual earnings and costs. It never uploads or replaces the online balance with a value from a save file. Unlinked games keep local gold; linking does not deposit that gold, and disconnecting restores the separate local balance.
+LiDollQuest can link a Little Log account and use its existing **online LiDollCoin balance** and separate **stars balance**. The game sends individual earnings and costs. It never uploads or replaces the online balance with a value from a save file. Unlinked games keep local gold; linking does not deposit that gold, and disconnecting restores the separate local balance.
 
 The initial release accepts earnings reported by a linked game, as requested. It does not verify game progress, prevent edited-save reward farming, or provide a real-money payment system. Configurable earning limits, scoped grants, whole-number balances, atomic ledger writes and replay protection are active now.
 
@@ -48,7 +48,7 @@ GET **wallet?client_id=lidollquest** with **Authorization: Bearer ACCESS_TOKEN**
 {"currency":"LiDollCoin","balance":150,"account_id":"APP_SCOPED_OPAQUE_ACCOUNT_ID"}
 ~~~
 
-Balance is an integer from 0 to 2,147,483,647. account_id identifies the linked player within this app; bind pending operations to it and do not replay them after linking a different account. The response does not include names, scientific records, stars or sticker data.
+Balance is an integer from 0 to 2,147,483,647. account_id identifies the linked player within this app; bind pending operations to it and do not replay them after linking a different account. The response does not include names, scientific records or sticker data. With `stars:read`, it also includes `stars` (integer balance) and `stars_enabled` (whether this grant also has `stars:write`).
 
 ## Earn and spend
 
@@ -108,3 +108,31 @@ These routes expose no scientific data and do not enable credentialed cross-orig
 Deploy the backend and `coins/browser.js` before deploying the matching game. Static tracker hosting must copy that script alongside the existing coin assets; API and OIDC callback paths already use the Node proxy. Rebuild the whole game package, including its LiDollBrowser JavaScript extension. The browser game's connection flow is tested with the actual GX runtime and a real local OIDC provider by the game repository's `ps/Test-CoinWalletBrowser.ps1`.
 
 Embedded LiDollQuest sends `view=embedded` to browser/connect and navigates the full browser tab. Its OIDC return destination is allowlisted as `game-wallet-embedded`; consent preserves the view in a hidden field. Approval returns to the fixed website root `/`, and cancellation to `/?wallet=cancelled`. Other view values use the standalone `/game/` return. Authentication pages retain their frame-ancestors protection. Update both server files and rebuild the game extension for this flow.
+
+## Stars in connected games
+
+The same wallet and operations routes now support stars. Stars live in the separate market database; earning or spending through the game never adds or removes potty-chart cells. Existing chart rewards continue to add to this same stars balance.
+
+Native clients request `wallet:read wallet:write stars:read stars:write` when linking. The two star permissions are independent: `stars:read` exposes stars in GET wallet, and `stars:write` authorizes star operations. A stars-only read grant receives account_id/stars/stars_enabled without the coin balance. Existing coin grants retain their original permissions. Browser consent now explicitly covers both currencies; remembered coin-only approval requires one new approval before stars are enabled. LiDollQuest shows **Enable stars** on its title-screen account button for an older connection.
+
+Send `asset: "stars"` on every star credit, debit **and refund**:
+
+```json
+{"request_id":"quest-star-reward-unique-id","asset":"stars","kind":"credit","amount":5}
+```
+
+```json
+{"request_id":"star-purchase-unique-id","asset":"stars","kind":"debit","amount":2}
+```
+
+```json
+{"request_id":"star-refund-unique-id","asset":"stars","kind":"refund","original_id":"star-purchase-unique-id"}
+```
+
+Receipts include `currency: "Stars"`, `asset: "stars"`, and `balance` for stars only. Coin receipts continue to use `currency: "LiDollCoin"`; omitting asset still means coins. New coin receipts also include `asset: "coins"`. Replayed older receipts retain their original shape. IDs are unique across both currencies for each app/account; changing currency under an existing ID returns 409. A refund must use the original debit's currency. Amounts and balances are bounded whole numbers; overdrafts and overflow fail atomically. The game only updates its coin cache from coin receipts.
+
+App registration supports optional `starDailyLimit` (1?2,147,483,647), defaulting to that app's `dailyLimit`. Star and coin issuance caps are counted independently per app/account/UTC day. New grants, spending and refunds do not reset either cap. No new configuration is required for existing deployments.
+
+Deploy the new Little Log backend **before** the game. Stop old backend workers before upgrading: market schema 5 adds currency to existing operation rows and records star approval separately. Back up both databases; the science schema is unchanged. Older coin clients remain supported, including pending receipts. Do not run an old backend worker against this upgraded market database. Existing linked players use **Enable stars** once after deployment.
+
+Game helpers and asynchronous receipt handling are documented in the game repository's STAR_WALLET_GUIDE.md. No quests or shops award/spend stars automatically until their scripts call these helpers.

@@ -43,6 +43,12 @@ test('browser wallet mutations enforce origin, CSRF, account isolation, replay a
   assert.equal((await post('operations',operation,{...headers,'Sec-Fetch-Site':'cross-site'})).status,403);
   const first=await (await post('operations',operation,headers)).json();assert.equal(first.balance,40);
   assert.deepEqual(await (await post('operations',operation,headers)).json(),first);
+  const star={kind:'credit',asset:'stars',amount:8,request_id:'browser-star'};
+  assert.equal((await post('operations',star,{Cookie:headers.Cookie})).status,403);
+  assert.equal((await post('operations',star,{...headers,Origin:'https://evil.example'})).status,403);
+  const starReceipt=await (await post('operations',star,headers)).json();assert.equal(starReceipt.currency,'Stars');assert.equal(starReceipt.balance,8);
+  assert.deepEqual(await (await post('operations',star,headers)).json(),starReceipt);
+  assert.equal(call('browserSession',a).balance,40);assert.equal(call('browserSession',a).stars,8);assert.equal(call('browserSession',b).stars,0);
   assert.equal(call('browserSession',b).balance,0);
   assert.notEqual(call('browserSession',b).account_id,call('browserSession',a).account_id);
   const refreshed=call('browserIssue',alice.id);assert.equal(call('browserSession',refreshed).account_id,call('browserSession',a).account_id);
