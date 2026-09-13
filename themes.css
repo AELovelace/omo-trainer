@@ -10,7 +10,8 @@
   font-family:"Trebuchet MS","Segoe UI",sans-serif;
   --page:#fff5fa; --panel:#fce7f1; --panel-deep:#fffdfd; --ink:#563b68; --muted:#786080;
   --pink:#ad3c79; --orchid:#8060af; --rail:#654774; --gold:#866211; --border:#dac4df;
-  --chart-grid:#e4d6e9; --chart-pee:#b94782; --chart-hold:#8060af; --chart-liquid:#297e87;
+  /* Soft pink, lavender and mint keep chart series aligned with the pastel cards and legend. */
+  --chart-grid:#e4d6e9; --chart-pee:#e8a7c6; --chart-hold:#baa5dd; --chart-liquid:#91c9ba;
   --display:"Comic Sans MS","Chalkboard SE","Trebuchet MS",sans-serif;
   --frame:0 0 0 1px #e7d1e8; --pastel-pink:#f9cddd; --pastel-lilac:#e9ddfa; --pastel-mint:#d9f0e8; --pastel-yellow:#fff0bc;
 }
