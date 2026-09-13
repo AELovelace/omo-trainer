@@ -1340,8 +1340,7 @@ dialog .primary {
     gap: 10px;
   }
   .dossier-heading {
-    min-height: 144px;
-    margin: 22px 0 25px;
+    display: none; /* Keep the decorative title and seal out of the mobile recording area. */
   }
   .eyebrow {
     font-size: 8px;
