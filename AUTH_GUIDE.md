@@ -49,6 +49,27 @@ If the auth HTTPS server block does not exist yet, use the complete [auth server
 
 Production startup requires explicit HTTPS issuer/app URLs. Auth metadata is available at `https://auth.sadgirlsclub.wtf/.well-known/openid-configuration`. The combination of issuer and subject identifies an account. Follow the explicit issuer migration section below when moving an existing installation.
 
+## Combined account and wallet consent
+
+LiDollBot can request `openid profile wallet:read wallet:write stars:read stars:write`
+through its existing `lidollbot` PKCE client. With no explicit client `scope`
+field, the provider enables those scopes for `lidollbot`; other clients default
+to `openid profile`. An explicit `scope` field overrides the default. Consent
+shows coin/star reading and spending permissions, **Connect account and wallet**,
+and **Cancel**. Profile-only tokens cannot authorize wallet access.
+
+The tracker verifies a consented access token against `GET /wallet/identity`
+using Bearer authentication. This returns verified issuer, subject, username,
+client ID, wallet scopes and expiry. It requires a live token, grant and enabled
+account; cookies and ID tokens do not authorize it. Auth never opens the market
+or scientific database. See [LIDOLLCOIN_API.md](LIDOLLCOIN_API.md) for deployment.
+
+If the tracker cannot reach the public issuer through the router, configure
+`LIDOLLCOIN_IDENTITY_URL=http://10.1.1.23:4180/wallet/identity` in tracker.env.
+Allow that service host to reach auth through the existing private network policy.
+Keep browser sign-in and the issuer on public HTTPS; changing the issuer to an
+IP address would change account identity.
+
 ## Add another application
 
 ```sh

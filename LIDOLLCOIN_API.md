@@ -8,7 +8,7 @@ The initial release accepts earnings reported by a linked game, as requested. It
 
 Deploy the updated Little Log server and public assets together, then rebuild LiDollQuest. The default native client is **lidollquest** and the game's API constant is **https://lidoll.dev/tracker/api/lidollcoin/v1/** in scrLiDollCoin.gml. Change that constant if Little Log is hosted elsewhere.
 
-Market schema version 3 adds connection and game-operation tables in **market.sqlite**. Back up that file before deploying; old servers refuse this newer market version. Scientific records remain in little-log.sqlite. No live deployment is performed by these changes.
+Market schema version 6 adds OIDC exchange receipts alongside existing connection and game-operation tables in **market.sqlite**. Back up that file before deploying; old servers refuse this newer market version. Scientific records remain in little-log.sqlite. No live deployment is performed by these changes.
 
 Register other apps or browser origins using the server environment variable **LIDOLLCOIN_APPS**, a JSON array, for example:
 
@@ -21,6 +21,9 @@ Native apps need no browser origin or shared app secret. Browser apps must use a
 All external routes require **?client_id=lidollquest**. Requests and responses are JSON; device/token requests also accept application/x-www-form-urlencoded. Responses use Cache-Control: no-store. External routes use Bearer authentication, never the Little Log session cookie. User approval uses a separate same-origin session and CSRF-protected UI at **/tracker/coins/**.
 
 ## Connect an account
+
+Server applications already using LiD0llID can use the combined flow below.
+The device flow remains available for existing native clients.
 
 1. POST **device?client_id=lidollquest** with the requested scopes:
 
@@ -39,6 +42,85 @@ The response includes **device_code**, **user_code**, **verification_uri**, **ex
 While waiting, HTTP 400 returns error **authorization_pending**. For **slow_down**, increase the polling interval by 5 seconds for all subsequent polls. Stop on **access_denied** or **expired_token**. The successful response contains **access_token**, **token_type: Bearer**, **expires_in: 2592000**, and **scope**. A device code issues a token once; if that response is lost, reconnect. Tokens expire in 30 days and can be revoked sooner.
 
 The device-code interaction follows the structure of [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628); these application endpoints are not the LiD0llID identity-provider token endpoint. Tokens are stored hashed on the server. Native clients should protect their local token file; never include it in game-save exports or source control.
+
+## Combined LiD0llID account and wallet login
+
+MommyBot uses one LiD0llID approval for identity and both currencies. Deploy the
+updated **auth and tracker services before MommyBot**. Stop older tracker workers
+before opening market schema 6 and use the normal stopped-service backup procedure.
+Existing scientific records and balances are preserved.
+
+Keep the existing `lidollbot` identity registration and exact callback
+`https://bot.lidoll.dev/auth/callback`, using PKCE S256 and no client secret.
+Also register `lidollbot` in `LIDOLLCOIN_APPS`, preserving other app entries.
+Both registrations must exist; identity registration does not register a wallet app.
+
+Request `openid profile wallet:read wallet:write stars:read stars:write` and
+`prompt=consent` during authorization. The provider displays all four wallet
+permissions alongside account linking. After verifying the normal OIDC callback,
+keep its access token server-side. Exchange it when the initiating Discord user
+submits the existing confirmation code:
+
+~~~http
+POST /tracker/api/lidollcoin/v1/exchange?client_id=lidollbot
+Content-Type: application/json
+~~~
+
+~~~json
+{
+  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "subject_token": "SHORT_LIVED_OIDC_ACCESS_TOKEN"
+}
+~~~
+
+This is an application-specific exchange endpoint, not a general OAuth token
+exchange implementation. It accepts only the configured identity service's
+access tokens for the requested client, carrying explicit wallet scopes. An ID
+token, submitted username/subject, or browser session cannot authorize it.
+
+~~~json
+{
+  "access_token": "WALLET_BEARER_TOKEN",
+  "token_type": "Bearer",
+  "expires_in": 2592000,
+  "scope": "wallet:read wallet:write stars:read stars:write",
+  "account_id": "APP_SCOPED_OPAQUE_ACCOUNT_ID",
+  "identity": {"issuer": "https://auth.lidoll.dev", "subject": "VERIFIED_SUBJECT"}
+}
+~~~
+
+Match the returned identity to the verified OIDC identity before activating it.
+The issuer above is an example; preserve the deployment's actual issuer. The
+wallet token lasts up to 30 days and uses the existing wallet, operations and
+revoke routes. Chart stars remain intact; the separate stars balance is spent.
+No scientific records are returned. The market keeps proof/token hashes and an
+exchange seed, never the raw OIDC or wallet token. Retrying the same valid proof
+returns the same grant with its remaining lifetime. A revoked grant cannot be
+revived by replaying that proof. An expired proof requires a fresh login.
+
+For Doll's LAN, add this to `/etc/lidoll/tracker.env`:
+
+~~~dotenv
+LIDOLLCOIN_IDENTITY_URL=http://10.1.1.23:4180/wallet/identity
+~~~
+
+Restart `lidoll-auth` and `lidoll-tracker` after deploying the updated code.
+Without this setting the tracker uses `OIDC_ISSUER` plus `/wallet/identity`.
+Private/loopback HTTP is supported for this explicit back channel; public
+addresses require HTTPS. Redirects are rejected and the verified issuer must
+still match `OIDC_ISSUER`. This transport setting never changes account keys.
+MommyBot can retain its private API URL on port 4173; its two client IDs must
+both be `lidollbot`. See MommyBot's ONLINE_WALLET_GUIDE.md for bot deployment.
+
+Run `npm test` for server checks. The optional full integration check is
+`node tests/combined-login-browser.mjs`, with `MOMMYBOT_ROOT` pointing to its
+checkout, `PUPPETEER_MODULE` to an installed Puppeteer ES module (file URL), and
+`CHROME_PATH` to Chrome/Chromium. Local Windows defaults are provided. It starts
+disposable services, exercises real PKCE/consent and the Discord confirmation
+handler, simulates a lost exchange response, verifies star access, and cancels
+another consent. It saves a consent screenshot under ignored `artifacts/` and
+never accesses live accounts.
 
 ## Read the balance
 

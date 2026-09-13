@@ -2,18 +2,21 @@ const css = ":root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;backg
 
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); // Escapes client names, usernames, and validation feedback before placing them in HTML.
 
-export function authPage({ uid, mode, clientName, csrf, error = '', username = '' }) { // Renders registration, sign-in, and consent with the shared Chrysalis identity theme.
+export function authPage({ uid, mode, clientName, csrf, error = '', username = '', scope = '' }) { // Renders registration, sign-in, and consent with the shared Chrysalis identity theme.
   const register = mode === 'register', login = mode === 'login';
   const action = `/interaction/${escape(uid)}${register ? '/register' : ''}`;
   const heading = register ? 'Establish your identity.' : login ? 'Identify yourself.' : 'Authorize access.';
   const description = register ? `Create one lidoll.dev account for ${escape(clientName)} and other lidoll.dev apps. Each app has its own data and permissions.`
     : login ? `Sign in to ${escape(clientName)} with your shared LiD0llID account.`
       : `${escape(clientName)} will receive your account ID and username. Your password stays with lidoll.dev accounts.`;
+  const wallet=String(scope).split(' ').filter(value=>['wallet:read','wallet:write','stars:read','stars:write'].includes(value));
+  const permissions=wallet.map(value=>({'wallet:read':'Read your LiDollCoin balance','wallet:write':'Earn and spend LiDollCoins','stars:read':'Read your stars balance','stars:write':'Earn and spend stars'}[value]));
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a0611">
 <title>${register ? 'Create account' : login ? 'Sign in' : 'Authorize access'} · lidoll.dev</title><style>${css}</style></head>
 <body><main><div class="brand">✦ CHRYSALIS<span>IDENTITY GATEWAY // LiD0llID accounts</span></div>
 <h1>${heading}</h1><p>${description}</p>
+${!login&&!register&&wallet.length?`<p>This connection also allows:</p><ul>${permissions.map(text=>`<li>${text}</li>`).join('')}</ul><p>Spending stars keeps your potty-chart progress. Scientific records are not shared with this app.</p>`:''}
 ${error ? `<p id="form-error" class="error" role="alert">${escape(error)}</p>` : ''}
 <form method="post" action="${action}"${error ? ' aria-describedby="form-error"' : ''}>
 <input type="hidden" name="csrf" value="${escape(csrf)}">
@@ -22,7 +25,7 @@ ${login || register ? `<label for="username">Username</label>
 ${register ? '<p class="help" id="username-help">3–40 letters, numbers, dots, underscores, or hyphens. Start with a letter or number. Stored in lowercase.</p>' : ''}
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="${register ? 'new-password' : 'current-password'}" required maxlength="128"${register ? ' minlength="12" aria-describedby="password-help"' : ''}>
 ${register ? '<p class="help" id="password-help">12–128 characters. A long, unique passphrase works well.</p><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="128">' : ''}` : ''}
-<button type="submit">${register ? 'Create account' : login ? 'Sign in' : 'Continue'}</button></form>
+<button type="submit" name="decision" value="allow">${register ? 'Create account' : login ? 'Sign in' : wallet.length ? 'Connect account and wallet' : 'Continue'}</button>${!login&&!register?'<button type="submit" name="decision" value="deny">Cancel</button>':''}</form>
 ${register ? `<p class="switch">Already registered? <a href="/interaction/${escape(uid)}">Sign in</a></p><small>No email address is collected. Save your password; password resets are handled by the lidoll.dev administrator. Next, review the app's access to your shared identity. Each app manages its own records and sync settings.</small>`
   : login ? `<p class="switch">New to LiD0llID? <a id="create-account-link" href="/interaction/${escape(uid)}/register">Create an account</a></p><small>Need a password reset? Contact the lidoll.dev administrator.</small>`
     : '<small>Each app manages access to its own data.</small>'}

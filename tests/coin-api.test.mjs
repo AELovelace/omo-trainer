@@ -28,7 +28,7 @@ test('game wallet operations are relative, scoped, integer, idempotent, isolated
     assert.throws(()=>call('operation',other,refund),e=>e.status===409);
     assert.equal(db.records(a.id).length,0);assert.equal(db.growthChart(a.id).chart,null);
     db.close();db=openDatabase(path,{stickerCatalog:[]});assert.equal(call('balance',token).balance,100);assert.deepEqual(call('operation',token,earn),receipt);
-    const market=new DatabaseSync(join(dir,'market.sqlite'));assert.equal(market.prepare('PRAGMA user_version').get().user_version,5);
+    const market=new DatabaseSync(join(dir,'market.sqlite'));assert.equal(market.prepare('PRAGMA user_version').get().user_version,6);
     const grant=market.prepare('SELECT token_hash FROM coin_grants LIMIT 1').get();assert.notEqual(grant.token_hash,token);assert.equal(grant.token_hash.length,64);
     assert.equal(market.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='entries'").get().n,0);market.close();
     const links=call('connections',a.id);call('revoke',b.id,links[0].id);assert.equal(call('connections',a.id).length,2);

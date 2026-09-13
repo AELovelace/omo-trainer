@@ -1,4 +1,4 @@
-import {randomBytes,randomUUID,createHash} from 'node:crypto';
+import {randomBytes,randomUUID,createHash,createHmac} from 'node:crypto';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const fail=(status,message,code='invalid_request')=>{throw Object.assign(new Error(message),{status,code});};
 const whole=(value,max=2147483647)=>{if(!Number.isSafeInteger(value)||value<1||value>max)fail(400,'Use a positive whole number within the allowed limit.');return value;};
@@ -25,6 +25,7 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
     CREATE INDEX IF NOT EXISTS coin_game_daily ON coin_game_operations(owner,client,created_at);
     CREATE TABLE IF NOT EXISTS coin_browser_grants(grant_id TEXT PRIMARY KEY REFERENCES coin_grants(id));
     CREATE TABLE IF NOT EXISTS coin_browser_permissions(owner TEXT NOT NULL,client TEXT NOT NULL,PRIMARY KEY(owner,client));
+    CREATE TABLE IF NOT EXISTS coin_oidc_exchanges(proof_hash TEXT PRIMARY KEY,grant_id TEXT NOT NULL REFERENCES coin_grants(id),seed TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS coin_rate_limits(key TEXT PRIMARY KEY,starts INTEGER NOT NULL,count INTEGER NOT NULL);
   `);
   // Upgrade existing coin receipts without changing their fingerprints or granting new permissions.
@@ -78,6 +79,17 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
       const secret=randomBytes(32).toString('base64url'),expires=now()+30*86400000;
       db.prepare('INSERT INTO coin_grants VALUES (?,?,?,?,?,?,?,0)').run(randomUUID(),hash(secret),value.owner,value.client,value.scope,now(),expires);
       return {access_token:secret,token_type:'Bearer',expires_in:2592000,scope:value.scope};
+    });
+  }
+  function exchange(owner,clientId,scope,proof) { // A verified OIDC token creates one retryable wallet grant; neither raw token is stored.
+    app(clientId);if(!enabled(owner))fail(403,'Account access is disabled.');
+    return atomic(()=>{
+      const proofHash=hash(proof),previous=db.prepare('SELECT * FROM coin_oidc_exchanges WHERE proof_hash=?').get(proofHash);
+      const seed=previous?.seed??randomBytes(32).toString('base64url'),secret=createHmac('sha256',seed).update(proof).digest('base64url');
+      if(previous) {const existing=grant(secret);if(existing.owner!==owner||existing.client!==clientId||existing.scope!==scope)fail(409,'Login exchange does not match.');return {access_token:secret,token_type:'Bearer',expires_in:Math.max(1,Math.floor((existing.expires-now())/1000)),scope,account_id:hash(clientId+':'+owner)};}
+      const id=randomUUID();db.prepare('INSERT INTO coin_grants VALUES (?,?,?,?,?,?,?,0)').run(id,hash(secret),owner,clientId,scope,now(),now()+30*86400000);
+      db.prepare('INSERT INTO coin_oidc_exchanges VALUES (?,?,?)').run(proofHash,id,seed);
+      return {access_token:secret,token_type:'Bearer',expires_in:2592000,scope,account_id:hash(clientId+':'+owner)};
     });
   }
   function grant(secret,scope) { // Tokens cannot select another owner, expose scientific records, or use any scientific API.
@@ -141,5 +153,5 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
       db.prepare('INSERT INTO coin_game_operations(client,owner,id,kind,amount,created_at,fingerprint,result,asset) VALUES (?,?,?,?,?,?,?,?,?)').run(client.id,identity.owner,input.request_id,input.kind,Math.abs(delta),now(),fingerprint,JSON.stringify(result),asset);return result;
     });
   }
-  return {app,begin,inspect,approve,token,grant,balance,connections,revoke,operation,browserApproved,browserIssue,browserSession};
+  return {app,begin,inspect,approve,token,exchange,grant,balance,connections,revoke,operation,browserApproved,browserIssue,browserSession};
 }

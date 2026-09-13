@@ -1,3 +1,4 @@
+import {walletIdentity,walletScopes} from '../auth/wallet-identity.mjs';
 import http from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import Provider from 'oidc-provider';
@@ -9,7 +10,8 @@ const config = loadAuthConfig();
 const store = openAuthStore();
 const secure = config.issuer.startsWith('https:');
 export const provider = new Provider(config.issuer, {
-  clients: config.clients, adapter: store.Adapter, jwks: config.jwks,
+  clients: config.clients.map(client=>({...client,scope:client.scope??['openid','profile',...(client.client_id==='lidollbot'?walletScopes:[])].join(' ')})),
+  scopes:['openid','profile',...walletScopes], adapter: store.Adapter, jwks: config.jwks,
   cookies: { keys: config.cookieKeys, long: { secure, sameSite: 'lax' }, short: { secure, sameSite: 'lax' } },
   features: { devInteractions: { enabled: false } },
   pkce: { required: () => true },
@@ -29,9 +31,9 @@ const csrfFor = (uid, action = 'login') => createHmac('sha256', config.cookieKey
 const registrationsInFlight = new Set(); // Bounds concurrent password hashing and blocks double submissions within one interaction.
 const formOrigins = [...new Set(config.clients.flatMap(client => client.redirect_uris.map(uri => new URL(uri).origin)))].join(' '); // Browser form redirects must be allowed to return to explicitly registered apps.
 
-function view(response, uid, mode, clientName, error = '', username = '', status = 200) { // Keeps every identity form uncached and protected by the same response policy.
+function view(response, uid, mode, clientName, error = '', username = '', status = 200, scope = '') { // Keeps every identity form uncached and protected by the same response policy.
   response.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${formOrigins}; base-uri 'none'; frame-ancestors 'none'`, 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' });
-  response.end(authPage({ uid, mode, clientName, csrf: csrfFor(uid, mode === 'register' ? 'register' : 'login'), error, username }));
+  response.end(authPage({ uid, mode, clientName, csrf: csrfFor(uid, mode === 'register' ? 'register' : 'login'), error, username, scope }));
 }
 
 async function formBody(request) { // Limits login form size before buffering secrets in memory.
@@ -44,6 +46,13 @@ async function formBody(request) { // Limits login form size before buffering se
 
 export const authServer = http.createServer(async (request, response) => { // Delegates protocol validation and token issuance to the maintained OIDC provider.
   const path = new URL(request.url, config.issuer).pathname;
+  if(path==='/wallet/identity') { // Private back-channel introspection; no browser cookies or identity supplied by the calling app are trusted.
+    response.setHeader('Cache-Control','no-store');response.setHeader('Content-Type','application/json');
+    if(request.method!=='GET'){response.writeHead(405);return response.end(JSON.stringify({error:'method_not_allowed'}));}
+    const secret=/^Bearer ([A-Za-z0-9_-]+)$/.exec(request.headers.authorization??'')?.[1];
+    try {return response.end(JSON.stringify(await walletIdentity(provider,store,config.issuer,secret)));}
+    catch {response.writeHead(401);return response.end(JSON.stringify({error:'invalid_token'}));}
+  }
   const match = /^\/interaction\/([A-Za-z0-9_-]+)(\/register)?$/.exec(path);
   if (!match) return callback(request, response);
   try {
@@ -54,7 +63,7 @@ export const authServer = http.createServer(async (request, response) => { // De
     const register = Boolean(match[2]);
     if (details.result || (register && details.prompt.name !== 'login')) throw new Error('Interaction already completed or unsupported.');
     const clientName = client.client_name ?? client.client_id;
-    if (request.method === 'GET') return view(response, details.uid, register ? 'register' : details.prompt.name, clientName);
+    if (request.method === 'GET') return view(response, details.uid, register ? 'register' : details.prompt.name, clientName, '', '', 200, details.params.scope);
     if (request.method !== 'POST' || request.headers.origin !== config.issuer) throw new Error('Invalid origin.');
     const form = await formBody(request);
     const supplied = Buffer.from(form.get('csrf') ?? ''), expected = Buffer.from(csrfFor(details.uid, register ? 'register' : 'login'));
@@ -87,6 +96,7 @@ export const authServer = http.createServer(async (request, response) => { // De
       if (!account) return view(response, details.uid, 'login', client.client_name, 'Username or password was not accepted.');
       return await provider.interactionFinished(request, response, { login: { accountId: account.id } }, { mergeWithLastSubmission: false });
     }
+    if(form.get('decision')==='deny')return await provider.interactionFinished(request,response,{error:'access_denied',error_description:'Access declined.'},{mergeWithLastSubmission:false}); // Denial grants neither identity nor wallet access.
     let grant = details.grantId ? await provider.Grant.find(details.grantId) : null;
     grant ??= new provider.Grant({ accountId: details.session.accountId, clientId: details.params.client_id });
     if (details.prompt.details.missingOIDCScope) grant.addOIDCScope(details.prompt.details.missingOIDCScope.join(' '));

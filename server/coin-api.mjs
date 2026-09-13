@@ -1,3 +1,4 @@
+import {verifyWalletIdentity} from './coin-identity.mjs';
 export async function coinApi(database,login,request,response,route) { // Bearer-only external routes have explicit per-app CORS and never use browser session cookies.
   const send=(status,value)=>{response.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store',Vary:'Origin, Authorization'});response.end(JSON.stringify(value));};
   try {
@@ -20,6 +21,13 @@ export async function coinApi(database,login,request,response,route) { // Bearer
     }
     if(request.method==='POST'&&route==='device')return send(200,{...call('begin',{...input,client_id:clientId},request.socket.remoteAddress??'unknown'),verification_uri:new URL(url.pathname.replace(/api\/lidollcoin\/v1\/.*$/,'coins/'),login.origin).href});
     if(request.method==='POST'&&route==='token')return send(200,call('token',{...input,client_id:clientId}));
+    if(request.method==='POST'&&route==='exchange') {
+      if(input.grant_type!=='urn:ietf:params:oauth:grant-type:token-exchange'||input.subject_token_type!=='urn:ietf:params:oauth:token-type:access_token')throw Object.assign(Error('Use the OIDC access-token exchange grant.'),{status:400});
+      const identity=await verifyWalletIdentity(input.subject_token,clientId);
+      const participant=database.ensureParticipant(identity.issuer,identity.subject,identity.username);
+      const tokens=call('exchange',participant.id,clientId,identity.scope,input.subject_token);
+      return send(200,{...tokens,identity:{issuer:identity.issuer,subject:identity.subject}});
+    }
     const secret=/^Bearer ([A-Za-z0-9_-]+)$/.exec(request.headers.authorization??'')?.[1];
     const identity=call('grant',secret);
     if(identity.client!==clientId)throw Object.assign(Error('Token belongs to another app.'),{status:403});
