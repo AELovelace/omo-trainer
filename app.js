@@ -258,7 +258,7 @@ $('#intake-unit-toggle').addEventListener('click', () => {
 });
 displayIntake(0);
 
-function seedForm(day = localDay(), resetLiquids = true) { // Carries forward the latest same-day counts and resets counts for a new day.
+function seedForm(day = localDay(), resetLiquids = true) { // Carries the active diaper across dates; only intake drafts reset after saving.
   if (resetLiquids) displayIntake(0);
   $('#diaper').value = diaperSummary(state.entries, day).currentDiaper;
   formDay = day;
@@ -527,11 +527,11 @@ function seedDiaperChange(reset = false) { // Preserve typed totals while refres
   const input = $('#diaper-change-time'), day = input.value.slice(0, 10) || localDay();
   const summary = diaperSummary(state.entries, day);
   $('#diaper-change-summary').textContent = summary.changes + ' changes recorded on ' + day + '. This will add change #' + (summary.changes + 1) + '.';
-  if (reset || !$('#diaper-change-number').dataset.edited) $('#diaper-change-number').value = summary.currentDiaper;
+  let before = null;
+  try { if (input.value) before = input.dataset.edited ? timestampFromInput(input.value) : instantTimestamp(); }
+  catch { $('#diaper-change-summary').textContent = 'Choose a valid date and time for this change.'; return; }
+  if (reset || !$('#diaper-change-number').dataset.edited) $('#diaper-change-number').value = before ? diaperAtTime(state.entries, before) : summary.currentDiaper;
   if (reset || !$('#diaper-change-wettings').dataset.edited) {
-    let before = null;
-    try { if (input.value) before = input.dataset.edited ? timestampFromInput(input.value) : instantTimestamp(); }
-    catch { $('#diaper-change-summary').textContent = 'Choose a valid date and time for this change.'; return; } // An invalid change draft must not interrupt other forms or sync rendering.
     $('#diaper-change-wettings').value = suggestedDiaperWettings(state.entries, day, Number($('#diaper-change-number').value), before);
   }
 }
@@ -723,7 +723,7 @@ $('#install-button').addEventListener('click', async () => {
 });
 window.addEventListener('appinstalled', () => { $('#install-button').hidden = true; notify('Little Log terminal installed. Ready for observations.'); });
 
-function refreshClock() { // Advances untouched live timestamps and resets automatic daily defaults when midnight passes.
+function refreshClock() { // Advances live timestamps and daily summaries while retaining the active diaper across midnight.
   const today = localDay();
   const input = $('#occurred-at');
   const changedDay = today !== activeDay;

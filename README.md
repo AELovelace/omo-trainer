@@ -11,8 +11,9 @@ Each check-in stores its timestamp, liquids consumed since the previous check-in
 The **Record a diaper change** card sits below **Record a wetting**, including
 in the mobile Wetting tab. Save the date/time, diaper number being changed and
 its final wetting count (including zero for a dry change). Daily totals count
-saved changes; the next diaper number is suggested automatically. Suggestions
-use that day's records, so adjust totals for unlogged or overnight wettings.
+saved changes. The current diaper number carries across midnight until a change
+is recorded. Wetting suggestions cover the full period since the last change,
+including overnight records; adjust for any unlogged wettings.
 New wetting events no longer store a per-diaper total. Historical totals remain
 editable, and changes sync and export as separate `diaper-change` records.
 Admin analytics includes change counts and mean wettings per completed diaper.

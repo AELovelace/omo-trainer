@@ -101,3 +101,7 @@ Pattern analysis includes a per-profile next-wetting model using actual wetting 
 
 ### Connected-game stars
 The shared wallet API now supports explicitly authorized star credit/debit/refund operations in market schema 5. See LIDOLLCOIN_API.md for migration and deployment order. Run `npm test` for currency isolation, legacy receipts/consent migration, integer and balance limits, star scopes, chart preservation, ledger persistence, refunds and browser origin/CSRF checks.
+
+
+### Current diaper across midnight
+`lib/diapers.js` derives the active diaper from the latest actual change and subsequent records, independent of calendar rollover. Suggested wetting totals span that wear period; daily statistics still count only changes saved on that date. The change form uses its exact event timestamp for backdated suggestions. No stored records or database schemas are rewritten.

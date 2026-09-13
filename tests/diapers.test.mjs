@@ -27,7 +27,7 @@ test('diaper changes validate independently and accept dry changes without inven
 test('daily change counts, completed-diaper totals and next diaper follow explicit events and corrections',()=>{
   const entries=[wetting('one'),wetting('two'),change(),change('dry','2026-09-12',0,2)];
   assert.deepEqual(diaperSummary(entries,'2026-09-12'),{changes:2,wettings:3,currentDiaper:3});
-  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:0,wettings:0,currentDiaper:1});
+  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:0,wettings:0,currentDiaper:3});
   assert.equal(diaperSummary([wetting('one',7)],'2026-09-12').changes,0,'A high diaper number is not evidence of changes');
   assert.equal(suggestedDiaperWettings(entries,'2026-09-12',1,'2026-09-12T09:30:00+00:00'),2);
   assert.equal(suggestedDiaperWettings(entries,'2026-09-12',2),0,'Completed counts must not seed the next diaper');
@@ -62,12 +62,30 @@ test('change events persist through sync, participant isolation, correction, del
   }finally{db.close();}
 });
 
- test('automatic wetting assignment follows event-time changes and resets on a new day',()=>{
+ test('automatic wetting assignment follows event-time changes and persists on a new day',()=>{
   const entries=[change(),{...change('second','2026-09-12',2,2),occurredAt:'2026-09-12T10:01:47+00:00'}];
   assert.equal(diaperAtTime(entries,'2026-09-12T09:59:59+00:00'),1,'Backdated wettings precede later changes');
   assert.equal(diaperAtTime(entries,'2026-09-12T10:00:01+00:00'),2);
   assert.equal(diaperAtTime(entries,'2026-09-12T10:01:46+00:00'),2,'Seconds distinguish events within a minute');
   assert.equal(diaperAtTime(entries,'2026-09-12T10:01:47+00:00'),3);
-  assert.equal(diaperAtTime(entries,'2026-09-13T00:00:00+00:00'),1);
+  assert.equal(diaperAtTime(entries,'2026-09-13T00:00:00+00:00'),3);
   assert.equal(diaperAtTime([wetting('historical',4)],'2026-09-12T09:30:00+00:00'),4,'Existing numbered records remain compatible');
+});
+
+test('an overnight diaper keeps its number and wettings until an explicit change, including old reset records',()=>{
+  const at=(entry,time)=>({...entry,occurredAt:time});
+  const entries=[at(change('evening','2026-09-12',4,6),'2026-09-12T22:00:00+00:00'),
+    at(wetting('night',7),'2026-09-12T23:00:00+00:00'),at(wetting('morning-reset',1),'2026-09-13T00:01:00+00:00')];
+  assert.equal(diaperAtTime(entries,'2026-09-13T00:02:00+00:00'),7);
+  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:0,wettings:0,currentDiaper:7});
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',7),2);
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-12',7,'2026-09-12T23:30:00+00:00'),1);
+  entries.push(at(change('morning','2026-09-13',2,7),'2026-09-13T08:00:00+00:00'));
+  assert.equal(diaperAtTime(entries,'2026-09-13T07:59:00+00:00'),7,'Backdated changes must use their event-time diaper');
+  assert.deepEqual(diaperSummary(entries,'2026-09-13'),{changes:1,wettings:2,currentDiaper:8});
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',8),0);
+  entries.push(at(wetting('after-change',8),'2026-09-13T08:00:00+00:00'));
+  assert.equal(suggestedDiaperWettings(entries,'2026-09-13',8),1,'Same-second wetting after the change belongs to the new diaper');
+  assert.equal(diaperSummary(entries,'2026-09-16').currentDiaper,8,'Several idle days never create changes');
+  assert.equal(diaperSummary(entries.filter(e=>e.id!=='morning'),'2026-09-13').changes,0,'Corrections derive from saved events');
 });

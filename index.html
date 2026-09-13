@@ -65,7 +65,7 @@
             <div class="card-heading"><div><h2 id="log-title" tabindex="-1">Record an observation</h2><p>A snapshot of the present. Filed for later.</p></div><span class="pill lavender">FORM 01</span></div>
             <form id="log-form">
               <label for="occurred-at">Date & time</label><input id="occurred-at" name="occurredAt" type="datetime-local" required>
-              <div class="field-pair"><div><label for="liquids">Liquids since last check-in <span class="unit" id="intake-unit-label">mL</span></label><input id="liquids" name="liquidsMl" type="number" min="0" max="1000000" step="1" value="0" required inputmode="numeric" aria-describedby="intake-unit-help"><button id="intake-unit-toggle" class="button secondary small intake-unit-toggle" type="button" aria-controls="liquids">Use fl oz</button><span id="intake-unit-help" class="field-help" aria-live="polite">Milliliters.</span><span class="field-help">Total consumed since your previous check-in. Starts at 0 after saving.</span></div><div><label for="diaper">Diaper number today</label><input id="diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"><span class="field-help">1st, 2nd, 3rd… resets each day.</span></div></div>
+              <div class="field-pair"><div><label for="liquids">Liquids since last check-in <span class="unit" id="intake-unit-label">mL</span></label><input id="liquids" name="liquidsMl" type="number" min="0" max="1000000" step="1" value="0" required inputmode="numeric" aria-describedby="intake-unit-help"><button id="intake-unit-toggle" class="button secondary small intake-unit-toggle" type="button" aria-controls="liquids">Use fl oz</button><span id="intake-unit-help" class="field-help" aria-live="polite">Milliliters.</span><span class="field-help">Total consumed since your previous check-in. Starts at 0 after saving.</span></div><div><label for="diaper">Current diaper number</label><input id="diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"><span class="field-help">Carries across midnight. Advances when you record a change.</span></div></div>
               <button class="button primary" id="save-observation" type="submit">Save observation</button>
             </form>
           </section>
@@ -83,9 +83,9 @@
               <p id="diaper-change-summary" class="field-help" role="status"></p>
               <form id="diaper-change-form">
                 <label for="diaper-change-time">Date &amp; time of change</label><input id="diaper-change-time" name="occurredAt" type="datetime-local" required>
-                <div class="field-pair"><div><label for="diaper-change-number">Diaper being changed (number that day)</label><input id="diaper-change-number" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"></div>
+                <div class="field-pair"><div><label for="diaper-change-number">Diaper being changed</label><input id="diaper-change-number" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"></div>
                 <div><label for="diaper-change-wettings">Wettings received before changing</label><input id="diaper-change-wettings" name="wettingsCount" type="number" min="0" max="10000" step="1" value="0" required inputmode="numeric" aria-describedby="diaper-change-help"></div></div>
-                <p id="diaper-change-help" class="field-help">Suggested from records for this diaper on the selected day. Adjust for unlogged or overnight wettings. Use 0 for a dry change.</p>
+                <p id="diaper-change-help" class="field-help">Suggested from records since the last change, including overnight wettings. Adjust for any unlogged wettings. Use 0 for a dry change.</p>
                 <button class="button primary" type="submit">Save diaper change</button>
               </form>
             </section>
@@ -291,7 +291,7 @@
     <label for="wetting-edit-position">Position</label><select id="wetting-edit-position" name="position"><option value="standing">Standing</option><option value="sitting">Sitting</option><option value="laying-down">Laying down</option></select><p class="field-help">Correcting an earlier day recalculates the current chance. Historical rolls retain their recorded chance.</p><button class="button primary" type="submit">Save changes</button></form></dialog>
   <dialog id="diaper-change-edit-dialog"><form id="diaper-change-edit-form"><div class="card-heading"><h2>Edit diaper change</h2><button id="close-diaper-change-edit" type="button" class="icon-button" aria-label="Close diaper change editor">&times;</button></div>
     <label for="diaper-change-edit-time">Date &amp; time</label><input id="diaper-change-edit-time" name="occurredAt" type="datetime-local" required>
-    <label for="diaper-change-edit-number">Diaper being changed (number that day)</label><input id="diaper-change-edit-number" name="diaperNumber" type="number" min="1" max="10000" step="1" required>
+    <label for="diaper-change-edit-number">Diaper being changed</label><input id="diaper-change-edit-number" name="diaperNumber" type="number" min="1" max="10000" step="1" required>
     <label for="diaper-change-edit-wettings">Wettings received before changing</label><input id="diaper-change-edit-wettings" name="wettingsCount" type="number" min="0" max="10000" step="1" required>
     <p class="field-help">Correcting this record updates the day's change count and completed-diaper totals.</p><button class="button primary" type="submit">Save changes</button></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

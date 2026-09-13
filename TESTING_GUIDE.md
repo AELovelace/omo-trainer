@@ -12,7 +12,7 @@ These cover all 101 probability settings, rejection sampling, cumulative snapsho
 
 `tests/observations.test.mjs` verifies interval sums, overlapping legacy cumulative snapshots, date attribution, separation of draw and observation fields, measurement-mode validation/exports, retry idempotency, second-device synchronization and totals after edits/deletions. The browser workflow verifies observation editing and intake reset; the protocol browser workflow checks that rolling preserves an unfinished observation and that saving during cooldown never creates another roll.
 
-Historical-field coverage verifies that roll position and older per-diaper totals survive SQLite, exports and second-device sync. New totals belong to `diaper-change` records. `tests/diapers.test.mjs` covers dry changes, daily totals, next-diaper suggestions, preserved historical counts, classification/cooldown isolation, sync, corrections, deletion and CSV/JSON round trips. The protocol browser suite records two changes, checks next-day reset and edits/deletes a change, while verifying the new card stays below the wetting card on mobile.
+Historical-field coverage verifies that roll position and older per-diaper totals survive SQLite, exports and second-device sync. New totals belong to `diaper-change` records. `tests/diapers.test.mjs` covers dry changes, daily totals, next-diaper suggestions, preserved historical counts, classification/cooldown isolation, sync, corrections, deletion and CSV/JSON round trips. The protocol browser suite records two changes, checks the next-day reset of daily change totals and edits/deletes a change, while verifying the new card stays below the wetting card on mobile.
 
 `tests/registration.test.mjs` starts an isolated auth service and uses real OIDC interactions to test registration pages, missing/expired cookies, invalid or wrong-action CSRF tokens, foreign origins, server-side field validation, escaped error output, normalized usernames, replay rejection, duplicate protection, and durable throttling. `tests/auth.test.mjs` also races two account creations and confirms only one password wins, with disabled accounts remaining protected.
 
@@ -159,3 +159,7 @@ All model inputs remain in memory. Switching participants, leaving the panel or 
 
 ### Connected-game stars
 The shared wallet API now supports explicitly authorized star credit/debit/refund operations in market schema 5. See LIDOLLCOIN_API.md for migration and deployment order. Run `npm test` for currency isolation, legacy receipts/consent migration, integer and balance limits, star scopes, chart preservation, ledger persistence, refunds and browser origin/CSRF checks.
+
+
+### Overnight diaper continuity
+`node tests/diapers-browser.mjs` starts an isolated local app and verifies mobile midnight rollover, an overnight wetting, reload persistence, changing the carried diaper, and backdated change suggestions. `npm test` includes day boundaries, old reset-number records and same-second change/wetting ordering. Current diaper numbers and their suggested totals carry across dates; only recorded changes today reset.
