@@ -63,6 +63,12 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
   }
   return {
     awardRecord,awardStars,tryFlush,
+    recordReward(owner,id) { // Resolve only an existing entitlement belonging to the signed-in participant.
+      if(typeof id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw Object.assign(Error('Invalid observation ID.'),{status:400});
+      if(!science.prepare("SELECT 1 FROM reward_outbox WHERE owner=? AND asset='sticker' AND source_id=?").get(owner,id))return null;
+      try {while(flush(owner)===1000) {} return open().recordReward(owner,opaque(id));}
+      catch {throw Object.assign(Error('Your observation is saved. Your sticker is waiting for the market to reconnect.'),{status:503});}
+    },
     snapshot(owner) {
       stageExisting(owner);
       try {while(flush(owner)===1000) { /* Drain this account's backlog in bounded, replayable batches. */ }return open().snapshot(owner);}

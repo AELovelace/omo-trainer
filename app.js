@@ -41,6 +41,7 @@ let serverSession = null;
 let syncRunning = false;
 let syncMessage = '';
 let renderedConflicts = '';
+let observationReward = null; // Only the currently open save celebration may receive an asynchronous sticker response.
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let crtPreference = null;
@@ -72,6 +73,52 @@ function notify(message) { // Announces feedback without moving focus away from 
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 6500);
 }
+
+function showObservationReward(id) { // Open after the local save; never invent a sticker while server sync is pending.
+  observationReward={id,owner:state.sync.participant?.id??null,loading:false,complete:false};
+  $('#observation-reward-title').textContent='Thank you for checking in!';
+  $('#observation-reward-sticker').hidden=true;
+  $('#observation-reward-image').removeAttribute('src');
+  $('#observation-reward-image').hidden=false;
+  $('#observation-reward-name').textContent='';
+  $('#observation-reward-retry').hidden=false;
+  $('#observation-reward-retry').disabled=false;
+  $('#observation-reward-dialog').showModal();
+  void refreshObservationReward();
+}
+
+async function refreshObservationReward() { // Show the receipt for this exact observation and account, never the latest arbitrary ledger entry.
+  const current=observationReward,dialog=$('#observation-reward-dialog'),status=$('#observation-reward-status');
+  if(!current||!dialog.open||current.complete||current.loading)return;
+  if(current.owner!==(state.sync.participant?.id??null)){dialog.close();return;}
+  if(!current.owner){status.textContent='Observation saved on this device. Sign in and sync to receive your sticker.';return;}
+  if(!navigator.onLine){status.textContent='Observation saved on this device. Your sticker will appear after you reconnect and sync.';return;}
+  if(state.sync.conflicts.some(record=>record.id===current.id)){status.textContent='Observation saved on this device. Review its sync conflict in Settings before collecting your sticker.';return;}
+  if(state.sync.queue.some(change=>change.id===current.id)){status.textContent='Observation saved on this device. Your sticker is waiting for this check-in to sync.';return;}
+  current.loading=true;status.textContent='Observation saved. Finding your earned sticker?';
+  $('#observation-reward-retry').disabled=true;
+  try {
+    const result=await apiRequest('record-reward?id='+encodeURIComponent(current.id));
+    if(current!==observationReward||!dialog.open)return;
+    if(result.participant.id!==current.owner||state.sync.participant?.id!==current.owner){dialog.close();return;}
+    if(!result.reward){status.textContent='Observation saved. Your sticker is waiting for the collection to become available. Check again shortly.';return;}
+    const sticker=result.reward,image=$('#observation-reward-image');
+    image.alt=sticker.name;image.src=sticker.url;
+    $('#observation-reward-name').textContent=sticker.name;
+    $('#observation-reward-sticker').hidden=false;
+    $('#observation-reward-title').textContent='You earned a sticker!';
+    status.textContent='Thank you for checking in! +1 sticker has been added to your collection.';
+    $('#observation-reward-retry').hidden=true;current.complete=true;
+  } catch {if(current===observationReward&&dialog.open)status.textContent='Your observation is saved. We could not load your sticker yet. Reconnect or sign in again, then check for your sticker.';}
+  finally {current.loading=false;if(current===observationReward)$('#observation-reward-retry').disabled=false;}
+}
+$('#observation-reward-dialog').addEventListener('close',()=>{observationReward=null;}); // A delayed response cannot reopen a dismissed celebration.
+$('#observation-reward-retry').addEventListener('click',async()=>{await syncNow();await refreshObservationReward();});
+$('#observation-reward-image').addEventListener('error',()=>{ // Keep the actual reward name available when its artwork cannot load.
+  if(!observationReward)return;
+  $('#observation-reward-image').hidden=true;
+  $('#observation-reward-status').textContent='Your sticker was added to your collection. Its picture is temporarily unavailable.';
+});
 
 function storageWarning(message) { // Makes storage failures persistent instead of falsely reporting a successful save.
   $('#storage-warning').textContent = message;
@@ -112,6 +159,7 @@ function commit(nextState, fromServer = false) { // Atomically saves records and
 function renderSync() { // Separates local saving, pending uploads, conflicts, and confirmed server persistence.
   $('#admin-nav').hidden = serverSession?.role !== 'admin'; // Navigation follows the server role; admin APIs independently enforce access.
   const sync = state.sync ?? emptySync();
+  if(observationReward&&observationReward.owner!==(sync.participant?.id??null))$('#observation-reward-dialog').close();
   let status = 'On this device only';
   if (sync.participant) status = sync.conflicts.length ? `${sync.conflicts.length} conflicts need review` : sync.queue.length ? `${sync.queue.length} changes waiting to sync` : sync.lastSyncedAt ? 'Saved to central database' : 'Waiting for first sync';
   if (syncRunning) status = 'Syncing with lidoll.dev…';
@@ -196,7 +244,7 @@ async function syncNow() { // Retries durable mutations in bounded batches; a lo
       if (!state.sync.queue.length) break;
     }
   } catch (error) { syncMessage = `${error.message} Unsynced changes are kept on this device.`; }
-  finally { syncRunning = false; renderSync(); }
+  finally { syncRunning = false; renderSync(); void refreshObservationReward(); }
 }
 
 async function checkSession() { // Restores a signed-in browser after redirect without uploading old local records before the connection action.
@@ -456,7 +504,7 @@ $('#log-form').addEventListener('submit', event => { // Saves interval intake an
     commit({ ...state, entries: [...enroll(state.entries), candidate] });
     $('#occurred-at').value = localInput();
     seedForm();
-    notify('Observation saved. Intake since the previous check-in was recorded.');
+    showObservationReward(candidate.id);
     navigator.storage?.persist?.().catch(() => {});
   } catch (error) { notify(error.message); }
 });

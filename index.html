@@ -268,6 +268,13 @@
     <a href="#analysis" data-action="analysis"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span>Pattern<br>analysis</span></a>
   </nav>
   <a href="./admin/" class="button small secondary admin-shortcut" id="admin-nav" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><span>Admin console</span></a>
+  <dialog id="observation-reward-dialog" aria-labelledby="observation-reward-title" aria-describedby="observation-reward-status">
+    <h2 id="observation-reward-title">Thank you for checking in!</h2>
+    <p id="observation-reward-status" role="status" aria-live="polite"></p>
+    <figure id="observation-reward-sticker" hidden><img id="observation-reward-image" alt="" width="192" height="192"><figcaption id="observation-reward-name"></figcaption></figure>
+    <button id="observation-reward-retry" type="button" class="button secondary">Check for my sticker</button>
+    <form method="dialog"><button class="button primary" autofocus>Done</button></form>
+  </dialog>
   <dialog id="market-dialog" aria-labelledby="market-dialog-title">
     <div class="card-heading"><h2 id="market-dialog-title" tabindex="-1">Sell sticker</h2><button id="market-close" type="button" class="button small secondary">Close</button></div>
     <p id="market-dialog-status" role="status" aria-live="polite"></p>

@@ -157,5 +157,13 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.exec('COMMIT');return data;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }
-  return {awardRecord,awardStars,snapshot,act,coins:createCoinApiStore(db,wallet,adjust,enabled)};
+  function recordReward(owner,source) { // Read this record's original award, even after later rewards or sticker sales.
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      assignPending(owner);
+      const reward=db.prepare('SELECT t.id,t.name,t.url FROM sticker_rewards r JOIN sticker_types t ON t.id=r.sticker WHERE r.owner=? AND r.entry_id=?').get(owner,source);
+      db.exec('COMMIT');return reward?{...reward,quantity:1}:null;
+    } catch(error) {db.exec('ROLLBACK');throw error;}
+  }
+  return {awardRecord,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
 }

@@ -141,3 +141,14 @@ LiDollQuest browser sign-in uses the first-party wallet session described in LID
 ## Personal potty estimates
 
 Pattern analysis includes a per-profile next-wetting model using actual wetting intervals and, when chronological validation supports it, intake timing and a learned fluid-response delay. It runs offline from the existing scientific records and updates after changes or sync. See [PREDICTION_GUIDE.md](PREDICTION_GUIDE.md) for inputs, limits, validation, deployment and browser tests. No database migration or external model service is needed.
+
+Saving an observation opens a theme-aware sticker dialog instead of the saved
+toast. Its image and name come from that observation's account-scoped reward
+receipt after sync. Offline/guest saves show a pending message; retrying the
+lookup never awards another sticker. Dismissing the dialog keeps it closed when
+background sync finishes. Wetting/change feedback is unchanged. Deploy the API
+and app assets together.
+
+Run `node tests/observation-reward-browser.mjs` with `PUPPETEER_MODULE` (module
+file path) and `CHROME_PATH` to check real saved rewards, offline recovery, guest
+feedback, focus, and mobile sizing using disposable local accounts.

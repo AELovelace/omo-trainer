@@ -233,3 +233,21 @@ test('a duplicate merge that would overflow a balance rolls back without losing 
     assert.equal(market.prepare('SELECT COUNT(*) AS n FROM sticker_aliases').get().n,0);
   }finally{market.close();}
 });
+
+
+test('record reward lookup returns the original award without minting or exposing another participant reward',()=>{
+ const {db,a,b}=fixture();
+ try {
+   assert.equal(db.economy.recordReward(a.id,'missing'),null);save(db,a,observation('celebration'));
+   const expected={...collection[0],quantity:1};assert.deepEqual(db.economy.recordReward(a.id,'celebration'),expected);
+   assert.equal(db.economy.recordReward(b.id,'celebration'),null);assert.throws(()=>db.economy.recordReward(a.id,'../invalid'),e=>e.status===400);
+   sell(db,a);assert.deepEqual(db.economy.recordReward(a.id,'celebration'),expected);
+   save(db,a,observation('celebration'),1);assert.deepEqual(db.economy.recordReward(a.id,'celebration'),expected);
+   assert.equal(db.economy.snapshot(a.id).types[0].quantity,0,'Reading or editing a sold reward cannot mint it again');
+ }finally{db.close();}
+});
+test('missing sticker assets keep the record reward pending without failing its saved observation',()=>{
+ const {db,a}=fixture(':memory:',[]);
+ try {save(db,a,observation('pending'));assert.equal(db.economy.recordReward(a.id,'pending'),null);assert.equal(db.records(a.id).length,1);assert.equal(db.economy.snapshot(a.id).pendingRewards,1);}
+ finally{db.close();}
+});
