@@ -22,6 +22,6 @@ test('Games origin rejects insecure production, embedded credentials and arbitra
 test('Games shell offers all three separate tabs with link instructions and a cached offline module',()=>{
   const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8'),html=read('index.html');
   for(const game of ['diapers','hangman','touhou'])assert.match(html,new RegExp(`href="./games/${game}" target="_blank" rel="noopener noreferrer"`));
-  assert.match(html,/\/lidollid login/);assert.doesNotMatch(html,/<iframe/i);assert.match(read('sw.js'),/\.\/lib\/games.js/);
+  assert.match(html,/No Discord account or membership is needed/);assert.doesNotMatch(html,/<iframe/i);assert.match(read('sw.js'),/\.\/lib\/games.js/);
   assert.match(read('scripts/serve.mjs'),/createGamesRoute/);assert.match(read('app.js'),/import '\.\/lib\/games.js'/);
 });
