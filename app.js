@@ -70,7 +70,7 @@ navigationDrawer.addEventListener('click',event=>{
 });
 window.addEventListener('hashchange',closeNavigation);
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
-const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
+const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary', bedwetting: 'Bedwetting', 'used-the-potty': 'Used the potty' }; // Use the same readable labels for saved records and corrections.
 let editedWetting = null, editedDiaperChange = null;
 let protocolView;
 let state = deviceState(emptyState());
@@ -391,8 +391,8 @@ function renderProtocol() { // Shows the current chance and an auditable daily b
   $('#probability').value = view.probability;
   $('#protocol-probability').textContent = `${view.probability}%`;
   $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's base chance comes from completed days. Random adjustments can change the base; a 100% roll is temporary.` : 'Starts at 50% with your first saved check-in, wetting, or roll. Earlier, unclassified snapshots are kept in your archive.';
-  $('#protocol-today').textContent = `Today: F ${counts.forced} · SF ${counts['semi-forced']} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
-  $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day['semi-forced']}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
+  $('#protocol-today').textContent = `Today: F ${counts.forced} · SF ${counts['semi-forced']} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary} · Bedwetting ${counts.bedwetting} · Used the potty ${counts['used-the-potty']}. If today ended now: ${view.nextProbability}%.`;
+  $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day['semi-forced']}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.bedwetting}</td><td>${day['used-the-potty']}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
   renderCooldown();
 }
 
@@ -607,7 +607,7 @@ $('#wetting-form').addEventListener('submit', event => { // Saves one classified
     $('#wetting-category').value = '';
     $('#wetting-time').value = localInput();
     delete $('#wetting-time').dataset.edited;
-    notify('Wetting saved. One event added to the daily classification totals.');
+    notify('Event saved. One event added to the daily classification totals.');
   } catch (error) { notify(error.message); }
 });
 $('#close-wetting-edit').addEventListener('click', () => $('#wetting-edit-dialog').close());

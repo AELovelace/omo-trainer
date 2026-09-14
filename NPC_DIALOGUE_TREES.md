@@ -18,3 +18,8 @@ and friend-note reveal. These are chart content, not new NPC dialogue-tree
 fields. Account status and conflict messages live in account.js outside the
 fictional chart voice. Keep source and bundled assets synchronized using
 scripts/import-growth-chart.mjs. See GROWTH_CHART_GUIDE.md.
+
+
+## Additional event choices
+
+Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule.

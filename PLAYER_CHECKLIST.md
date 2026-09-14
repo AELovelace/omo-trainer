@@ -10,8 +10,8 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - Choose the check-in diaper number. Select **Your position** in the roll card before rolling. In **Record a wetting**, classify one actual event; its diaper number is assigned automatically from records at the event time.
 - Use **Record a diaper change** below the wetting form to save each change and the number of wettings that diaper received. Correct the suggestion for unlogged or overnight wettings; 0 records a dry change. The next diaper number is suggested after saving.
 - The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for ten minutes; **Save observation** and wetting logging stay available.
-- In **Record a wetting**, classify each actual event once as Forced, Semi-Forced (SF), Voluntary, Semi-involuntary, or Involuntary, including events without a roll. Each save adds one classified event. The per-diaper total is recorded separately when changing it.
-- Completed days with F + SF + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no wettings recorded, increase it by 5 points. The chance stays between 20% and 80%. Open **About** in the navigation to read the protocol rules and review your daily adjustment history.
+- In **Record a wetting**, classify each actual event once as Forced, Semi-Forced (SF), Voluntary, Semi-involuntary, Involuntary, Bedwetting, or Used the potty, including events without a roll. Each save adds one classified event. The per-diaper total is recorded separately when changing it.
+- Completed days with F + SF + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no F/SF/V/SI/I events recorded, increase it by 5 points. The chance stays between 20% and 80%. Open **About** in the navigation to read the protocol rules and review your daily adjustment history.
 - Today affects tomorrow. Correcting a past wetting recalculates later days; recorded roll probabilities stay unchanged. Day boundaries use the timezone saved at enrollment, even on another device.
 - Use the bathroom whenever needed. The random result is optional and does not record a wetting automatically.
 - Review Charts or History. Edit mistakes or delete individual records in History.
@@ -78,3 +78,8 @@ Open Settings and choose **Little Tracker** for soft pastels or **Caregiver Trac
 - Administrators: **Admin console > Reminders > Margin note** edits the home-page tips separately from the scrolling header. Enter up to 2,000 characters, keep line breaks if wanted, and save. Use **Show this margin note** to publish or hide it.
 
 - **Settings > Manage connected games** lets you approve a LiDollQuest connection code or disconnect an app. A linked game earns/spends from the same LiDollCoin wallet; saved local gold is not deposited.
+
+
+## Additional event choices
+
+Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule.

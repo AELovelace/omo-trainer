@@ -55,7 +55,7 @@ try {
   await page.$eval('.roll-button', button => button.dispatchEvent(new Event('click')));
   assert.equal((await saved(page)).entries.length, 2, 'Programmatic submit cannot bypass the cooldown');
   for (const selector of ['#wetting-category', '#wetting-edit-category']) {
-    assert.deepEqual(await page.$$eval(selector + ' option', options => options.filter(option => option.value).map(option => option.textContent)), ['Forced (F)', 'Semi-Forced (SF)', 'Voluntary (V)', 'Semi-involuntary (SI)', 'Involuntary (I)']);
+    assert.deepEqual(await page.$$eval(selector + ' option', options => options.filter(option => option.value).map(option => option.textContent)), ['Forced (F)', 'Semi-Forced (SF)', 'Voluntary (V)', 'Semi-involuntary (SI)', 'Involuntary (I)', 'Bedwetting', 'Used the potty']);
   }
   await fill(page, '#wetting-category', 'semi-forced');
   await page.click('#wetting-form button[type="submit"]');
@@ -133,7 +133,7 @@ try {
   await page.setViewport({ width: 390, height: 844 });
 
   const actions = ['observation', 'wetting', 'change', 'roll', 'analysis'];
-  const visiblePanels = () => page.$$eval('[data-mobile-panel]', panels => panels.filter(panel => panel.getClientRects().length).map(panel => panel.dataset.mobilePanel));
+  const visiblePanels = () => page.$$eval('[data-mobile-panel]', panels => [...new Set(panels.filter(panel => panel.getClientRects().length).map(panel => panel.dataset.mobilePanel))]); // The analysis destination contains both the prediction and charts cards.
   const selectAction = async action => { // Use the fixed bar exactly as a phone visitor would.
     await page.click('.mobile-actions [data-action="' + action + '"]');
     await page.waitForFunction(value => document.querySelector('.mobile-actions [aria-current="page"]')?.dataset.action === value, {}, action);
@@ -243,6 +243,29 @@ try {
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2, 'Mobile Record change saves a completed diaper');
   await page.screenshot({ path: resolve('artifacts/diaper-change-mobile.png'), fullPage: true });
 
+  await page.setViewport({width:1440,height:1000});
+  for(const [category,label,other] of [['bedwetting','Bedwetting','used-the-potty'],['used-the-potty','Used the potty','bedwetting']]) { // Exercise both new options through the actual save, reload, edit and delete flows.
+    await navigateMenu(page,'[data-page="overview"]');
+    const before=Number(await page.$eval('#diaper-change-wettings',input=>input.value));
+    await fill(page,'#wetting-category',category);
+    await page.click('#wetting-form button[type="submit"]');
+    const entry=(await saved(page)).entries.filter(entry=>entry.kind==='wetting').at(-1);
+    assert.equal(entry.category,category);
+    assert.equal(Number(await page.$eval('#diaper-change-wettings',input=>input.value)),before+(category==='bedwetting'?1:0));
+    await page.reload({waitUntil:'networkidle0'});
+    assert.equal((await saved(page)).entries.find(record=>record.id===entry.id).category,category);
+    await navigateMenu(page,'[data-page="history"]');
+    await page.click('#clear-filters');
+    assert.ok((await page.$eval('#history-body',node=>node.textContent)).includes(label));
+    await page.click(`[data-edit="${entry.id}"]`);
+    assert.equal(await page.$eval('#wetting-edit-category',input=>input.value),category);
+    await fill(page,'#wetting-edit-category',other);
+    await page.click('#wetting-edit-form button[type="submit"]');
+    assert.equal((await saved(page)).entries.find(record=>record.id===entry.id).category,other);
+    page.once('dialog',dialog=>dialog.accept());
+    await page.click(`[data-delete="${entry.id}"]`);
+    assert.equal((await saved(page)).entries.some(record=>record.id===entry.id),false);
+  }
   assert.deepEqual(errors, []);
   console.log('Protocol browser checks passed: cooldown boundary, offline reload, manual and wetting logging, midnight rules, corrections, history and six viewport widths.');
 } finally { await browser.close(); }

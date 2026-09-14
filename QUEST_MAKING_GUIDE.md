@@ -15,3 +15,8 @@ The game website's promotional Growth Chart is now bundled in this PWA and
 links to the same shared account as observations. Its orb-derived text remains
 authored in the game checkout; chart sync does not change quests, game saves
 or game_editor_gui.py fields. See GROWTH_CHART_GUIDE.md.
+
+
+## Additional event choices
+
+Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule. These recording choices add no quest or game editor fields.

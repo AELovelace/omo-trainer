@@ -170,3 +170,8 @@ The overnight regression also checks that the first morning change starts diaper
 ## Games navigation
 
 `npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all three cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` now expects seven destinations and checks the Games route. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.
+
+
+## Additional event choices
+
+Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule. Verify both options can be saved, reloaded, edited and deleted, and that potty use leaves the diaper suggestion unchanged.

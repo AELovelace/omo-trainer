@@ -41,3 +41,8 @@ See GROWTH_CHART_GUIDE.md for bounded storage and sync behavior.
 ## Sticker economy tuning
 
 Each eligible synced record draws uniformly from the full active sticker collection. The current bank rate is 10 plus distinct participating traders in the preceding 30 days, capped at 1,000 coins. Repeated trades by the same participant count once per type. All balances and prices are whole numbers. Chart stars also credit a separate balance, with no spending rate enabled. See ECONOMY_GUIDE.md for economic invariants; these rewards do not alter the training protocol.
+
+
+## Additional event choices
+
+Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule.
