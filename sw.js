@@ -1,4 +1,4 @@
-const CACHE = `little-log-v61-notification-icons-${self.registration.scope}`; // Cache dedicated Little Log notification artwork for installed PWAs.
+const CACHE = `little-log-v62-fixed-mobile-menu-${self.registration.scope}`; // Refresh the fixed mobile menu styles for installed PWAs.
 const SHELL = ['./lib/games.js', './lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/notification-icon.png', './icons/notification-badge.png', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 SHELL.push(...['embedded.css', 'app.js', 'merge.js', 'account.js'].map(name => `./potty_chart/${name}`)); // Keep the complete chart available inside the installed PWA.
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));

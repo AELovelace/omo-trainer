@@ -45,6 +45,13 @@ try {
       await page.setViewport({width,height:900});
       await page.waitForFunction(mobile=>document.querySelector('#navigation-content').parentElement.id===(mobile?'main-navigation':'desktop-navigation'),{},width<=680);
       if(width<=680) {
+      await page.evaluate(()=>scrollTo(0,0));
+      const menuTop=await page.$eval('#menu-toggle',el=>el.getBoundingClientRect().top);
+      await page.evaluate(()=>{scrollTo(0,600);return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+      assert.ok(await page.evaluate(()=>scrollY>200),'Page scrolled before testing the menu');
+      assert.equal(await page.$eval('#menu-toggle',el=>getComputedStyle(el).position),'fixed');
+      assert.equal(await page.$eval('#menu-toggle',el=>el.getBoundingClientRect().top),menuTop,'Menu stays at the same viewport position');
+      if(width===390)await page.screenshot({path:resolve(directory,theme+'-menu-scrolled.png')});
       await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));
       assert.equal(await page.$eval('#main-navigation',el=>el.scrollWidth<=el.clientWidth),true,'Drawer overflow '+theme+' '+width);
       const links=await page.$$eval('#main-navigation [data-page]',els=>els.map(el=>({top:el.getBoundingClientRect().top,left:el.getBoundingClientRect().left})));

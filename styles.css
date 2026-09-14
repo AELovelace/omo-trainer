@@ -1690,7 +1690,8 @@ dialog .primary {
   #topbar-brand .brand-sigil { width:26px; height:32px; }
 }
 @media (max-width:680px) {
-  .topbar .menu-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-size:12px; flex-shrink:0; }
+  .topbar-heading::before { content:""; flex:0 0 88px; height:44px; } /* Reserve the menu's original space beside the logo. */
+  .topbar .menu-toggle { display:inline-flex; position:fixed; top:max(13px,env(safe-area-inset-top,0px)); left:max(18px,env(safe-area-inset-left,0px)); z-index:12; width:88px; background:var(--panel); align-items:center; justify-content:center; gap:8px; min-height:44px; font-size:12px; box-shadow:0 3px 12px #0003; } /* Keep the mobile opener reachable throughout page scrolling. */
 }
 html.navigation-open,html.navigation-open body { overflow:hidden; }
 @media(prefers-reduced-motion:no-preference) {
