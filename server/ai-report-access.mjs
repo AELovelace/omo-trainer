@@ -8,8 +8,8 @@ export function createReportAccess(db,admin,{now=Date.now}={}) { // Report integ
     CREATE TABLE IF NOT EXISTS ai_report_feed(cursor INTEGER PRIMARY KEY AUTOINCREMENT,job_id TEXT NOT NULL UNIQUE REFERENCES ai_analysis_jobs(id));
     INSERT OR IGNORE INTO ai_report_feed(job_id) SELECT id FROM ai_analysis_jobs j WHERE status='completed' AND document IS NOT NULL
       AND NOT EXISTS(SELECT 1 FROM ai_report_feed f WHERE f.job_id=j.id) ORDER BY finished,rowid;`);
-  const metadata='f.cursor,j.id,j.day,j.source,j.schedule_day AS scheduled_for,j.created,j.finished,j.model_used,j.finish_reason';
-  const nightly="j.status='completed' AND j.source='daily' AND j.schedule_day IS NOT NULL"; // Only the scheduler can create a daily job; manual runs cannot opt into the bot feed.
+  const metadata='f.cursor,j.id,j.day,j.source,j.share_with_bot,j.schedule_day AS scheduled_for,j.created,j.finished,j.model_used,j.finish_reason';
+  const publishable="j.status='completed' AND ((j.source='daily' AND j.schedule_day IS NOT NULL) OR (j.source='manual' AND j.share_with_bot=1))"; // Scheduled nights and explicit administrator opt-ins are eligible; ordinary manual runs remain private.
   function audit(actor,action,id){db.prepare('INSERT INTO admin_audit VALUES (?,?,?,?,?,?)').run(randomUUID(),actor,action,id,'{}',new Date(now()).toISOString());} // Keep credentials and report contents out of activity logs.
   function list(actor){admin.requireAdmin(actor);return db.prepare('SELECT id,name,actor_id,created,revoked FROM ai_report_tokens ORDER BY created DESC,rowid DESC LIMIT 100').all();}
   function create(actor,input){
@@ -40,14 +40,14 @@ export function createReportAccess(db,admin,{now=Date.now}={}) { // Report integ
   function number(value,fallback,min,max){if(value===null||value===undefined)return fallback;if(!/^\d+$/.test(String(value))||!Number.isSafeInteger(Number(value))||Number(value)<min||Number(value)>max)throw new ApiError(400,'Invalid cursor or page limit.');return Number(value);}
   function feed(secret,{after,limit}={}) { // Completion cursors prevent an older queued job from being missed when it finishes after a newer job.
     authorize(secret);const cursor=number(after,0,0,Number.MAX_SAFE_INTEGER),size=number(limit,20,1,100);
-    const rows=db.prepare(`SELECT ${metadata} FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE f.cursor>? AND ${nightly} ORDER BY f.cursor LIMIT ?`).all(cursor,size+1);
-    const hasMore=rows.length>size,reports=rows.slice(0,size),latestCursor=db.prepare(`SELECT COALESCE(max(f.cursor),0) AS n FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE ${nightly}`).get().n;
+    const rows=db.prepare(`SELECT ${metadata} FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE f.cursor>? AND ${publishable} ORDER BY f.cursor LIMIT ?`).all(cursor,size+1);
+    const hasMore=rows.length>size,reports=rows.slice(0,size),latestCursor=db.prepare(`SELECT COALESCE(max(f.cursor),0) AS n FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE ${publishable}`).get().n;
     return {reports,next_cursor:reports.at(-1)?.cursor??cursor,latest_cursor:latestCursor,has_more:hasMore};
   }
   function report(secret,id) { // Export only the finished document and descriptive metadata; prompt drafts, source snapshots and job controls stay in the console.
     authorize(secret);if(typeof id!=='string'||id.length>80)throw new ApiError(400,'Invalid report ID.');
-    const row=db.prepare(`SELECT ${metadata},j.document FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE j.id=? AND ${nightly}`).get(id);
-    if(!row)throw new ApiError(404,'Completed nightly report not found.');return {...row,format:'markdown',incomplete:row.finish_reason==='length'};
+    const row=db.prepare(`SELECT ${metadata},j.document FROM ai_report_feed f JOIN ai_analysis_jobs j ON j.id=f.job_id WHERE j.id=? AND ${publishable}`).get(id);
+    if(!row)throw new ApiError(404,'Shared completed report not found.');return {...row,format:'markdown',incomplete:row.finish_reason==='length'};
   }
   return {list,create,revoke,feed,report};
 }

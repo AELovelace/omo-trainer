@@ -1,8 +1,8 @@
 export function createAnalysisPanel({request,authorized,download}) { // All requests use the existing admin session, live role checks and CSRF protection.
   const $=id=>document.getElementById('ai-'+id);
-  let settings=null,dirty=false,busy=false,epoch=0,requestId=null,report=null,nextCursor=null,page=null;
+  let settings=null,dirty=false,busy=false,epoch=0,requestId=null,requestSharing=false,report=null,nextCursor=null,page=null;
   const message=text=>{$('status').textContent=text;};
-  function controls(){for(const id of ['save','reload','run','refresh','older','token-create'])$(id).disabled=busy||!authorized()||(id==='run'&&(!settings||dirty));} // Unsaved prompt changes cannot accidentally launch with an older prompt.
+  function controls(){for(const id of ['save','reload','run','run-share','refresh','older','token-create'])$(id).disabled=busy||!authorized()||(['run','run-share'].includes(id)&&(!settings||dirty));} // Unsaved prompt changes cannot accidentally launch with an older prompt.
   async function loadTokens(){ // Only token metadata is reloaded; saved credentials cannot be retrieved from the server.
     const version=epoch,value=await request('ai-analysis/tokens');if(version!==epoch||!authorized())return;
     $('api-url').textContent=new URL('../api/ai-reports/v1/reports',location.href).href;
@@ -16,7 +16,7 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
   function apply(value){settings=value;dirty=false;$('prompt').value=value.prompt;$('days').value=value.lookbackDays;$('tokens').value=value.maxTokens;$('temperature').value=value.temperature;$('model').value=value.model;$('enabled').checked=value.enabled;controls();}
   function renderReport(value){
     report=value;$('report').hidden=false;$('report-title').textContent='AI report — '+value.day;
-    $('report-meta').textContent=value.status+' · '+(value.model_used||'model pending')+' · '+(value.input?'Source captured '+new Date(value.input.capturedAt).toLocaleString():'Source not yet captured');
+    $('report-meta').textContent=value.status+' · '+(value.source==='daily'||value.share_with_bot?'MommyBot feed when completed':'Private manual report')+' · '+(value.model_used||'model pending')+' · '+(value.input?'Source captured '+new Date(value.input.capturedAt).toLocaleString():'Source not yet captured');
     $('report-warning').textContent=value.finish_reason==='length'?'This report reached the output token limit and may be incomplete.':'AI-generated analysis. Review findings against the saved statistics.';
     $('document').textContent=value.document||value.error||'The report is still being prepared.';
     $('source').textContent=JSON.stringify({settings:value.settings,statistics:value.input},null,2);$('download').disabled=!value.document;
@@ -26,7 +26,7 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
     const table=document.createElement('table'),head=table.createTHead().insertRow();
     for(const text of ['Report date','Source','Status','Attempts','Actions']){const cell=document.createElement('th');cell.scope='col';cell.textContent=text;head.append(cell);}
     const body=table.createTBody();
-    for(const job of jobs){const row=body.insertRow();for(const [index,value] of [job.day,job.source,job.status+(job.error?' — '+job.error:''),job.attempts].entries()){const cell=row.insertCell();cell.textContent=value;cell.className='wrap';cell.dataset.label=['Report date','Source','Status','Attempts'][index];}
+    for(const job of jobs){const row=body.insertRow();for(const [index,value] of [job.day,job.source+(job.share_with_bot?' · share with MommyBot':''),job.status+(job.error?' — '+job.error:''),job.attempts].entries()){const cell=row.insertCell();cell.textContent=value;cell.className='wrap';cell.dataset.label=['Report date','Source','Status','Attempts'][index];}
       const cell=row.insertCell();cell.dataset.label='Actions';
       for(const [label,action] of [['View','view'],...(['queued','running'].includes(job.status)?[['Cancel','cancel']]:['failed','cancelled'].includes(job.status)?[['Retry','retry']]:[])]){
         const button=document.createElement('button');button.type='button';button.className='button secondary small';button.textContent=label;
@@ -50,7 +50,11 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
     const version=epoch,draft={...settings,prompt:$('prompt').value,lookbackDays:Number($('days').value),model:$('model').value,maxTokens:Number($('tokens').value),temperature:Number($('temperature').value),enabled:$('enabled').checked};
     const value=await request('ai-analysis/settings',draft);if(version!==epoch)return;apply(value);message('Analysis settings saved.');await refresh();
   });});
-  $('run-form').addEventListener('submit',event=>{event.preventDefault();if(dirty||!settings)return;void perform(async()=>{const version=epoch;requestId??=crypto.randomUUID();const job=await request('ai-analysis/run',{requestId,day:$('day').value});if(version!==epoch)return;requestId=null;message('Report queued. You can close this page while it runs.');page=null;await refresh();if(version===epoch)await view(job.id);});});
+  $('run-form').addEventListener('submit',event=>{event.preventDefault();if(dirty||!settings)return;const shareWithBot=event.submitter?.id==='ai-run-share';void perform(async()=>{
+    const version=epoch;if(requestSharing!==shareWithBot)requestId=null;requestSharing=shareWithBot;requestId??=crypto.randomUUID(); // Changing the sharing choice starts a new request instead of reusing an uncertain previous submission.
+    const job=await request('ai-analysis/run',{requestId,day:$('day').value,shareWithBot});if(version!==epoch)return;requestId=null;
+    message(shareWithBot?'Report queued for MommyBot. It will appear in the polling feed after completion.':'Report queued. You can close this page while it runs.');page=null;await refresh();if(version===epoch)await view(job.id);
+  });});
   $('day').addEventListener('input',()=>{requestId=null;});
   $('reload').addEventListener('click',()=>void perform(()=>refresh(true)));
   $('refresh').addEventListener('click',()=>void perform(()=>{page=null;return refresh();}));

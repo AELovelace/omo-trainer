@@ -43,4 +43,4 @@ Linked games may see a new Little Log account's 50-coin welcome balance before a
 
 The report API is a read-only administrator integration for MommyBot; it adds no quest or game_editor_gui.py fields and cannot grant game rewards. See [AI_REPORT_API.md](AI_REPORT_API.md).
 
-The MommyBot report feed is restricted to scheduled midnight Los Angeles reports. Manual analysis cannot create a bot-feed entry or a quest event.
+The MommyBot report feed includes midnight Los Angeles reports and explicit **Run and share with MommyBot** requests. Ordinary manual analysis stays private; report sharing does not create quest events.

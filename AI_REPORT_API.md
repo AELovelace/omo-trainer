@@ -1,15 +1,15 @@
 # MommyBot report API
 
-This read-only API lets MommyBot poll for completed nightly Little Log AI reports and
+This read-only API lets MommyBot poll for completed nightly and explicitly shared Little Log AI reports and
 retrieve their full Markdown documents. It does not post to Discord itself.
-Automatic posting needs a consumer in MommyBot with a configured destination
+MommyBot's report publisher consumes this feed using its configured destination
 channel. The admin console remains the place to edit prompts, run analysis,
 inspect source statistics and manage access.
 
 ## Create a connection
 
 1. Deploy the updated tracker, then open **Admin console → AI analysis →
-   MommyBot nightly report access**.
+   MommyBot report access**.
 2. Enter a connection name and press **Create report-read token**. Copy the
    token into MommyBot's protected service configuration. It is displayed once;
    the tracker stores only its SHA-256 digest. There are at most ten active
@@ -26,17 +26,38 @@ they cannot run jobs, change settings, read raw records, retrieve prompt/source
 snapshots or use wallet operations. A completed report's prose can of course
 describe the aggregate statistics supplied to the model.
 
-Tokens allow access to **completed nightly reports only, including earlier nightly
-reports**. Manual runs are excluded by the server, even when created at midnight
-or for the same report date. Direct retrieval of a manual report ID returns 404.
-Existing report tokens inherit this restriction without needing replacement.
+Tokens allow access to **completed nightly reports and manual reports explicitly
+queued with Run and share with MommyBot**, including earlier shared reports.
+Ordinary **Run now** reports remain private, even for the same report date or
+when started at midnight. Direct retrieval of a private manual report ID returns
+404. Existing report tokens work without replacement.
 They do not expire automatically. Revoke or rotate them from the admin console.
 Revocation takes effect on the next request. The issuing account must also
 remain an enabled administrator: every read rechecks that account's live role.
 Use HTTPS outside a trusted local development environment. Keep tokens out of
 Discord messages and logs.
 
-## List completed nightly reports
+## Run and share an on-demand report
+
+Save the desired prompt/settings in the admin console, choose a report date,
+then press **Run and share with MommyBot**. The sharing choice is saved with the
+job. It enters the existing polling feed only after successful completion;
+failed or cancelled attempts stay out. Retry retains the original sharing
+choice and report ID. Each completed job has one stable feed entry.
+
+The administrator API accepts `shareWithBot: true` on the existing
+`POST /tracker/api/admin/ai-analysis/run` request alongside `requestId` and `day`.
+This still requires an enabled admin session and CSRF token; a report-read token
+cannot queue analysis. Omitted or false means private. Reusing a request ID with
+a changed date or sharing choice returns 409. Sharing cannot be enabled through
+a feed query parameter, and existing private reports are not shared on upgrade.
+
+MommyBot uses the same URL, token, channel and polling interval. Deploy the
+updated bot client as well: it accepts `source: manual` only when
+`share_with_bot: 1`. It captions these attachments as **Little Log requested
+report**; nightly report captions and existing delivery receipts remain stable.
+
+## List completed shared reports
 
 ```http
 GET /tracker/api/ai-reports/v1/reports?after=0&limit=20
@@ -54,6 +75,7 @@ Authorization: Bearer <report-token>
       "id": "report-uuid",
       "day": "2026-09-14",
       "source": "daily",
+      "share_with_bot": 0,
       "scheduled_for": "2026-09-15",
       "created": 1789455600000,
       "finished": 1789455660000,
@@ -67,8 +89,10 @@ Authorization: Bearer <report-token>
 }
 ```
 
-Times are Unix milliseconds. `day` is the report's ending date; `source` is always
-`daily`. `scheduled_for` is the Los Angeles calendar date of the midnight that
+Times are Unix milliseconds. `day` is the report's ending date; `source` is
+`daily` or `manual`. Exported manual reports always have `share_with_bot: 1` and
+`scheduled_for: null`; private manual reports are never returned. For nightly
+reports, `scheduled_for` is the Los Angeles calendar date of the midnight that
 scheduled it (normally the day after `day`). One unique job is scheduled per
 midnight, with PST/PDT handled by `America/Los_Angeles`. The job may finish later
 or be queued after a restart catches up the latest missed midnight; eligibility
@@ -82,7 +106,7 @@ stable and may have gaps. Reading a report never consumes it.
 List responses contain metadata only. Fetch each document separately to avoid
 loading many long reports into one response. `next_cursor` is the last returned
 cursor, or the supplied `after` value when the page is empty. `latest_cursor`
-is the current end of the nightly feed; manual reports do not advance it. It is useful for choosing to skip historical
+is the current end of the shared feed; private manual reports do not advance it. It is useful for choosing to skip historical
 reports at first setup. **Do not use `latest_cursor` to advance normal polling**,
 because there may be unread pages or newly completed reports.
 
@@ -117,10 +141,11 @@ disable mentions when the bot posts it.
   historical delivery (`after=0`) or initialize to `latest_cursor` to send only
   future completions.
 - Poll periodically, for example once per minute. Read ascending pages until
-  `has_more` is false. The server exports only completed scheduled nightly reports;
-  there is no query parameter to enable manual reports. Track report IDs so each
-  nightly document is posted once to the configured destination, after generation
-  finishes. Starting a manual analysis never adds a bot publication.
+  `has_more` is false. The server exports completed nightly reports and explicit
+  administrator sharing requests. Do not filter solely on `source: daily`;
+  also accept `source: manual` with `share_with_bot: 1`. Track report IDs so each
+  document is posted once to the configured destination after generation finishes.
+  Ordinary manual analysis never adds a bot publication.
 - Retrieve each selected document and save a pending delivery before sending.
   Save the returned Discord message ID and completion state after success,
   then advance the cursor. Retrying a GET is safe and does not mark a report
@@ -145,15 +170,16 @@ const page = await response.json();
 console.log({ count: page.reports.length, latestCursor: page.latest_cursor });
 ```
 
-Those variable names are examples for the forthcoming bot consumer; this tracker
-change does not configure or launch a Discord publisher.
+These variables match MommyBot's report consumer configuration. Deploy both
+tracker and bot updates; configuring or starting a live publisher is separate
+from this read-only connection check.
 
 ## Errors, administration and storage
 
 - `400`: invalid cursor, limit or report ID.
 - `401`: missing, invalid or revoked report token.
 - `403`: issuing administrator lost access, or a disallowed browser origin.
-- `404`: unknown endpoint/report, a manual report, or a nightly report that has not completed.
+- `404`: unknown endpoint/report, a private manual report, or a shared report that has not completed.
 - `405`: mutations are not supported; external report routes accept only GET.
 - `500`: transient server error; retry without advancing delivery state.
 

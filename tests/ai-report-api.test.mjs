@@ -36,13 +36,32 @@ test('upgrading raises active settings once, retains prompt snapshots and backfi
     const done=f.nightly();f.store.claim('worker');complete(f,done.id);
     const oldManual=f.queue();f.store.claim('worker');complete(f,oldManual.id,'Earlier manual report');const pending=f.queue();
     const token=f.access.create(f.admin.id,{name:'MommyBot'}).token,actor=f.admin.id;f.db.close();
-    const raw=new DatabaseSync(filename);try{raw.exec("DELETE FROM ai_analysis_migrations WHERE name='output-limit-50000'; DELETE FROM ai_report_feed");}finally{raw.close();}
+    const raw=new DatabaseSync(filename);try{raw.exec("DELETE FROM ai_analysis_migrations WHERE name='output-limit-50000'; DELETE FROM ai_report_feed; ALTER TABLE ai_analysis_jobs DROP COLUMN share_with_bot");}finally{raw.close();}
     f=fixture(filename);let settings=f.store.overview(actor).settings;assert.equal(settings.maxTokens,50000);assert.equal(settings.prompt,'Original custom prompt.');assert.equal(f.store.report(actor,pending.id).settings.maxTokens,16384);
     const before=f.access.feed(token);assert.equal(before.reports.length,1);assert.equal(before.reports[0].id,done.id);
     assert.equal(before.latest_cursor,before.reports[0].cursor);assert.throws(()=>f.access.report(token,oldManual.id),error=>error.status===404);
     f.store.save(actor,{...settings,maxTokens:1024});f.db.close();f=fixture(filename);
     assert.equal(f.store.overview(actor).settings.maxTokens,1024);assert.deepEqual(f.access.feed(token),before);
   }finally{f.db.close();rmSync(directory,{recursive:true,force:true});}
+});
+
+test('an explicit shared manual run appears only after completion, preserves sharing on retry and does not expose private runs',()=>{
+  const f=fixture();try{
+    const token=f.access.create(f.admin.id,{name:'MommyBot'}).token;
+    const input={requestId:crypto.randomUUID(),day:'2026-09-13',shareWithBot:true};
+    assert.throws(()=>f.store.queue(f.member.id,input),error=>error.status===403);
+    for(const shareWithBot of ['true',1,null])assert.throws(()=>f.store.queue(f.admin.id,{...input,shareWithBot}),error=>error.status===400);
+    const shared=f.store.queue(f.admin.id,input);assert.equal(shared.share_with_bot,1);assert.equal(f.store.queue(f.admin.id,input).id,shared.id);
+    assert.throws(()=>f.store.queue(f.admin.id,{...input,shareWithBot:false}),error=>error.status===409,'An uncertain shared request cannot be retried as a private request');
+    assert.equal(f.access.feed(token).reports.length,0);assert.throws(()=>f.access.report(token,shared.id),error=>error.status===404);
+    f.store.claim('worker');f.store.change(f.admin.id,{id:shared.id,action:'cancel'});assert.equal(complete(f,shared.id),0);assert.equal(f.access.feed(token).reports.length,0);
+    f.store.change(f.admin.id,{id:shared.id,action:'retry'});assert.equal(f.store.claim('worker').share_with_bot,1);complete(f,shared.id,'On-demand document');
+    const page=f.access.feed(token);assert.equal(page.reports.length,1);assert.equal(page.reports[0].id,shared.id);assert.equal(page.reports[0].source,'manual');assert.equal(page.reports[0].share_with_bot,1);assert.equal(page.reports[0].scheduled_for,null);
+    assert.equal(f.access.report(token,shared.id).document,'On-demand document');assert.equal(complete(f,shared.id,'Duplicate response'),0);assert.deepEqual(f.access.feed(token),page);
+    const privateJob=f.queue();f.store.claim('worker');complete(f,privateJob.id,'Private document');
+    assert.deepEqual(f.access.feed(token),page);assert.throws(()=>f.access.report(token,privateJob.id),error=>error.status===404);
+    assert.equal(f.store.report(f.admin.id,privateJob.id).document,'Private document');assert.ok(f.db.admin.auditList(f.admin.id).some(row=>row.action==='ai-queue-and-share'&&row.target_id===shared.id));
+  }finally{f.db.close();}
 });
 
 test('polling follows completion order across failed attempts, repeated reads and late completion of older jobs',()=>{

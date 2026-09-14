@@ -41,6 +41,12 @@ try{
   await page.click('#ai-token-create');await page.waitForFunction(()=>document.querySelector('#ai-token-secret').value.startsWith('llreport_'));
   const token=await page.$eval('#ai-token-secret',element=>element.value),reportApi=base+'api/ai-reports/v1/reports';
   const feed=await fetch(reportApi,{headers:{Authorization:'Bearer '+token}});assert.equal(feed.status,200);assert.equal((await feed.json()).reports.length,0,'The manual browser run must stay out of MommyBot\'s nightly feed');
+  generation=null;await page.click('#ai-run-share');await page.waitForFunction(()=>document.querySelector('#ai-status').textContent.includes('Report queued for MommyBot'));
+  const shareDeadline=Date.now()+15000;while(!generation&&Date.now()<shareDeadline)await new Promise(done=>setTimeout(done,100));assert.ok(generation);
+  assert.equal((await (await fetch(reportApi,{headers:{Authorization:'Bearer '+token}})).json()).reports.length,0,'Running shared reports are not published early');
+  generation();await page.waitForFunction(()=>document.querySelectorAll('#ai-history tbody tr').length===2&&[...document.querySelectorAll('#ai-history tbody tr')].every(row=>row.textContent.includes('completed')),{timeout:20000});
+  const sharedPage=await (await fetch(reportApi,{headers:{Authorization:'Bearer '+token}})).json();assert.equal(sharedPage.reports.length,1);assert.equal(sharedPage.reports[0].share_with_bot,1);assert.equal(sharedPage.reports[0].source,'manual');
+  const sharedDocument=await (await fetch(reportApi+'/'+sharedPage.reports[0].id,{headers:{Authorization:'Bearer '+token}})).json();assert.match(sharedDocument.document,/Synthetic result/);
   await page.click('#ai-token-hide');assert.equal(await page.$eval('#ai-token-secret',element=>element.value),'');
   await page.click('#ai-token-list button');await page.waitForFunction(()=>document.querySelector('#ai-token-list').textContent.includes('Revoked'));
   assert.equal((await fetch(reportApi,{headers:{Authorization:'Bearer '+token}})).status,401);

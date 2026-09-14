@@ -69,4 +69,4 @@ New Little Log accounts start with 50 lid0llcoins, credited once through registr
 
 Report output now permits 256–50,000 tokens and defaults to 50,000. Migration raises the active setting once; existing queued snapshots retain their original token limit, and subsequent custom settings survive restarts. The model must have sufficient context. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
 
-Only the scheduled midnight Los Angeles report is exported to MommyBot after completion. Manual runs for prompt tuning remain in the admin console, even when they cover the same date as a nightly report.
+Nightly reports are exported to MommyBot after completion. Manual prompt-tuning runs remain private unless the administrator uses **Run and share with MommyBot** to queue an explicitly shared on-demand report.
