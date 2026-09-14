@@ -6,10 +6,10 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - In Settings, sign in with your shared lidoll.dev account to connect this device. Connecting uploads existing entries and future changes; the organizer can use synced records for analysis.
 - You can also choose **Sign in to sync** beside the save status at the top of any page. After signing in, **Connect device** opens Settings so you can review and approve uploading this device's entries. The header button disappears once this device is connected and signed in.
 - If you need an account, choose **Create account**, enter a username and a password twice, then review the app's identity access. Back in the tracker, choose **Connect & upload my entries** when ready to sync your local records.
-- Check the time and enter liquids consumed since your previous saved check-in in mL. Choose **Save observation** to record it; the intake field then resets to zero.
+- Check the time and enter liquids consumed since your previous saved check-in in mL. Choose **Save liquids** to record it; the intake field then resets to zero.
 - Choose the check-in diaper number. Select **Your position** in the roll card before rolling. In **Record a wetting**, classify one actual event; its diaper number is assigned automatically from records at the event time.
 - Use **Record a diaper change** below the wetting form to save each change and the number of wettings that diaper received. Correct the suggestion for unlogged or overnight wettings; 0 records a dry change. The next diaper number is suggested after saving.
-- The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for ten minutes; **Save observation** and wetting logging stay available.
+- The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for ten minutes; **Save liquids** and wetting logging stay available.
 - In **Record a wetting**, classify each actual event once as Forced, Semi-Forced (SF), Voluntary, Semi-involuntary, Involuntary, Bedwetting, or Used the potty, including events without a roll. Each save adds one classified event. The per-diaper total is recorded separately when changing it.
 - Completed days with F + SF + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no F/SF/V/SI/I events recorded, increase it by 5 points. The chance stays between 20% and 80%. Open **About** in the navigation to read the protocol rules and review your daily adjustment history.
 - Today affects tomorrow. Correcting a past wetting recalculates later days; recorded roll probabilities stay unchanged. Day boundaries use the timezone saved at enrollment, even on another device.
@@ -36,7 +36,7 @@ During a server update, offline check-ins remain on the device and retry afterwa
 
 ## Mobile quick actions
 
-- [ ] Switch between Record observation, Record wetting, Roll and Pattern analysis using the bottom bar.
+- [ ] Switch between Record liquids, Record wetting, Roll and Pattern analysis using the bottom bar.
 - [ ] Enter a draft, switch away and return; confirm the form retains its values.
 - [ ] Verify Back/Forward, offline reopening, and returning from Settings.
 - [ ] Check form buttons and notifications remain reachable above the bar and phone home indicator.

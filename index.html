@@ -70,11 +70,11 @@
         <div class="dashboard-grid">
           <div class="left-column">
           <section class="card log-card" data-mobile-panel="observation" aria-labelledby="log-title">
-            <div class="card-heading"><div><h2 id="log-title" tabindex="-1">Record an observation</h2><p>A snapshot of the present. Filed for later.</p></div><span class="pill lavender">FORM 01</span></div>
+            <div class="card-heading"><div><h2 id="log-title" tabindex="-1">Record liquids</h2><p>A snapshot of the present. Filed for later.</p></div><span class="pill lavender">FORM 01</span></div>
             <form id="log-form">
               <label for="occurred-at">Date & time</label><input id="occurred-at" name="occurredAt" type="datetime-local" required>
               <div class="field-pair"><div><label for="liquids">Liquids since last check-in <span class="unit" id="intake-unit-label">mL</span></label><input id="liquids" name="liquidsMl" type="number" min="0" max="1000000" step="1" value="0" required inputmode="numeric" aria-describedby="intake-unit-help"><button id="intake-unit-toggle" class="button secondary small intake-unit-toggle" type="button" aria-controls="liquids">Use fl oz</button><span id="intake-unit-help" class="field-help" aria-live="polite">Milliliters.</span><span class="field-help">Total consumed since your previous check-in. Starts at 0 after saving.</span></div><div><label for="diaper">Current diaper number</label><input id="diaper" name="diaperNumber" type="number" min="1" max="10000" step="1" value="1" required inputmode="numeric"><span class="field-help">Carries across midnight. The first change of a new day starts diaper #1.</span></div></div>
-              <button class="button primary" id="save-observation" type="submit">Save observation</button>
+              <button class="button primary" id="save-observation" type="submit">Save liquids</button>
             </form>
           </section>
             <div class="wetting-panels">
@@ -235,7 +235,7 @@
         <div class="page-heading"><div><p class="eyebrow">YOUR DAILY REWARDS</p><h1 id="login-bonuses-title" tabindex="-1">LOGIN BONUSES<span>.</span></h1><p class="subtitle">A little reward for showing up, growing every day in a row.</p></div><button id="bonus-refresh" class="button secondary" type="button">Refresh</button></div>
         <p id="bonus-status" role="status">Sign in to view your login bonuses.</p>
         <div id="bonus-content" hidden>
-          <section class="card"><div class="bonus-summary"><p><strong id="bonus-streak">0</strong>days in a row</p><p><strong id="bonus-best">0</strong>best streak</p><p><strong id="bonus-total">0</strong>check-in days</p><p><strong id="bonus-next">10 coins</strong>next check-in reward</p></div><p id="bonus-earned"></p><p>Days 1, 2 and 3: 10, 20 and 30 coins. Day 4: 1 diamond, day 5: 2 diamonds, then one more diamond each consecutive day. Miss a day and your next check-in starts at day 1. One diamond exchanges for 50 coins.</p><p>Save and sync an observation, wetting or diaper change to check in. The first new record received by the server each day earns the bonus. Offline and backdated records count on the day they sync; edits, retries and rolls do not earn another daily bonus.</p></section>
+          <section class="card"><div class="bonus-summary"><p><strong id="bonus-streak">0</strong>days in a row</p><p><strong id="bonus-best">0</strong>best streak</p><p><strong id="bonus-total">0</strong>check-in days</p><p><strong id="bonus-next">10 coins</strong>next check-in reward</p></div></section>
           <section class="card"><div class="bonus-controls"><div><label for="bonus-view">Calendar view</label><select id="bonus-view"><option value="month">Monthly</option><option value="week">Weekly</option></select></div><div><label for="bonus-month">Month</label><input id="bonus-month" type="month"></div><button id="bonus-prev" type="button" class="button secondary" aria-label="Previous calendar period">Previous</button><button id="bonus-today" type="button" class="button secondary">Today</button><button id="bonus-next-period" type="button" class="button secondary" aria-label="Next calendar period">Next</button></div><h2 id="bonus-range">Calendar</h2><div id="bonus-calendar" class="bonus-grid" aria-label="Check-in calendar"></div><p class="field-help">Colored days have a check-in bonus; # marks the streak day. On phones, c means coins and the diamond symbol means diamonds. Select any date for its statistics. Statistics use the event date; earned bonuses stay recorded after edits or deletion.</p></section>
           <section class="card" aria-labelledby="bonus-day-title"><h2 id="bonus-day-title">Daily statistics</h2><p id="bonus-day-reward"></p><dl id="bonus-day-stats" class="bonus-stats"></dl></section>
         </div>
@@ -290,7 +290,7 @@
     </main>
   </div>
   <nav class="mobile-actions" aria-label="Quick actions">
-    <a href="#observation" data-action="observation"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Record<br>observation</span></a>
+    <a href="#observation" data-action="observation"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Record<br>liquids</span></a>
     <a href="#wetting" data-action="wetting"><svg class="icon" aria-hidden="true"><use href="#i-drop"/></svg><span>Record<br>wetting</span></a>
     <a href="#change" data-action="change"><svg class="icon" aria-hidden="true"><use href="#i-change"/></svg><span>Record<br>change</span></a>
     <a href="#roll" data-action="roll"><svg class="icon" aria-hidden="true"><use href="#i-dice"/></svg><span>Roll</span></a>
