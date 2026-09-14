@@ -1,3 +1,4 @@
+import { createRewardCelebration } from './lib/reward-celebration.js';
 import { renderPrediction } from './lib/prediction-view.js';
 import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
   timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
@@ -87,6 +88,7 @@ let renderedConflicts = '';
 let observationReward = null; // Only the currently open save celebration may receive an asynchronous sticker response.
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const rewardCelebration=createRewardCelebration($('#observation-reward-dialog'),$('#reward-confetti'),$('#reward-sound'),reducedMotion);
 let crtPreference = null;
 try { crtPreference = localStorage.getItem('ldq-crt-effect'); } catch { /* The display still works when browser storage is unavailable. */ }
 
@@ -118,7 +120,8 @@ function notify(message) { // Announces feedback without moving focus away from 
 }
 
 function showObservationReward(id) { // Open after the local save; never invent a sticker while server sync is pending.
-  observationReward={id,owner:state.sync.participant?.id??null,loading:false,complete:false};
+  rewardCelebration.clear();rewardCelebration.prepare();
+  observationReward={id,owner:state.sync.participant?.id??null,loading:false,complete:false,celebrated:false};
   $('#observation-reward-title').textContent='Thank you for checking in!';
   $('#observation-reward-sticker').hidden=true;
   $('#observation-reward-image').removeAttribute('src');
@@ -155,8 +158,14 @@ async function refreshObservationReward() { // Show the receipt for this exact o
   } catch {if(current===observationReward&&dialog.open)status.textContent='Your observation is saved. We could not load your sticker yet. Reconnect or sign in again, then check for your sticker.';}
   finally {current.loading=false;if(current===observationReward)$('#observation-reward-retry').disabled=false;}
 }
-$('#observation-reward-dialog').addEventListener('close',()=>{observationReward=null;}); // A delayed response cannot reopen a dismissed celebration.
-$('#observation-reward-retry').addEventListener('click',async()=>{await syncNow();await refreshObservationReward();});
+function celebrateObservationSticker() { // Image load can fire more than once; one visible receipt earns one celebration.
+  const current=observationReward,image=$('#observation-reward-image');
+  if(!current?.complete||current.celebrated||!$('#observation-reward-dialog').open||!image.naturalWidth||image.hidden)return;
+  current.celebrated=true;rewardCelebration.play();
+}
+$('#observation-reward-image').addEventListener('load',celebrateObservationSticker);
+$('#observation-reward-dialog').addEventListener('close',()=>{observationReward=null;rewardCelebration.clear();}); // A delayed response cannot reopen a dismissed celebration.
+$('#observation-reward-retry').addEventListener('click',async()=>{rewardCelebration.prepare();await syncNow();await refreshObservationReward();});
 $('#observation-reward-image').addEventListener('error',()=>{ // Keep the actual reward name available when its artwork cannot load.
   if(!observationReward)return;
   $('#observation-reward-image').hidden=true;

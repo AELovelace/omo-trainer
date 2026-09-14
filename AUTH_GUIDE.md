@@ -22,6 +22,19 @@ Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Def
 
 ## Self-service registration
 
+**Announcement link:** https://auth.sadgirlsclub.wtf/register
+
+This permanent URL starts a fresh signup flow on every visit. It redirects to
+Little Log's registration entry point, derived from its registered callback in
+clients.json, which establishes PKCE, state, nonce and login cookies before
+showing the shared LiD0llID signup form. Visitors do not need to open Little Log
+first. After signup and consent, they arrive at Little Log's account settings.
+The existing 18+ confirmation and registration protections apply. Query parameters
+cannot override the destination. Use the permanent link in announcements rather
+than copying a temporary /interaction/ URL. Locally, use http://127.0.0.1:4180/register.
+Deploy the updated auth service and restart lidoll-auth to enable the short link;
+the registered Little Log service must also be available.
+
 Choose **Settings & data → Create account** in Little Log, or **Register for LiD0llID** on the shared sign-in page. Registration asks for a username, password, password confirmation, and an unchecked **I confirm I am 18 or older** checkbox. Adult confirmation is required by both the browser and the registration endpoint before an account is created. This is self-attestation; no date of birth or identity documents are collected. Usernames are normalized to lowercase and must contain 3–40 letters, numbers, dots, underscores, or hyphens, starting with a letter or number. Passwords must contain 12–128 characters. No email address is collected or email verification performed; password resets remain administrator-managed.
 
 Little Log starts registration at `/tracker/auth/register`. This creates a normal server-side OIDC login attempt with PKCE, state, and nonce, using `screen_hint=signup` and `prompt=login` to request the auth service's registration screen. The form lives at `/interaction/<uid>/register` and requires the matching, unexpired interaction cookie. Do not bookmark or publish an interaction URL. Future registered apps can request the same signup hint using their own client and callback.

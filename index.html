@@ -275,6 +275,8 @@
   </nav>
   <a href="./admin/" class="button small secondary admin-shortcut" id="admin-nav" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><span>Admin console</span></a>
   <dialog id="observation-reward-dialog" aria-labelledby="observation-reward-title" aria-describedby="observation-reward-status">
+    <div id="reward-confetti" aria-hidden="true"></div>
+    <button id="reward-sound" type="button" class="button small secondary" aria-pressed="true">Sound on</button>
     <h2 id="observation-reward-title">Thank you for checking in!</h2>
     <p id="observation-reward-status" role="status" aria-live="polite"></p>
     <figure id="observation-reward-sticker" hidden><img id="observation-reward-image" alt="" width="192" height="192"><figcaption id="observation-reward-name"></figcaption></figure>

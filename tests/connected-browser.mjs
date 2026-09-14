@@ -87,8 +87,11 @@ try {
   await fill(alice, '#liquids', 400);
   await alice.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await alice.click('#save-observation');
+  await alice.click('#observation-reward-dialog .primary'); // Finish the save celebration before navigating to account settings.
+
   await navigateMenu(alice,'[data-page="settings"]');
-  await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
+  await alice.goto(issuer+'/register',{waitUntil:'networkidle0'}); // Announcement links start a fresh, complete registration flow without an app button.
+  assert.ok(alice.url().startsWith(issuer+'/interaction/'));
   await alice.waitForSelector('#confirm-password');
   assert.equal(await alice.$eval('#age-confirmed', element => element.required && !element.checked), true, 'Age confirmation must be required and unchecked');
   await alice.setViewport({ width: 1280, height: 1100 });
@@ -150,6 +153,8 @@ try {
   await fill(second, '#liquids', 700);
   await second.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; }); // Keeps this queue-size assertion independent of an additional failure-deadline update.
   await second.click('#save-observation');
+  await second.click('#observation-reward-dialog .primary'); // Finish the save celebration before navigating to account settings.
+
   assert.equal((await saved(second)).sync.queue.length, 1);
   await second.reload({ waitUntil: 'networkidle0' });
   assert.equal((await saved(second)).entries.length, 2);

@@ -60,7 +60,7 @@ Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](dep
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
 2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.sadgirlsclub.wtf** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, sprites/ (active images 1.png-12.png, animal_01.png-animal_09.png, and sun_01.png-sun_16.png; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, lib/reward-celebration.js, sprites/ (active images 1.png-12.png, animal_01.png-animal_09.png, and sun_01.png-sun_16.png; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 
@@ -233,3 +233,9 @@ The separate market database (schema 7) keeps only an opaque source receipt, coi
 amount, account balance and ledger entry. Market outages leave scientific saves
 intact; pending credits retry after recovery without duplicate issuance. Deploy
 the Node service and app shell together for the reward rules and display copy.
+
+Earned observation stickers celebrate once when their artwork loads, with a brief
+confetti burst and a quiet synthesized success chime. Reduced-motion preferences
+disable confetti. The modal's Sound on/off button remembers this browser's choice.
+Closing the modal stops effects; pending and guest saves do not celebrate an
+unawarded sticker. Include lib/reward-celebration.js when deploying static assets.

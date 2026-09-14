@@ -141,3 +141,17 @@ test('signup throttling rejects excess requests without creating accounts and su
     assert.equal(reopened.list().some(account => account.username === 'blocked-user'), false);
   } finally { reopened.close(); }
 });
+
+
+test('announcement signup link is permanent and redirects only to the registered tracker entry point', async()=>{
+  for(const path of ['/register','/register/','/register?returnTo=https://foreign.example&client_id=foreign']) {
+    const response=await session()(path);
+    assert.equal(response.status,303);
+    assert.equal(response.headers.get('location'),'http://127.0.0.1:4173/tracker/auth/register');
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    assert.equal(response.headers.get('referrer-policy'),'no-referrer');
+    assert.equal(response.headers.get('set-cookie'),null,'The relying party creates fresh login cookies after this redirect');
+  }
+  const response=await session()('/register',{method:'POST'});
+  assert.equal(response.status,405);assert.equal(response.headers.get('allow'),'GET');
+});

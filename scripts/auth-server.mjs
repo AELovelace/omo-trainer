@@ -46,6 +46,17 @@ async function formBody(request) { // Limits login form size before buffering se
 
 export const authServer = http.createServer(async (request, response) => { // Delegates protocol validation and token issuance to the maintained OIDC provider.
   const path = new URL(request.url, config.issuer).pathname;
+  if(path==='/register'||path==='/register/') { // A shareable entry point starts fresh PKCE/state cookies through the registered Little Log client.
+    response.setHeader('Cache-Control','no-store');
+    response.setHeader('Referrer-Policy','no-referrer');
+    if(request.method!=='GET'){response.writeHead(405,{Allow:'GET'});return response.end();}
+    const tracker=config.clients.find(client=>client.client_id==='little-log');
+    const callbackUri=tracker?.redirect_uris.find(uri=>new URL(uri).pathname.endsWith('/auth/callback'));
+    if(!callbackUri){response.writeHead(503,{'Content-Type':'text/plain; charset=utf-8'});return response.end('Registration is temporarily unavailable. Please try again later.');}
+    const target=new URL(callbackUri);
+    target.pathname=target.pathname.replace(/\/callback$/,'/register');target.search='';target.hash=''; // Never accept a caller-supplied redirect or reuse an expiring interaction URL.
+    response.writeHead(303,{Location:target.href});return response.end();
+  }
   if(path==='/wallet/identity') { // Private back-channel introspection; no browser cookies or identity supplied by the calling app are trusted.
     response.setHeader('Cache-Control','no-store');response.setHeader('Content-Type','application/json');
     if(request.method!=='GET'){response.writeHead(405);return response.end(JSON.stringify({error:'method_not_allowed'}));}

@@ -1697,3 +1697,10 @@ html.navigation-open,html.navigation-open body { overflow:hidden; }
   #main-navigation[open] { animation:navigation-enter 160ms ease-out; }
   @keyframes navigation-enter { from { transform:translateX(-100%); } to { transform:translateX(0); } }
 }
+
+/* Decorative confetti stays inside the dialog and never intercepts taps or keyboard focus. */
+#reward-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; border-radius:inherit; z-index:1; }
+#reward-confetti span { position:absolute; left:50%; top:38%; width:8px; height:12px; border-radius:2px; }
+#reward-confetti span:nth-child(3n) { border-radius:50%; width:9px; height:9px; }
+#reward-sound { margin:0 0 16px; }
+@media(prefers-reduced-motion:reduce) { #reward-confetti { display:none; } }
