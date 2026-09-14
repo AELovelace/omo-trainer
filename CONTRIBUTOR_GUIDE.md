@@ -131,3 +131,7 @@ Daily attendance is inserted only after a successful batch accepts a new observa
 ## Admin AI analysis
 
 The admin-only AI analysis panel uses a supervised worker thread and a private SQLite job queue. Keep inference out of request handlers; retain live role/CSRF checks, lease ownership checks and prompt/source snapshots. Setup, scheduling and privacy boundaries are in [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
+
+## Registration grants
+
+New participant creation atomically stages a one-time 50-coin welcome entitlement. Keep its market receipt, credit and ledger entry transactional; never award from ordinary wallet reads or repeated sign-ins. Existing accounts are excluded. See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md).

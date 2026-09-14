@@ -15,19 +15,19 @@ test('game wallet operations are relative, scoped, integer, idempotent, isolated
   try {
     const token=connect(call,a),other=connect(call,b),read=connect(call,a,'wallet:read');
     const earn={request_id:'reward-1',kind:'credit',amount:100};const receipt=call('operation',token,earn);
-    assert.equal(receipt.balance,100);assert.deepEqual(call('operation',token,earn),receipt);
+    assert.equal(receipt.balance,150);assert.deepEqual(call('operation',token,earn),receipt);
     assert.throws(()=>call('operation',token,{...earn,amount:101}),e=>e.status===409);
-    assert.equal(call('balance',other).balance,0);assert.equal(call('balance',token).balance,100);
+    assert.equal(call('balance',other).balance,50);assert.equal(call('balance',token).balance,150);
     assert.throws(()=>call('operation',read,{...earn,request_id:'no-scope'}),e=>e.status===403);
     for(const amount of [0,-1,0.5,'1',2147483648])assert.throws(()=>call('operation',token,{...earn,request_id:'invalid',amount}),e=>e.status===400);
-    const purchase={request_id:'purchase-1',kind:'debit',amount:40};assert.equal(call('operation',token,purchase).balance,60);
-    assert.throws(()=>call('operation',token,{...purchase,request_id:'overdraw',amount:61}),e=>e.status===409);
-    assert.equal(call('balance',token).balance,60);
-    const refund={request_id:'refund-1',kind:'refund',original_id:'purchase-1'};assert.equal(call('operation',token,refund).balance,100);
+    const purchase={request_id:'purchase-1',kind:'debit',amount:40};assert.equal(call('operation',token,purchase).balance,110);
+    assert.throws(()=>call('operation',token,{...purchase,request_id:'overdraw',amount:111}),e=>e.status===409);
+    assert.equal(call('balance',token).balance,110);
+    const refund={request_id:'refund-1',kind:'refund',original_id:'purchase-1'};assert.equal(call('operation',token,refund).balance,150);
     assert.throws(()=>call('operation',token,{...refund,request_id:'refund-2'}),e=>e.status===409);
     assert.throws(()=>call('operation',other,refund),e=>e.status===409);
     assert.equal(db.records(a.id).length,0);assert.equal(db.growthChart(a.id).chart,null);
-    db.close();db=openDatabase(path,{stickerCatalog:[]});assert.equal(call('balance',token).balance,100);assert.deepEqual(call('operation',token,earn),receipt);
+    db.close();db=openDatabase(path,{stickerCatalog:[]});assert.equal(call('balance',token).balance,150);assert.deepEqual(call('operation',token,earn),receipt);
     const market=new DatabaseSync(join(dir,'market.sqlite'));assert.equal(market.prepare('PRAGMA user_version').get().user_version,9);
     const grant=market.prepare('SELECT token_hash FROM coin_grants LIMIT 1').get();assert.notEqual(grant.token_hash,token);assert.equal(grant.token_hash.length,64);
     assert.equal(market.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='entries'").get().n,0);market.close();
@@ -68,7 +68,7 @@ test('external API uses bearer tokens and explicit origins; browser consent requ
     assert.equal((await fetch(external+'wallet?client_id=lidollquest',{headers:{Cookie:session}})).status,401);
     const wallet=await fetch(external+'wallet?client_id=lidollquest',{headers});assert.equal(wallet.status,200);assert.equal(wallet.headers.get('cache-control'),'no-store');
     const payment=await post(external+'operations?client_id=lidollquest',{kind:'credit',amount:25,request_id:'api-reward',owner:b.id},headers);assert.equal(payment.status,200);
-    assert.equal(call('balance',result.access_token).balance,25);assert.equal(db.economy.snapshot(b.id).wallet.coins,0);
+    assert.equal(call('balance',result.access_token).balance,75);assert.equal(db.economy.snapshot(b.id).wallet.coins,50);
     assert.equal((await fetch(base+'session',{headers})).status,401,'Game token cannot retrieve scientific records');
     const allowed=await fetch(external+'wallet?client_id=lidollquest',{headers:{...headers,Origin:login.origin}});assert.equal(allowed.headers.get('access-control-allow-origin'),login.origin);assert.equal(allowed.headers.get('access-control-allow-credentials'),null);
     assert.equal((await post(external+'revoke?client_id=lidollquest',{},headers)).status,200);assert.equal((await fetch(external+'wallet?client_id=lidollquest',{headers})).status,401);
@@ -81,6 +81,6 @@ test('game earning caps survive new grants and refunds do not create extra credi
     const fresh=connect(call,a);assert.throws(()=>call('operation',fresh,{kind:'credit',amount:1,request_id:'above-cap'}),e=>e.code==='daily_limit');
     call('operation',token,{kind:'debit',amount:10,request_id:'spend'});call('operation',token,{kind:'refund',original_id:'spend',request_id:'refund'});
     assert.throws(()=>call('operation',fresh,{kind:'credit',amount:1,request_id:'still-above'}),e=>e.code==='daily_limit');
-    assert.equal(call('balance',token).balance,1000000);
+    assert.equal(call('balance',token).balance,1000050);
   }finally{db.close();}
 });

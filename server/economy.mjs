@@ -29,6 +29,7 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
   `);
   if(!db.prepare('PRAGMA table_info(economy_wallets)').all().some(column=>column.name==='diamonds'))db.exec("ALTER TABLE economy_wallets ADD COLUMN diamonds INTEGER NOT NULL DEFAULT 0 CHECK(typeof(diamonds)='integer' AND diamonds BETWEEN 0 AND 2147483647)"); // Add a separate bounded balance without changing existing coins or stars.
   db.exec('CREATE TABLE IF NOT EXISTS daily_bonus_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),source_id TEXT NOT NULL,asset TEXT NOT NULL,amount INTEGER NOT NULL,PRIMARY KEY(owner,source_id))');
+  db.exec('CREATE TABLE IF NOT EXISTS registration_rewards(owner TEXT PRIMARY KEY REFERENCES economy_wallets(owner),created_at TEXT NOT NULL)');
   db.exec('BEGIN IMMEDIATE');
   try {
     db.prepare('INSERT OR IGNORE INTO economy_wallets(owner) VALUES (?)').run(BANK);
@@ -83,6 +84,11 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
     if(!['coins','diamonds'].includes(asset))fail(400,'Invalid daily reward currency.');
     integer(amount);wallet(owner);
     if(db.prepare('INSERT OR IGNORE INTO daily_bonus_rewards VALUES (?,?,?,?)').run(owner,source,asset,amount).changes)adjust(owner,asset,amount,'login:'+source,'Daily check-in bonus');
+  }
+  function awardRegistration(owner) { // The bridge commits this receipt, its 50-coin credit and the ledger entry in one market transaction.
+    if(owner===BANK)fail(400,'The bank cannot receive a registration grant.');
+    wallet(owner);
+    if(db.prepare('INSERT OR IGNORE INTO registration_rewards VALUES (?,?)').run(owner,new Date().toISOString()).changes)adjust(owner,'coins',50,'registration:'+owner,'Welcome bonus: 50 lid0llcoins');
   }
   function awardStars(owner,chart) { // A date/row cell earns once for its lifetime; clearing and restoring progress cannot earn it twice.
     wallet(owner);
@@ -188,5 +194,5 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.exec('COMMIT');return reward?{...reward,quantity:1}:null;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }
-  return {awardRecord,awardPerformanceBonus,awardDailyBonus,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
+  return {awardRecord,awardPerformanceBonus,awardDailyBonus,awardRegistration,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
 }

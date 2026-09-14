@@ -73,3 +73,24 @@ amount and timestamp. Existing records/admin imports only backfill stickers.
 ## Login bonuses and diamonds
 
 Market schema 9 adds a separate diamond balance and unique daily-bonus receipts. New synced records earn daily attendance bonuses through the durable scientific outbox. Diamonds exchange one-way at 50 coins each using the existing atomic market action/receipt flow. See LOGIN_BONUSES_GUIDE.md.
+
+## New-account starting balance
+
+New Little Log accounts receive **50 lid0llcoins once**, when their authenticated
+identity is first created as a tracker participant. The grant appears in wallet
+history as **Welcome bonus: 50 lid0llcoins** and is available through the same
+wallet API used by MommyBot and games. It does not award stars, diamonds,
+stickers or a daily check-in.
+
+Existing tracker accounts retain their balances, including accounts visiting the
+market for the first time. Repeat sign-ins, profile renames, imports, spending
+coins and service restarts do not grant another starting balance. A shared
+identity that has never used Little Log gets its grant when first provisioned in
+the tracker.
+
+Account creation and a `registration-coins` reward-outbox entitlement commit in
+one science-database transaction. Delivery records a unique owner in the market's
+`registration_rewards` table, with its credit and ledger entry in the same market
+transaction. Market outages leave the grant pending for retry; replay after a
+crash cannot credit it twice. The bank receives no welcome grant, and the grant
+does not consume an external application's daily earning allowance.

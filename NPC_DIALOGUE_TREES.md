@@ -37,3 +37,7 @@ The shared recording modal now announces a daily bonus only when the server retu
 ## AI report status copy
 
 The admin-only AI analysis panel distinguishes queued, running, completed, failed and cancelled jobs. Report text is model output for administrator review and is never NPC dialogue or a participant-facing message. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
+
+## Welcome grant copy
+
+The wallet records **Welcome bonus: 50 lid0llcoins** once for each newly created Little Log account. This is wallet history, not an NPC event or a daily check-in announcement.

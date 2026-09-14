@@ -40,7 +40,7 @@ try {
  await navigateMenu(page,'[data-page="stickers"]');await page.waitForFunction(()=>document.querySelector('#economy-diamonds').textContent==='6');
  await page.$eval('#diamond-quantity',input=>{input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}));});
  assert.match(await page.$eval('#diamond-exchange-quote',node=>node.textContent),/100 coins/);await page.click('#diamond-exchange-submit');
- await page.waitForFunction(()=>document.querySelector('#economy-diamonds').textContent==='4'&&document.querySelector('#economy-coins').textContent==='160');
+ await page.waitForFunction(()=>document.querySelector('#economy-diamonds').textContent==='4'&&document.querySelector('#economy-coins').textContent==='210');
  const query=await page.evaluate(async()=>{const response=await fetch('./api/login-bonuses');return {cache:response.headers.get('cache-control'),data:await response.json()};});
  assert.equal(query.cache,'no-store');assert.equal(query.data.streak,6);assert.equal(query.data.earned.diamonds,6,'Exchanging diamonds does not erase earned rewards');
  assert.equal((await fetch(origin+'/tracker/api/login-bonuses')).status,401);

@@ -36,7 +36,7 @@ test('stars are separate from coins and chart progress, scoped, whole, replay-sa
   assert.equal(call('operation',token,refund).balance,11);
   assert.throws(()=>call('operation',token,{...refund,request_id:'refund-twice'}),e=>e.status===409);
   call('operation',token,{request_id:'coin-earn',kind:'credit',amount:50});
-  assert.equal(call('balance',token).balance,50);assert.equal(call('balance',token).stars,11);assert.equal(call('balance',other).stars,0);
+  assert.equal(call('balance',token).balance,100);assert.equal(call('balance',token).stars,11);assert.equal(call('balance',other).stars,0);
   assert.deepEqual(db.growthChart(a.id),before);assert.equal(db.records(a.id).length,0);
   db.close();db=openDatabase(path,{stickerCatalog:[]});
   assert.deepEqual(call('operation',token,earn),receipt);assert.equal(call('balance',token).stars,11);

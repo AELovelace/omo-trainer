@@ -60,3 +60,7 @@ Daily bonuses pay 10/20/30 coins on streak days 1/2/3, then streak minus 3 diamo
 ## AI report prompt tuning
 
 Admin console → AI analysis offers an editable report prompt, 1–31 day comparison window, model, temperature and output token limit. Save before queueing. Reports retain their settings and aggregate source statistics; prompt changes affect future jobs. This customizes inference instructions, not model weights. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
+
+## Starting coins
+
+New Little Log accounts start with 50 lid0llcoins, credited once through registration. This grant is separate from record performance bonuses and daily streak rewards; it does not alter probability or grant stars/diamonds. See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md).

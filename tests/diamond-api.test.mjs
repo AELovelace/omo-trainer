@@ -25,7 +25,7 @@ test('diamonds have explicit consent, isolated balances, bound receipts, whole a
   const earn={request_id:'earn',kind:'credit',asset:'diamonds',amount:7};
   for(const token of [legacy,read])assert.throws(()=>call('operation',token,earn),e=>e.code==='insufficient_scope');
   const receipt=call('operation',full,earn);assert.equal(receipt.currency,'Diamonds');assert.equal(receipt.balance,7);assert.deepEqual(call('operation',full,earn),receipt);
-  assert.equal(call('balance',full).balance,0);assert.equal(call('balance',full).stars,0);assert.equal(call('balance',other).diamonds,0);assert.equal(call('balance',full).diamond_coin_value,50);
+  assert.equal(call('balance',full).balance,50);assert.equal(call('balance',full).stars,0);assert.equal(call('balance',other).diamonds,0);assert.equal(call('balance',full).diamond_coin_value,50);
   assert.throws(()=>call('operation',full,{...earn,asset:'stars'}),e=>e.status===409);
   for(const amount of [0,-1,.5,'1',2147483648])assert.throws(()=>call('operation',full,{...earn,request_id:'bad',amount}),e=>e.status===400);
   assert.throws(()=>call('operation',full,{...earn,request_id:'overdraw',kind:'debit',amount:8}),e=>e.status===409);

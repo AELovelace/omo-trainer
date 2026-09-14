@@ -60,14 +60,14 @@ test('diamond conversion is atomic, bounded and retry-safe, and daily outbox rep
  let db=openDatabase(path,{stickerCatalog:[],now:()=>time});const user=db.ensureParticipant('test','a','Alice');
  try {
   for(let day=1;day<=5;day++){time=Date.parse(`2026-09-0${day}T12:00:00Z`);db.sync(user.id,[change(entry('d'+day,'wetting'))]);}
-  assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:60,stars:0,diamonds:3});
+  assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:110,stars:0,diamonds:3});
   const command={action:'diamond-exchange',quantity:2,requestId:'exchange'};const receipt=db.economy.act(user.id,command);
-  assert.deepEqual(db.economy.act(user.id,command),receipt);assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:160,stars:0,diamonds:1});
+  assert.deepEqual(db.economy.act(user.id,command),receipt);assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:210,stars:0,diamonds:1});
   for(const quantity of [0,-1,1.5,'1',42949673])assert.throws(()=>db.economy.act(user.id,{...command,requestId:'bad',quantity}),e=>e.status===400);
   assert.throws(()=>db.economy.act(user.id,{...command,requestId:'overdraw'}),e=>e.status===409);
   assert.throws(()=>db.economy.act(user.id,{...command,quantity:1}),e=>e.status===409);
   const science=new DatabaseSync(path);science.exec("UPDATE reward_outbox SET delivered=0 WHERE asset LIKE 'login-%'");science.close();db.economy.tryFlush();
-  assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:160,stars:0,diamonds:1});
+  assert.deepEqual({...db.economy.snapshot(user.id).wallet},{coins:210,stars:0,diamonds:1});
   db.close();db=openDatabase(path,{stickerCatalog:[],now:()=>time});assert.equal(db.economy.loginBonuses(user.id).streak,5);assert.deepEqual(db.economy.act(user.id,command),receipt);
   const market=new DatabaseSync(resolve(directory,'market.sqlite'));market.prepare('UPDATE economy_wallets SET coins=2147483647 WHERE owner=?').run(user.id);market.close();
   assert.throws(()=>db.economy.act(user.id,{...command,quantity:1,requestId:'overflow'}),e=>e.status===409);assert.equal(db.economy.snapshot(user.id).wallet.diamonds,1);

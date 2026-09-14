@@ -191,3 +191,7 @@ With the MommyBot checkout beside this project (or MOMMYBOT_ROOT set), run `node
 ## Admin AI analysis checks
 
 Run `npm test` for the durable queue, saved prompt/source snapshots, admin/CSRF boundaries, Los Angeles midnight and DST cases, inference failures, cancellation and recovery. Run `node tests/ai-analysis-browser.mjs` with `PUPPETEER_MODULE` and `CHROME_PATH` configured for the real worker/browser flow using a synthetic local model endpoint. Verify the actual LAN endpoint from the deployed host separately; see [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
+
+## Registration starting balance
+
+`npm test` includes `tests/registration-bonus.test.mjs`: new accounts start at 50 coins, spending and repeat sign-ins never refill them, old accounts receive no retroactive grant, and market outages/replayed delivery preserve exactly one credit. Market, wallet API and daily-bonus tests account for the separate 50-coin starting balance.

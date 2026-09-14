@@ -34,3 +34,7 @@ Login bonuses are tracker attendance rewards and do not add quests or game_edito
 ## Administrator reports
 
 AI analysis is an admin-console reporting tool. It introduces no quest definitions or game_editor_gui.py fields. Its prompt and worker configuration are documented in [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
+
+## New-account funds
+
+Linked games may see a new Little Log account's 50-coin welcome balance before any quest rewards. Keep quest payouts relative to the current wallet balance; game_editor_gui.py and quest definitions need no new fields. See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md).

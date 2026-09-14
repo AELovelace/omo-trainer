@@ -235,3 +235,11 @@ Each LIDOLLCOIN_APPS registration may set `diamondDailyLimit`, a positive intege
 Deploy the identity service with diamond consent scopes, then the tracker with market schema 9, then MommyBot. Back up both tracker databases and the bot state first. Renew a bot connection through /lidollid login to approve diamonds. Existing grants retain coin/star access until renewed. MommyBot shows diamond balances and supports administrator diamond gifts via /lidollid wallet gift and its private menu. No new Discord message is sent merely by updating the code.
 
 The authenticated daily calendar API and attendance policy are documented in [LOGIN_BONUSES_GUIDE.md](LOGIN_BONUSES_GUIDE.md). Wallet tokens never expose calendar or health statistics.
+
+## Initial account funds
+
+New Little Log participant accounts receive a one-time 50-lid0llcoin welcome grant.
+Authorized wallet clients see it in the normal coin balance; no new scope or API
+call is required. It is separate from client-issued credits and does not consume
+the client's daily earning allowance. Existing tracker accounts keep their funds.
+See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md) for eligibility and delivery behavior.

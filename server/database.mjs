@@ -105,11 +105,17 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
   }
 
   function ensureParticipant(issuer, subject, label) { // Maps an OIDC identity to an app-specific pseudonym, never to a browser-supplied participant ID.
-    const existing = db.prepare('SELECT id FROM participants WHERE issuer = ? AND subject = ?').get(issuer, subject);
-    const id = existing?.id ?? randomUUID();
     const name = String(label || 'Participant').slice(0, 80);
-    db.prepare(`INSERT INTO participants (id, label, issuer, subject, created_at) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(issuer, subject) DO UPDATE SET label=excluded.label`).run(id, name, issuer, subject, new Date().toISOString());
+    let id;db.exec('BEGIN IMMEDIATE'); // Account creation and its one-time starting balance entitlement commit together, including concurrent first sign-ins.
+    try {
+      const existing=db.prepare('SELECT id FROM participants WHERE issuer=? AND subject=?').get(issuer,subject);
+      id=existing?.id??randomUUID();
+      db.prepare(`INSERT INTO participants (id, label, issuer, subject, created_at) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(issuer, subject) DO UPDATE SET label=excluded.label`).run(id,name,issuer,subject,new Date().toISOString());
+      if(!existing)economy.awardRegistration(id);
+      db.exec('COMMIT');
+    }catch(error){db.exec('ROLLBACK');throw error;}
+    economy.tryFlush(); // A market outage leaves the durable grant pending without preventing registration or sign-in.
     return { id, label: name };
   }
 

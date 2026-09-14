@@ -33,6 +33,9 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     if(amount>0)science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id,amount) VALUES (?,'coins',?,?)").run(owner,entry.id,amount);
     awardSticker(owner,entry);
   }
+  function awardRegistration(owner) { // Only new participant creation stages this entitlement; existing accounts and lazy wallet creation cannot earn it.
+    science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id,amount) VALUES (?,'registration-coins','starting-balance-v1',50)").run(owner);
+  }
   function awardSticker(owner,entry) { // Historical/import backfill retains sticker-only behavior, without retroactive coin payouts.
     if(eligible.has(entry?.kind))science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id) VALUES (?,'sticker',?)").run(owner,entry.id);
   }
@@ -49,6 +52,7 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
         if(reward.asset==='sticker')economy.awardRecord(reward.owner,{id:source});
         else if(reward.asset==='coins')economy.awardPerformanceBonus(reward.owner,source,reward.amount);
         else if(reward.asset==='star')economy.awardStars(reward.owner,{stars:{[source]:true}});
+        else if(reward.asset==='registration-coins')economy.awardRegistration(reward.owner);
         else if(['login-coins','login-diamonds'].includes(reward.asset))economy.awardDailyBonus(reward.owner,source,reward.asset.slice(6),reward.amount); // Pass an opaque entitlement and currency, never attendance or health records.
         else throw Error('Unknown pending reward asset.');
       }
@@ -74,7 +78,7 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     } catch(error) {science.exec('ROLLBACK');throw error;}
   }
   return {
-    awardRecord,awardStars,tryFlush,awardDailyCheckin:loginBonuses.award,
+    awardRecord,awardStars,awardRegistration,tryFlush,awardDailyCheckin:loginBonuses.award,
     loginBonuses(owner,range) {tryFlush();return loginBonuses.view(owner,range);},
     dailyBonusReceipt:loginBonuses.receipt,
     recordReward(owner,id) { // Resolve only an existing entitlement belonging to the signed-in participant.
@@ -89,10 +93,12 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
       catch {throw Object.assign(new Error('The market is temporarily unavailable. Your scientific records and pending rewards are safe; try again shortly.'),{status:503});}
     },
     act(owner,input) { // A market action is independent of scientific transactions; ordinary validation errors retain their status.
+      tryFlush(); // Deliver pending starting balances before a newly registered account spends coins.
       let economy;try {economy=open();}catch {throw Object.assign(new Error('The market is temporarily unavailable. Try again shortly.'),{status:503});}
       return economy.act(owner,input);
     },
     coins(method,...args) { // External wallet operations use only the market database and live account access checks.
+      tryFlush(); // MommyBot and other authorized clients see the same durable starting balance as the app.
       let economy;try {economy=open();}catch {throw Object.assign(new Error('The wallet is temporarily unavailable.'),{status:503});}
       return economy.coins[method](...args);
     },

@@ -97,3 +97,7 @@ Save and sync one observation, wetting or diaper change each day for a growing b
 ## Administrator analysis checks
 
 With an administrator account, open Admin console → AI analysis, save a prompt and queue a report. Reopen the page to review the saved document and download Markdown. Ordinary participant accounts cannot use this feature. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md) for the daily schedule.
+
+## New-account coins
+
+A new Little Log account receives 50 lid0llcoins. Check Stickers & market for the balance and welcome entry. Spending the coins or signing in again does not refill this grant; existing tracker accounts retain their previous balances.

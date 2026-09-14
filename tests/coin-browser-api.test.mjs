@@ -27,7 +27,7 @@ test('browser sign-in requires consent and creates a wallet-only HttpOnly sessio
   const linked=await post('connect',{decision:'allow',csrf,returnTo:'https://evil.example'},headers);assert.equal(linked.status,303);assert.equal(linked.headers.get('location'),'/game/');
   const setCookie=linked.headers.get('set-cookie');assert.match(setCookie,/HttpOnly/);assert.match(setCookie,/SameSite=Lax/);assert.match(setCookie,/Path=\/tracker\/api\/lidollcoin\/browser\//);
   const walletCookie=setCookie.split(';')[0];
-  const session=await (await fetch(base+'session',{headers:{Cookie:walletCookie}})).json();assert.equal(session.linked,true);assert.equal(session.balance,0);assert.ok(session.csrf);assert.equal(session.access_token,undefined);
+  const session=await (await fetch(base+'session',{headers:{Cookie:walletCookie}})).json();assert.equal(session.linked,true);assert.equal(session.balance,50);assert.ok(session.csrf);assert.equal(session.access_token,undefined);
   assert.equal((await fetch(login.origin+'/tracker/api/session',{headers:{Cookie:walletCookie}})).status,401,'wallet cookie cannot read science');
   assert.equal((await fetch(login.origin+'/tracker/api/lidollcoin/v1/wallet?client_id=lidollquest',{headers:{Cookie:walletCookie}})).status,401,'browser cookie is not an external bearer credential');
   assert.equal((await fetch(base+'session',{headers})).status,200);assert.deepEqual(await (await fetch(base+'session',{headers})).json(),{linked:false},'Little Log session alone never grants wallet access');
@@ -41,15 +41,15 @@ test('browser wallet mutations enforce origin, CSRF, account isolation, replay a
   assert.equal((await post('operations',operation,{Cookie:headers.Cookie})).status,403);
   assert.equal((await post('operations',operation,{...headers,Origin:'https://evil.example'})).status,403);
   assert.equal((await post('operations',operation,{...headers,'Sec-Fetch-Site':'cross-site'})).status,403);
-  const first=await (await post('operations',operation,headers)).json();assert.equal(first.balance,40);
+  const first=await (await post('operations',operation,headers)).json();assert.equal(first.balance,90);
   assert.deepEqual(await (await post('operations',operation,headers)).json(),first);
   const star={kind:'credit',asset:'stars',amount:8,request_id:'browser-star'};
   assert.equal((await post('operations',star,{Cookie:headers.Cookie})).status,403);
   assert.equal((await post('operations',star,{...headers,Origin:'https://evil.example'})).status,403);
   const starReceipt=await (await post('operations',star,headers)).json();assert.equal(starReceipt.currency,'Stars');assert.equal(starReceipt.balance,8);
   assert.deepEqual(await (await post('operations',star,headers)).json(),starReceipt);
-  assert.equal(call('browserSession',a).balance,40);assert.equal(call('browserSession',a).stars,8);assert.equal(call('browserSession',b).stars,0);
-  assert.equal(call('browserSession',b).balance,0);
+  assert.equal(call('browserSession',a).balance,90);assert.equal(call('browserSession',a).stars,8);assert.equal(call('browserSession',b).stars,0);
+  assert.equal(call('browserSession',b).balance,50);
   assert.notEqual(call('browserSession',b).account_id,call('browserSession',a).account_id);
   const refreshed=call('browserIssue',alice.id);assert.equal(call('browserSession',refreshed).account_id,call('browserSession',a).account_id);
   assert.deepEqual(call('operation',refreshed,operation),first,'signing in again retains operation idempotency');
