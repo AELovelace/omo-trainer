@@ -1,5 +1,7 @@
 # Daily protocol and probability
 
+Administrator statistics displays use the same saved daily counting rules as AI report snapshots, including legacy cumulative intake. Display windows change which saved dates are included; they do not tune probabilities or generate records. See [STATISTICS_API.md](STATISTICS_API.md).
+
 The main mode starts at 50% on the first saved check-in, wetting, diaper change, or roll. A synced `kind: protocol` record fixes enrollment time, reporting timezone, and protocol version 1. Existing unclassified snapshots are preserved without inventing classifications or charging days before enrollment. Concurrent offline enrollments use the earliest timestamp, then ID as a tie-breaker.
 
 Each actual wetting is a separate `kind: wetting` record with a timestamp, category, position, diaper number, and (for historical records only) an optional cumulative diaper wetting count. Categories are forced, semi-forced, voluntary, semi-involuntary, and involuntary. Semi-Forced (SF) is stored as `semi-forced` and appears between Forced and Voluntary in both classification menus. Repeated cumulative snapshots never count as classified events.

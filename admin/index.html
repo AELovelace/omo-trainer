@@ -18,7 +18,17 @@
     <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
     <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LiD0llID</a></section>
     <div id="admin-workspace" hidden>
-      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#notifications" data-tab="notifications">Notifications</a><a href="#ai-analysis" data-tab="ai-analysis">AI analysis</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#notifications" data-tab="notifications">Notifications</a><a href="#ai-analysis" data-tab="ai-analysis">AI analysis</a><a href="#statistics" data-tab="statistics">Statistics devices</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <section data-panel="statistics" aria-labelledby="stats-title" hidden>
+        <div class="card"><h2 id="stats-title">Statistics devices</h2><p>Connect a CrowPanel or another read-only display. Everyone access includes combined totals and a selector for individual participants. Only enabled administrators can create or use these tokens.</p>
+          <p>API base: <code id="stats-url"></code></p>
+          <form id="stats-form"><label for="stats-name">Device name</label><input id="stats-name" maxlength="80" required placeholder="CrowPanel 7 inch">
+            <label for="stats-scope">Statistics access</label><select id="stats-scope"><option value="self">My statistics only</option><option value="all">Everyone and individual views (admin)</option></select>
+            <button id="stats-create" class="button primary" type="submit">Create device token</button></form>
+          <div id="stats-result" hidden><label for="stats-secret">Copy this token once</label><input id="stats-secret" readonly autocomplete="off" spellcheck="false"><button id="stats-hide" class="button secondary" type="button">Hide token</button></div>
+          <p id="stats-status" role="status" aria-live="polite"></p><div id="stats-list"></div>
+        </div>
+      </section>
       <section data-panel="ai-analysis" aria-labelledby="ai-title" hidden>
         <section class="card"><h2 id="ai-title">AI analysis</h2><p>Daily reports run at midnight Los Angeles time and remain private to administrators. Reports cover all participants, independently of the analytics filters.</p><p id="ai-schedule" class="field-help"></p>
           <form id="ai-settings"><label for="ai-prompt">Analysis prompt</label><textarea id="ai-prompt" rows="8" maxlength="8000" required></textarea>

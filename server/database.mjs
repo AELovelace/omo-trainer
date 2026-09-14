@@ -1,5 +1,6 @@
 import {createNotifications} from './notifications.mjs';
 import {createAnalysisStore} from './ai-analysis.mjs';
+import {createStatistics} from './statistics.mjs';
 import { DatabaseSync, backup } from 'node:sqlite';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
@@ -236,8 +237,9 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
   const notifications=createNotifications(db,records,options.notifications);
   const aiAnalysis=createAnalysisStore(db,admin,options.aiAnalysis); // Only admin API routes expose settings, jobs and saved reports.
+  const statistics=createStatistics(db,admin,options.statistics); // Scoped device reads reuse the same saved-record aggregation as admin reports.
   return {
-    aiAnalysis, notifications, economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    statistics, aiAnalysis, notifications, economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),

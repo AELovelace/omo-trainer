@@ -1,5 +1,7 @@
 # Dialogue integration status
 
+CrowPanel status copy distinguishes loading, current values, stale data and access denied. Its everyone overview and individual drilldown show recorded statistics rather than NPC dialogue or inferred events. See [STATISTICS_API.md](STATISTICS_API.md).
+
 No NPC dialogue system or dialogue assets are present in this tracker. Current interface text lives in `index.html` and `app.js`; there are no character branches to synchronize with `game_editor_gui.py` yet.
 
 Chrysalis presentation copy uses brief archival labels: observation, record archive, terminal, and identity gateway. The anonymous margin note in `index.html` is fictional interface flavor, not dialogue attributed to a game character. Keep this flavor outside factual status, consent, deletion, and error messages. Registration, sign-in, and consent copy live in `auth/views.mjs`; server validation feedback lives in `scripts/auth-server.mjs` and `auth/store.mjs`.

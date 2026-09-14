@@ -1,5 +1,7 @@
 # Little Log
 
+Administrator device statistics: [STATISTICS_API.md](STATISTICS_API.md) documents the read-only API, revocable admin tokens, everyone overview and individual drilldown, plus the CrowPanel Advance 7-inch V1.4 companion setup.
+
 A phone-friendly PWA for **lidoll.dev/tracker/** with central SQLite storage and shared lidoll.dev authentication. Two Node services run on the service server: Little Log (4173) and the reusable OpenID Connect identity service (4180). The web server reverse-proxies both over HTTPS.
 
 The interface is styled as a recovered **Chrysalis observation terminal**, using [lidoll.dev](https://lidoll.dev)'s plum, pink, and pale framed borders. The dashboard, record archive, shared sign-in screens, and install icons share the theme. Optional static CRT texture follows the main site's saved preference and respects reduced motion. All fonts and tracker assets are local, including offline use.

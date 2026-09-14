@@ -1,5 +1,13 @@
 # Little Log user checklist
 
+## Administrator CrowPanel setup
+
+- Deploy the tracker, then open **Admin console → Statistics devices** and create an **Everyone and individual views (admin)** token.
+- Configure Wi-Fi, the tracker API address and that token in the sketch's private `config.h`; follow the adjacent README for the Advance 7-inch V1.4 build settings.
+- Verify Everyone/Individual, Prev/Next and date windows against saved records. Revoke the device token when retiring the panel.
+
+The statistics API is unavailable to ordinary participant accounts. Details: [STATISTICS_API.md](STATISTICS_API.md).
+
 Little Log now appears as a recovered Chrysalis observation terminal. **Record archive** is your history view; **Settings & data** contains account and export controls. The **CRT FX** button toggles a static terminal texture and remembers the choice in this browser. Reduced-motion settings turn that texture off.
 
 - Open `/tracker/` in your browser. Optional: install it from your browser menu, or Safari's Share → Add to Home Screen.

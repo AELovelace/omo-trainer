@@ -2,6 +2,7 @@ import {coinBrowserApi} from './coin-browser-api.mjs';
 import {coinApi} from './coin-api.mjs';
 import { ApiError } from './database.mjs';
 import {reportApi} from './ai-report-access.mjs';
+import {statisticsApi} from './statistics.mjs';
 
 function send(response, status, body) { // Keeps every authenticated response out of browser, proxy, and service-worker caches.
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', Vary: 'Cookie' });
@@ -24,6 +25,7 @@ async function body(request, limit = 256 * 1024) { // Bounds uploads before pars
 export function createApi(database, login) { // Resolves each app session to an OIDC identity and isolates all data by that identity.
   return async (request, response, route) => {
     try {
+      if(route.startsWith('statistics/v1/'))return statisticsApi(database,login,request,response,route.slice('statistics/v1/'.length));
       if(route.startsWith('ai-reports/v1/'))return reportApi(database,login,request,response,route.slice('ai-reports/v1/'.length));
       if(route.startsWith('lidollcoin/browser/'))return coinBrowserApi(database,login,request,response,route.slice('lidollcoin/browser/'.length));
       if(route.startsWith('lidollcoin/v1/'))return coinApi(database,login,request,response,route.slice('lidollcoin/v1/'.length));
@@ -47,6 +49,9 @@ export function createApi(database, login) { // Resolves each app session to an 
       if(route==='coin-revoke'&&request.method==='POST')return send(response,200,database.economy.coins('revoke',participant.id,(await body(request,4096)).id));
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
+        if(route==='admin/statistics/tokens'&&request.method==='GET')return send(response,200,{tokens:database.statistics.list(participant.id)});
+        if(route==='admin/statistics/tokens'&&request.method==='POST')return send(response,201,database.statistics.create(participant.id,await body(request,4096)));
+        if(route==='admin/statistics/tokens/revoke'&&request.method==='POST')return send(response,200,database.statistics.revoke(participant.id,await body(request,4096)));
         if(route==='admin/ai-analysis/tokens'&&request.method==='GET')return send(response,200,{tokens:database.aiAnalysis.integrations.list(participant.id)});
         if(route==='admin/ai-analysis/tokens'&&request.method==='POST')return send(response,201,database.aiAnalysis.integrations.create(participant.id,await body(request,4096)));
         if(route==='admin/ai-analysis/tokens/revoke'&&request.method==='POST')return send(response,200,database.aiAnalysis.integrations.revoke(participant.id,await body(request,4096)));

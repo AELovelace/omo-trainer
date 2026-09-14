@@ -137,11 +137,12 @@ export function createAnalysisStore(db,admin,{now=Date.now,endpoint=process.env.
   return {integrations,overview,save,queue,change,report(actor,id){admin.requireAdmin(actor);return get(id,true);},schedule,claim,renew,snapshot,finish,fail};
 }
 
-export function aggregateAnalysis(db,from,to,now=Date.now()) { // Stream one participant-day at a time; no names, IDs, notes or credentials are sent to the model.
+export function aggregateAnalysis(db,from,to,now=Date.now(),participantId=null) { // An optional bound identity lets the statistics API reuse the same daily counting rules.
   const days=new Map();let group=[],groupKey='',groupActive=false;
   for(let date=from;date<=to;date=shiftDay(date,1))days.set(date,{date,activeParticipants:0,observations:0,liquidsMl:0,wettings:0,diaperChanges:0,chartStars:0,randomRolls:0,randomPeeResults:0,categories:Object.fromEntries(WETTING_CATEGORIES.map(category=>[category,0]))});
   function flush(){if(!group.length)return;const row=days.get(group[0].occurredAt.slice(0,10));row.liquidsMl+=liquidTotal(group);group=[];} // Preserve existing interval/cumulative intake semantics for each participant's saved local day.
-  const rows=db.prepare("SELECT participant_id,payload_json,occurred_at,liquids_ml,source,result FROM entries WHERE deleted_at IS NULL AND substr(occurred_at,1,10) BETWEEN ? AND ? ORDER BY participant_id,substr(occurred_at,1,10),occurred_at,id").iterate(from,to);
+  const filter=participantId===null?'':' AND participant_id=?',args=participantId===null?[]:[participantId];
+  const rows=db.prepare("SELECT participant_id,payload_json,occurred_at,liquids_ml,source,result FROM entries WHERE deleted_at IS NULL AND substr(occurred_at,1,10) BETWEEN ? AND ?"+filter+" ORDER BY participant_id,substr(occurred_at,1,10),occurred_at,id").iterate(from,to,...args);
   for(const record of rows){
     const entry=record.payload_json?JSON.parse(record.payload_json):{occurredAt:record.occurred_at,liquidsMl:record.liquids_ml,source:record.source,result:record.result}; // Pre-v2 snapshots remain in typed SQL columns until edited.
     const date=entry.occurredAt.slice(0,10),row=days.get(date),key=record.participant_id+':'+date;
@@ -153,11 +154,11 @@ export function aggregateAnalysis(db,from,to,now=Date.now()) { // Stream one par
     if(isRoll(entry)&&entry.source==='random'){row.randomRolls++;if((entry.rolledResult??entry.result)==='pee')row.randomPeeResults++;}
   }
   flush();
-  for(const record of db.prepare('SELECT payload_json FROM growth_charts').iterate()){
+  for(const record of db.prepare('SELECT payload_json FROM growth_charts WHERE 1=1'+filter).iterate(...args)){
     const chart=JSON.parse(record.payload_json);for(const [key,value] of Object.entries(chart.stars??{})){const row=days.get(key.slice(0,10));if(row&&value)row.chartStars++;}
   }
-  return {schemaVersion:1,capturedAt:new Date(now).toISOString(),from,to,registeredParticipants:db.prepare('SELECT count(*) AS n FROM participants').get().n,
-    scope:'All participants, including disabled accounts. Tracking records and chart stars only; no wallet, login bonus or notification data.',
+  return {schemaVersion:1,capturedAt:new Date(now).toISOString(),from,to,registeredParticipants:participantId===null?db.prepare('SELECT count(*) AS n FROM participants').get().n:1,
+    scope:(participantId===null?'All participants, including disabled accounts.':'Selected participant.')+' Tracking records and chart stars only; no wallet, login bonus or notification data.',
     dateBasis:'Each record uses its saved local date, matching admin analytics. The report schedule uses America/Los_Angeles. Current saved, non-deleted records as of capturedAt; late syncs may change later reports.',
     limitations:'Aggregated counts only: no names, IDs, free text or individual histories. Missing records do not establish zero real-world events. Intake follows saved interval/cumulative semantics. Chart stars use their saved calendar date.',days:[...days.values()]};
 }

@@ -1,5 +1,11 @@
 # Testing guide
 
+## Admin statistics API and CrowPanel
+
+`npm test` includes `tests/statistics.test.mjs`: admin-only token creation/use, self/all scopes, demotion/disabling/revocation, digest-only persistence, HTTP/CSRF boundaries, bounded dates, participant pagination, overview versus individual counts, cumulative intake, chart stars and deleted records. `node tests/statistics-browser.mjs` verifies token setup, literal device labels, both views, revocation/hiding, mobile layout and authorization cleanup using synthetic data.
+
+The companion `F:\Langley\Documents\Arduino\lidoll-logger\ps\build.ps1` compiles against esp32 3.3.10, LovyanGFX 1.2.26 and ArduinoJson 7.4.3. Its README lists physical display/touch/reconnection checks; compilation does not verify board operation. See [STATISTICS_API.md](STATISTICS_API.md).
+
 ## Automated regression tests
 
 ```sh

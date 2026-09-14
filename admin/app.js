@@ -4,6 +4,7 @@ import { datasetCsv } from '../lib/admin-format.js';
 import { createNotificationComposer } from './notifications.js';
 import { createChartBuilder } from './chart-builder.js';
 import { createAnalysisPanel } from './ai-analysis.js';
+import { createStatisticsPanel } from './statistics.js';
 
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); // Escape user-authored labels before creating HTML or SVG.
@@ -17,6 +18,7 @@ const noticeEditors=[createNoticeEditor('reminder','Reminder'),createNoticeEdito
 const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('little-log-chart-updates'):null; // Keep drilldown state only in memory alongside the authorized dataset.
 const notificationComposer=createNotificationComposer({request,authorized:()=>Boolean(actor)});
 const analysisPanel=createAnalysisPanel({request,authorized:()=>Boolean(actor),download});
+const statisticsPanel=createStatisticsPanel({request,authorized:()=>Boolean(actor)});
 const chartBuilder=createChartBuilder($('#chart-builder'));
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
@@ -25,6 +27,7 @@ function clearPrivateView() { // Drop all in-memory cohort data and rendered rec
   resetPrediction();
   notificationComposer.clear();
   analysisPanel.clear();
+  statisticsPanel.clear();
   chartBuilder.clear();
   for(const editor of noticeEditors)editor.clear();
   accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
@@ -214,10 +217,11 @@ async function renderAudit() {
   $('#audit-table').innerHTML=table(['When','Actor','Action','Target','Details'],result.audit.map(row=>[row.created_at,users.find(user=>user.id===row.actor_id)?.label??row.actor_id,row.action,row.target_id,row.details_json]));
 }
 function navigate() {
-  const route=['analytics','advanced-drilldown','potty-charts','predictions','users','transfer','reminders','notifications','ai-analysis','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
+  const route=['analytics','advanced-drilldown','potty-charts','predictions','users','transfer','reminders','notifications','ai-analysis','statistics','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
-  $('.admin-filters').hidden=['reminders','notifications','ai-analysis'].includes(route);
+  $('.admin-filters').hidden=['reminders','notifications','ai-analysis','statistics'].includes(route);
+  if(route==='statistics'&&actor)void statisticsPanel.load();
   if(route==='ai-analysis'&&actor)void analysisPanel.load();
   if(route==='notifications'&&actor)void notificationComposer.load();
   if(route==='reminders'&&actor)for(const editor of noticeEditors)editor.loadInitial();
