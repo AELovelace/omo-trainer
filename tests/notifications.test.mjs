@@ -59,6 +59,8 @@ test('push handler shows the approved reminder and notification clicks stay insi
  vm.runInNewContext(readFileSync(new URL('../sw.js',import.meta.url),'utf8'),{self,URL,Set});
  let work;handlers.push({data:{json:()=>({title:'Potty check-in',body:'injected',url:'https://evil.example',tag:'potty-test'})},waitUntil:p=>{work=p;}});await work;
  assert.equal(shown[0][1].body,'Pee NOW! Time for a potty check-in.');
+ assert.equal(shown[0][1].icon,'https://lidoll.dev/tracker/icons/notification-icon.png');
+ assert.equal(shown[0][1].badge,'https://lidoll.dev/tracker/icons/notification-badge.png');
  handlers.notificationclick({notification:{close(){}},waitUntil:p=>{work=p;}});await work;assert.equal(opened,'https://lidoll.dev/tracker/#overview');
 });
 

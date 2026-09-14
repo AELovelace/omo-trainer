@@ -31,7 +31,8 @@
           <form id="push-form"><label for="push-recipient">Send to</label><select id="push-recipient"><option value="">Everyone subscribed</option></select><p id="push-audience" class="field-help"></p>
             <label for="push-heading">Notification title</label><input id="push-heading" maxlength="80" required value="Little Log"><label for="push-body">Message</label><textarea id="push-body" rows="4" maxlength="500" required></textarea>
             <p class="field-help">Notification preview</p><div class="push-preview"><strong id="push-preview-title">Little Log</strong><p id="push-preview-body">Your message appears here.</p></div>
-            <div class="admin-buttons"><button id="push-send" class="button primary" type="submit" disabled>Send notification</button><button id="push-reload" class="button secondary" type="button">Refresh delivery status</button></div>
+            <p id="push-readiness" class="field-help" role="status" aria-live="polite"></p>
+            <div class="admin-buttons"><button aria-describedby="push-readiness" id="push-send" class="button primary" type="submit" disabled>Send notification</button><button id="push-reload" class="button secondary" type="button">Refresh delivery status</button></div>
           </form><p id="push-status" class="field-help" role="status"></p>
         </section>
         <section class="card"><h2>Recent notifications</h2><p class="field-help">Counts are per device. Accepted means the push service accepted the message, not that the member saw it. Failed / uncertain messages are not automatically retried. Cancel only stops queued deliveries.</p><div id="push-history" class="table-scroll"></div></section>

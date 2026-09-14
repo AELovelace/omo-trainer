@@ -22,6 +22,19 @@ try {
   PushManager.prototype.subscribe=async()=>window.testSubscription={endpoint:'https://fcm.googleapis.com/fcm/send/browser-fixture',toJSON(){return {endpoint:this.endpoint,keys:{p256dh:publicKey,auth:'AQEBAQEBAQEBAQEBAQEBAQ'}};},unsubscribe:async()=>{window.testSubscription=null;return true;}};
  },keys.publicKey);
  await page.setViewport({width:390,height:900});await page.goto(origin+'/tracker/#settings',{waitUntil:'networkidle0'});await page.waitForFunction(()=>!document.querySelector('#notification-enable').disabled);
+ const artwork=await page.evaluate(async()=>{
+  await navigator.serviceWorker.ready;
+  const result={};
+  for(const name of ['notification-icon.png','notification-badge.png']){
+   const url=new URL('./icons/'+name,location.href),response=await fetch(url);if(!response.ok)throw Error('Notification icon is not served: '+name);
+   const bitmap=await createImageBitmap(await response.blob()),canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+   const context=canvas.getContext('2d');context.drawImage(bitmap,0,0);
+   result[name]={width:bitmap.width,height:bitmap.height,corner:[...context.getImageData(0,0,1,1).data],center:[...context.getImageData(bitmap.width/2,bitmap.height/2,1,1).data],tip:[...context.getImageData(bitmap.width/2,8,1,1).data],cached:Boolean(await caches.match(url.href))};
+  }return result;
+ }); // Decode actual served PNGs and verify the notification badge retains transparent negative space offline.
+ assert.equal(artwork['notification-icon.png'].width,192);assert.deepEqual(artwork['notification-icon.png'].corner,[255,245,250,255]);
+ assert.equal(artwork['notification-badge.png'].width,96);assert.equal(artwork['notification-badge.png'].corner[3],0);assert.equal(artwork['notification-badge.png'].center[3],0);assert.deepEqual(artwork['notification-badge.png'].tip,[255,255,255,255]);
+ assert.ok(Object.values(artwork).every(value=>value.cached));
  assert.equal(await page.evaluate(()=>permissionRequests),0,'No notification permission prompt before opt-in');
  await page.click('#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
  assert.equal(await page.$eval('#notification-title',node=>node.textContent),'Receive notifications');

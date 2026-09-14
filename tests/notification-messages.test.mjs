@@ -95,5 +95,7 @@ test('service worker displays authored admin text literally, rejects oversized p
  let work;const payload={kind:'admin-message',title:'A message',body:'<b>Hello</b>',url:'https://evil.example',tag:'admin-test'};
  handlers.push({data:{json:()=>payload},waitUntil:p=>work=p});await work;assert.equal(shown[0][0],'A message');assert.equal(shown[0][1].body,'<b>Hello</b>');
  handlers.push({data:{json:()=>({...payload,body:'x'.repeat(501)})},waitUntil:p=>work=p});assert.equal(shown.length,1);
+ assert.equal(shown[0][1].icon,'https://lidoll.dev/tracker/icons/notification-icon.png');
+ assert.equal(shown[0][1].badge,'https://lidoll.dev/tracker/icons/notification-badge.png');
  handlers.notificationclick({notification:{close(){}},waitUntil:p=>work=p});await work;assert.equal(opened,'https://lidoll.dev/tracker/#overview');
 });

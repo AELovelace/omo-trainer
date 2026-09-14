@@ -10,6 +10,7 @@ const delivered=[];const db=openDatabase(':memory:',{stickerCatalog:[],notificat
 const admin=db.ensureParticipant('test','admin','Admin'),a=db.ensureParticipant('test','a','Alice'),b=db.ensureParticipant('test','b','Bob');db.admin.bootstrap(admin.id);
 const sub=id=>({endpoint:'https://fcm.googleapis.com/fcm/send/'+id,keys:{p256dh:Buffer.alloc(65,4).toString('base64url'),auth:Buffer.alloc(16,1).toString('base64url')}});
 for(const user of [a,b])db.notifications.save(user.id,{subscription:sub(user.id),timeZone:'UTC',quietStart:0,quietEnd:0,adminMessages:true});
+let configured=true,overviewFails=false;const overview=db.notifications.messages.overview;db.notifications.messages.overview=actor=>{if(overviewFails)throw Object.assign(Error('Synthetic availability outage'),{status:503});return {...overview(actor),configured};};
 const token=db.createSession(admin.id),login={origin:'',session:req=>db.session(req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('little_log='))?.slice(11))};
 const api=createApi(db,login),root=resolve('.');
 const server=createServer(async(req,res)=>{
@@ -24,6 +25,11 @@ try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH,headless:true,pipe:true});const context=await browser.createBrowserContext();await context.setCookie({name:'little_log',value:token,url:login.origin+'/tracker/',path:'/tracker/',httpOnly:true});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewport({width:390,height:900});await page.goto(login.origin+'/tracker/admin/#notifications',{waitUntil:'networkidle0'});await page.waitForFunction(()=>document.querySelector('#push-audience').textContent.includes('2 opted-in'));
  assert.equal(await page.$eval('.admin-filters',node=>node.hidden),true);assert.equal(await page.$eval('#push-send',node=>node.disabled),true);
+ assert.match(await page.$eval('#push-readiness',node=>node.textContent),/Write a message/);
+ configured=false;await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-readiness').textContent.includes('PUSH_VAPID_PUBLIC_KEY'));assert.equal(await page.$eval('#push-send',node=>node.disabled),true);
+ configured=true;await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-readiness').textContent.includes('Write a message'));
+ overviewFails=true;await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-readiness').textContent.includes('Synthetic availability outage'));assert.equal(await page.$eval('#push-send',node=>node.disabled),true);
+ overviewFails=false;await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-readiness').textContent.includes('Write a message'));
  await page.select('#push-recipient',a.id);await page.type('#push-body','Hello <img src=x onerror=alert(1)>!');assert.equal(await page.$('#push-preview-body img'),null);assert.match(await page.$eval('#push-audience',node=>node.textContent),/^1 opted-in/);
  await page.click('#push-send');await page.waitForFunction(()=>document.querySelector('#push-status').textContent.startsWith('Notification queued'));
  await db.notifications.tick();assert.equal(delivered.length,1);assert.equal(delivered[0].sub.endpoint,sub(a.id).endpoint);assert.equal(delivered[0].payload.body,'Hello <img src=x onerror=alert(1)>!');
@@ -32,7 +38,10 @@ try{
  await db.notifications.tick();assert.equal(delivered.length,1,'Cancelled announcement must not send');
  // Losing a selected recipient never silently changes an individual message into a broadcast.
  await page.select('#push-recipient',b.id);db.notifications.remove(b.id,{all:true});await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-audience').textContent.startsWith('0 opted-in'));assert.equal(await page.$eval('#push-recipient',node=>node.value),b.id);
+ assert.match(await page.$eval('#push-readiness',node=>node.textContent),/This member has no device/);
+ await page.select('#push-recipient','');db.notifications.remove(a.id,{all:true});await page.click('#push-reload');await page.waitForFunction(()=>document.querySelector('#push-readiness').textContent.startsWith('No devices'));
+ assert.match(await page.$eval('#push-readiness',node=>node.textContent),/Messages from admins/);
  for(const width of [320,390,1024]){await page.setViewport({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
  await page.type('#push-body','Private draft');db.deleteSession(token);await page.click('#push-reload');await page.waitForSelector('#admin-gate:not([hidden])');assert.equal(await page.$eval('#push-body',node=>node.value),'');assert.equal(await page.$eval('#push-history',node=>node.childElementCount),0);
- assert.deepEqual(errors,[]);console.log('PASS: admin composer, explicit audience, literal preview, real queue and cancellation, mobile layout, and session-revocation cleanup (push transport mocked).');
+ assert.deepEqual(errors,[]);console.log('PASS: admin composer, explicit audience, literal preview, real queue and cancellation, mobile layout, disabled-button explanations, availability failures and recovery, and session-revocation cleanup (push transport mocked).');
 }finally{await browser?.close();await new Promise(r=>server.close(r));db.close();}

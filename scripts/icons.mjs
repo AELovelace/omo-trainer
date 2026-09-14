@@ -29,24 +29,32 @@ function colorAt(x, y) { // Draws the vector terminal sigil inside the maskable 
   return colors.background;
 }
 
-function png(size) { // Builds antialiased RGB PNGs with Node built-ins, avoiding any runtime icon dependency.
-  const raw = Buffer.alloc(size * (1 + size * 3));
+function notificationColorAt(x, y, badge = false) {
+  const dx = Math.abs(x - .5), dy = Math.abs(y - .5);
+  const inside = Math.max(dx, dy) + 2.6 * Math.min(dx, dy) <= .45;
+  const center = dx + dy < .175;
+  if (badge) return [255, 255, 255, inside && !center ? 255 : 0];
+  return center ? [26, 6, 17] : inside ? [173, 60, 121] : [255, 245, 250];
+} // Match the header's four-point Little Log sigil; the badge uses alpha instead of an opaque background.
+
+function png(size, sample = colorAt, channels = 3) { // Builds antialiased RGB/RGBA PNGs with Node built-ins, avoiding any runtime icon dependency.
+  const raw = Buffer.alloc(size * (1 + size * channels));
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const sum = [0, 0, 0];
+      const sum = Array(channels).fill(0);
       for (let sy = 0; sy < 3; sy++) for (let sx = 0; sx < 3; sx++) {
-        const pixel = colorAt((x + (sx + .5) / 3) / size, (y + (sy + .5) / 3) / size);
-        for (let channel = 0; channel < 3; channel++) sum[channel] += pixel[channel];
+        const pixel = sample((x + (sx + .5) / 3) / size, (y + (sy + .5) / 3) / size);
+        for (let channel = 0; channel < channels; channel++) sum[channel] += pixel[channel];
       }
-      const offset = y * (1 + size * 3) + 1 + x * 3;
-      for (let channel = 0; channel < 3; channel++) raw[offset + channel] = Math.round(sum[channel] / 9);
+      const offset = y * (1 + size * channels) + 1 + x * channels;
+      for (let channel = 0; channel < channels; channel++) raw[offset + channel] = Math.round(sum[channel] / 9);
     }
   }
   const header = Buffer.alloc(13);
   header.writeUInt32BE(size, 0);
   header.writeUInt32BE(size, 4);
   header[8] = 8;
-  header[9] = 2;
+  header[9] = channels === 4 ? 6 : 2;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
@@ -54,4 +62,6 @@ await mkdir(new URL('../icons/', import.meta.url), { recursive: true });
 for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['maskable-512.png', 512], ['apple-touch-icon.png', 180]]) {
   await writeFile(new URL(`../icons/${name}`, import.meta.url), png(size));
 }
-console.log('Generated four install icons from the Chrysalis terminal sigil.');
+await writeFile(new URL('../icons/notification-icon.png', import.meta.url), png(192, notificationColorAt));
+await writeFile(new URL('../icons/notification-badge.png', import.meta.url), png(96, (x, y) => notificationColorAt(x, y, true), 4));
+console.log('Generated four install icons and Little Log notification icon/badge.');

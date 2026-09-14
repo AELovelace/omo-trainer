@@ -39,6 +39,7 @@ const files = new Map([
   ['admin/chart-builder.js','text/javascript; charset=utf-8'], ['lib/chart-builder-model.js','text/javascript; charset=utf-8'],
   ['lib/admin-format.js', 'text/javascript; charset=utf-8'], ['lib/admin-analytics.js', 'text/javascript; charset=utf-8'],
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
+  ['icons/notification-icon.png', 'image/png'], ['icons/notification-badge.png', 'image/png'],
   ['icons/icon.svg', 'image/svg+xml'], ['icons/icon-192.png', 'image/png'],
   ['icons/icon-512.png', 'image/png'], ['icons/maskable-512.png', 'image/png'], ['icons/apple-touch-icon.png', 'image/png'],
 ]);
