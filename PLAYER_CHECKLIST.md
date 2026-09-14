@@ -105,3 +105,5 @@ A new Little Log account receives 50 lid0llcoins. Check Stickers & market for th
 ## Administrator report sharing
 
 Admins can set a report output limit up to 50,000 tokens and create or revoke MommyBot report-read tokens from AI analysis. Ordinary wallet connections cannot read these reports. See [AI_REPORT_API.md](AI_REPORT_API.md) for setting up a consumer.
+
+MommyBot's report API exposes only the completed midnight Los Angeles report. Running analysis manually stays private to the admin console and will not add a report to the bot's feed.

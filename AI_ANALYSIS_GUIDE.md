@@ -4,8 +4,12 @@ Open **Admin console → AI analysis**. The panel, settings, queue actions and s
 reports require an enabled administrator session. Every API request rechecks that
 role; changes also require the existing same-origin CSRF token. There is no
 participant analysis API. Administrators can explicitly create a separate
-read-only token for MommyBot to retrieve completed report documents through
+read-only token for MommyBot to retrieve completed scheduled nightly documents through
 [AI_REPORT_API.md](AI_REPORT_API.md). Reports are not published to the app.
+
+Manual report runs stay in the admin console. The bot API exports only the one
+scheduled job per Los Angeles midnight, once that job has completed; delayed
+completion and retries retain the same report identity.
 
 Edit the analysis prompt, comparison window (1–31 days), model, maximum output
 tokens and temperature, then **Save settings**. This customizes instructions for

@@ -40,7 +40,7 @@ try{
   await page.click('#ai-download');await page.waitForFunction(()=>window.downloaded);assert.match(await page.evaluate(()=>window.downloaded),/Saved configuration and source statistics/);
   await page.click('#ai-token-create');await page.waitForFunction(()=>document.querySelector('#ai-token-secret').value.startsWith('llreport_'));
   const token=await page.$eval('#ai-token-secret',element=>element.value),reportApi=base+'api/ai-reports/v1/reports';
-  const feed=await fetch(reportApi,{headers:{Authorization:'Bearer '+token}});assert.equal(feed.status,200);assert.equal((await feed.json()).reports.length,1);
+  const feed=await fetch(reportApi,{headers:{Authorization:'Bearer '+token}});assert.equal(feed.status,200);assert.equal((await feed.json()).reports.length,0,'The manual browser run must stay out of MommyBot\'s nightly feed');
   await page.click('#ai-token-hide');assert.equal(await page.$eval('#ai-token-secret',element=>element.value),'');
   await page.click('#ai-token-list button');await page.waitForFunction(()=>document.querySelector('#ai-token-list').textContent.includes('Revoked'));
   assert.equal((await fetch(reportApi,{headers:{Authorization:'Bearer '+token}})).status,401);

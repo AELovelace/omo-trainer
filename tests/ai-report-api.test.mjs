@@ -13,7 +13,8 @@ function fixture(filename=':memory:'){ // Synthetic users and an injectable cloc
   let now=Date.parse('2026-09-14T12:00:00Z');const db=openDatabase(filename,{stickerCatalog:[],aiAnalysis:{now:()=>now}});
   const admin=db.ensureParticipant('test','admin','Admin'),member=db.ensureParticipant('test','member','Member');db.admin.bootstrap(admin.id);
   const store=db.aiAnalysis,access=store.integrations;
-  return {db,admin,member,store,access,advance:ms=>{now+=ms;},queue:()=>store.queue(admin.id,{requestId:crypto.randomUUID(),day:'2026-09-13'})};
+  return {db,admin,member,store,access,advance:ms=>{now+=ms;},queue:()=>store.queue(admin.id,{requestId:crypto.randomUUID(),day:'2026-09-13'}),
+    nightly(){now+=86400000;store.schedule();return store.overview(admin.id).jobs.find(job=>job.source==='daily');}}; // Generate bot-visible fixtures through the actual midnight scheduler.
 }
 function complete(f,id,text='# Report',reason='stop'){return f.store.finish(id,'worker',{document:text,model:'synthetic',finishReason:reason});} // Exercise the production completion transaction, including the feed cursor.
 
@@ -21,7 +22,7 @@ test('50,000 tokens is the default and upper bound, is sent to inference, and pe
   const f=fixture();try{
     const settings=f.store.overview(f.admin.id).settings;assert.equal(settings.maxTokens,50000);
     for(const maxTokens of [50001,255,50000.5])assert.throws(()=>f.store.save(f.admin.id,{...settings,maxTokens}),error=>error.status===400);
-    f.store.save(f.admin.id,{...settings,maxTokens:50000,model:'synthetic'});const job=f.queue(),text='Report text. '.repeat(20000);let input;
+    f.store.save(f.admin.id,{...settings,maxTokens:50000,model:'synthetic'});const job=f.nightly(),text='Report text. '.repeat(20000);let input;
     await runAnalysisJob(f.store,f.store.claim('worker'),'worker',{fetcher:async(_url,options)=>{input=JSON.parse(options.body);return new Response(JSON.stringify({model:'synthetic',choices:[{message:{content:text},finish_reason:'length'}]}));}});
     assert.equal(input.max_tokens,50000);assert.equal(f.store.report(f.admin.id,job.id).document,text);
     const token=f.access.create(f.admin.id,{name:'MommyBot'}).token;const exported=f.access.report(token,job.id);assert.equal(exported.document,text);assert.equal(exported.incomplete,true);
@@ -32,11 +33,13 @@ test('upgrading raises active settings once, retains prompt snapshots and backfi
   const directory=mkdtempSync(join(tmpdir(),'ai-report-upgrade-')),filename=join(directory,'science.sqlite');let f=fixture(filename);
   try{
     f.store.save(f.admin.id,{...f.store.overview(f.admin.id).settings,maxTokens:16384,prompt:'Original custom prompt.'});
-    const done=f.queue();f.store.claim('worker');complete(f,done.id);const pending=f.queue();
+    const done=f.nightly();f.store.claim('worker');complete(f,done.id);
+    const oldManual=f.queue();f.store.claim('worker');complete(f,oldManual.id,'Earlier manual report');const pending=f.queue();
     const token=f.access.create(f.admin.id,{name:'MommyBot'}).token,actor=f.admin.id;f.db.close();
     const raw=new DatabaseSync(filename);try{raw.exec("DELETE FROM ai_analysis_migrations WHERE name='output-limit-50000'; DELETE FROM ai_report_feed");}finally{raw.close();}
     f=fixture(filename);let settings=f.store.overview(actor).settings;assert.equal(settings.maxTokens,50000);assert.equal(settings.prompt,'Original custom prompt.');assert.equal(f.store.report(actor,pending.id).settings.maxTokens,16384);
     const before=f.access.feed(token);assert.equal(before.reports.length,1);assert.equal(before.reports[0].id,done.id);
+    assert.equal(before.latest_cursor,before.reports[0].cursor);assert.throws(()=>f.access.report(token,oldManual.id),error=>error.status===404);
     f.store.save(actor,{...settings,maxTokens:1024});f.db.close();f=fixture(filename);
     assert.equal(f.store.overview(actor).settings.maxTokens,1024);assert.deepEqual(f.access.feed(token),before);
   }finally{f.db.close();rmSync(directory,{recursive:true,force:true});}
@@ -44,8 +47,8 @@ test('upgrading raises active settings once, retains prompt snapshots and backfi
 
 test('polling follows completion order across failed attempts, repeated reads and late completion of older jobs',()=>{
   const f=fixture();try{
-    const token=f.access.create(f.admin.id,{name:'MommyBot'}).token,old=f.queue();f.store.claim('worker');f.store.fail(old.id,'worker','Temporary failure.');
-    const newer=f.queue();assert.equal(f.store.claim('worker').id,newer.id);complete(f,newer.id);
+    const token=f.access.create(f.admin.id,{name:'MommyBot'}).token,old=f.nightly(),newer=f.nightly();f.store.claim('worker');f.store.fail(old.id,'worker','Temporary failure.');
+    assert.equal(f.store.claim('worker').id,newer.id);complete(f,newer.id);
     const first=f.access.feed(token,{after:'0',limit:'1'});assert.equal(first.reports[0].id,newer.id);assert.equal(first.has_more,false);assert.equal(first.next_cursor,first.latest_cursor);
     f.advance(300001);assert.equal(f.store.claim('worker').id,old.id);complete(f,old.id,'Older job completed later.');
     const later=f.access.feed(token,{after:first.next_cursor});assert.equal(later.reports.length,1);assert.equal(later.reports[0].id,old.id);assert.ok(later.next_cursor>first.next_cursor);
@@ -77,7 +80,7 @@ test('report tokens are admin-issued, digest-only, read-only and immediately blo
 
 test('external report HTTP API rejects browser cookies, wallet tokens, mutations and cross-origin requests',async()=>{
   const f=fixture(),session=f.db.createSession(f.admin.id),ordinary=f.db.createSession(f.member.id),token=f.access.create(f.admin.id,{name:'MommyBot'}).token;
-  const job=f.queue();f.store.claim('worker');complete(f,job.id);
+  const job=f.nightly();f.store.claim('worker');complete(f,job.id);
   const login={origin:'',session:req=>f.db.session(req.headers.cookie)},api=createApi(f.db,login),server=createServer((req,res)=>api(req,res,new URL(req.url,'http://localhost').pathname.slice(1)));
   await new Promise(done=>server.listen(0,'127.0.0.1',done));login.origin='http://127.0.0.1:'+server.address().port;
   const get=(path,headers={})=>fetch(login.origin+'/'+path,{headers}),path='ai-reports/v1/reports',headers={Authorization:'Bearer '+token};
@@ -86,6 +89,12 @@ test('external report HTTP API rejects browser cookies, wallet tokens, mutations
     assert.equal((await get(path+'?token='+encodeURIComponent(token))).status,401,'Credentials are never accepted in URLs');
     const response=await get(path,headers);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.match(response.headers.get('vary'),/Authorization/);assert.equal((await response.json()).reports[0].id,job.id);
     const detail=await get(path+'/'+job.id,headers);assert.equal(detail.status,200);assert.equal((await detail.json()).document,'# Report');
+    const manual=f.queue();f.store.claim('worker');complete(f,manual.id,'Private manual report');
+    assert.equal((await get(path+'/'+manual.id,headers)).status,404,'A known manual report ID cannot bypass the nightly restriction');
+    for(const filter of ['','?source=manual','?source=all']){
+      const page=await (await get(path+filter,headers)).json();assert.deepEqual(page.reports.map(report=>report.id),[job.id]);assert.equal(page.latest_cursor,page.reports[0].cursor);assert.equal(page.reports[0].scheduled_for,'2026-09-15');
+    }
+    assert.equal((await get('admin/ai-analysis/report?id='+manual.id,{Cookie:session})).status,200,'Manual reports remain available in the admin console');
     assert.equal((await get(path,{...headers,Origin:'https://unrelated.example'})).status,403);
     assert.equal((await fetch(login.origin+'/'+path,{method:'POST',headers})).status,405);
     assert.equal((await get('admin/ai-analysis',headers)).status,401,'A report token is not an administrator session');

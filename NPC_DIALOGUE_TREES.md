@@ -36,7 +36,7 @@ The shared recording modal now announces a daily bonus only when the server retu
 
 ## AI report status copy
 
-The admin-only AI analysis panel distinguishes queued, running, completed, failed and cancelled jobs. Report text is model output for administrator review, not NPC dialogue. An explicitly authorized MommyBot integration can retrieve completed documents for Discord publication through [AI_REPORT_API.md](AI_REPORT_API.md); the tracker does not itself send Discord messages.
+The admin-only AI analysis panel distinguishes queued, running, completed, failed and cancelled jobs. Report text is model output for administrator review, not NPC dialogue. An explicitly authorized MommyBot integration can retrieve only completed nightly documents for Discord publication through [AI_REPORT_API.md](AI_REPORT_API.md). Manual runs stay in the console; the tracker does not itself send Discord messages.
 
 ## Welcome grant copy
 

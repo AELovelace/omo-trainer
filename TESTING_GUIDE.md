@@ -199,3 +199,5 @@ Run `npm test` for the durable queue, saved prompt/source snapshots, admin/CSRF 
 ## Report-read API and 50k output
 
 `npm test` includes `tests/ai-report-api.test.mjs`: 50,000-token validation and inference payloads, one-time settings migration, out-of-order completion cursors, historical backfill, digest-only credentials, role checks, revocation and read-only HTTP access. `node tests/ai-analysis-browser.mjs` also checks token creation/hiding/revocation and credential cleanup after lost admin access. Tests use synthetic reports and send no Discord messages.
+
+The report API tests also verify nightly-only feed and document access, hidden historical manual reports, and a nightly-only latest cursor. The browser test confirms a successful manual run remains visible to admins while the MommyBot feed stays empty.
