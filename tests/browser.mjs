@@ -51,16 +51,16 @@ try {
   await fill(page, '#liquids', 250);
   await fill(page, '#diaper-change-wettings', 2);
 
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries[0].kind, 'observation');
   assert.equal((await saved(page)).entries[0].wettingsCount, undefined);
-  await page.click('#diaper-change-form button[type="submit"]');
+  await page.click('#diaper-change-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   assert.equal(await page.$('#wetting-diaper'), null, 'The wetting form assigns diaper numbers automatically');
   await fill(page, '#diaper', 2);
   assert.equal(await page.$eval('#diaper-change-wettings', element => element.value), '0');
   await fill(page, '#liquids', 600);
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   let state = await saved(page);
   assert.equal(state.entries.length, 2);
   assert.equal(state.entries[1].kind, 'observation');
@@ -81,7 +81,7 @@ try {
   await fill(page, '#liquids', 400);
   assert.equal(await page.$eval('#probability', element => element.readOnly), true);
 
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   state = await saved(page);
   assert.equal(state.entries[2].kind, 'observation');
   assert.equal('result' in state.entries[2], false);
@@ -142,7 +142,7 @@ try {
   await page.screenshot({ path: resolve(artifacts, 'offline.png'), fullPage: true });
   assert.equal(await page.$eval('#stat-rolls', element => element.textContent), '2');
   await page.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.length, 4);
   await page.setOfflineMode(false);
 
@@ -165,6 +165,7 @@ try {
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException('Storage full', 'QuotaExceededError'); }; });
   await navigateMenu(page,'[data-page="overview"]');
   await page.click('#save-observation');
+  assert.equal(await page.$eval('#observation-reward-dialog',dialog=>dialog.open),false,'A failed save must not open a reward');
   assert.deepEqual(await saved(page), before);
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
   await page.reload({ waitUntil: 'networkidle0' });
@@ -173,6 +174,7 @@ try {
   await page.reload({ waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
   await page.click('#save-observation');
+  assert.equal(await page.$eval('#observation-reward-dialog',dialog=>dialog.open),false,'Corrupt storage must not produce a reward');
   assert.equal(await page.evaluate(() => localStorage.getItem('lidoll.little-log.v1')), 'invalid JSON recovery test');
   await navigateMenu(page,'[data-page="settings"]');
   page.once('dialog', dialog => dialog.accept());

@@ -87,7 +87,7 @@ let serverSession = null;
 let syncRunning = false;
 let syncMessage = '';
 let renderedConflicts = '';
-let observationReward = null; // Only the currently open save celebration may receive an asynchronous sticker response.
+let recordReward = null; // Only the currently open save celebration may receive an asynchronous sticker response.
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const rewardCelebration=createRewardCelebration($('#observation-reward-dialog'),$('#reward-confetti'),$('#reward-sound'),reducedMotion);
@@ -121,9 +121,9 @@ function notify(message) { // Announces feedback without moving focus away from 
   toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 6500);
 }
 
-function showObservationReward(id) { // Open after the local save; never invent a sticker while server sync is pending.
+function showRecordReward(entry) { // Open after the local save; never invent a sticker while server sync is pending.
   rewardCelebration.clear();rewardCelebration.prepare();
-  observationReward={id,owner:state.sync.participant?.id??null,loading:false,complete:false,celebrated:false};
+  recordReward={id:entry.id,label:entry.kind==='diaper-change'?'Diaper change':entry.kind==='wetting'?'Event':'Observation',owner:state.sync.participant?.id??null,loading:false,complete:false,celebrated:false};
   $('#observation-reward-title').textContent='Thank you for checking in!';
   $('#observation-reward-sticker').hidden=true;
   $('#observation-reward-image').removeAttribute('src');
@@ -132,24 +132,24 @@ function showObservationReward(id) { // Open after the local save; never invent 
   $('#observation-reward-retry').hidden=false;
   $('#observation-reward-retry').disabled=false;
   $('#observation-reward-dialog').showModal();
-  void refreshObservationReward();
+  void refreshRecordReward();
 }
 
-async function refreshObservationReward() { // Show the receipt for this exact observation and account, never the latest arbitrary ledger entry.
-  const current=observationReward,dialog=$('#observation-reward-dialog'),status=$('#observation-reward-status');
+async function refreshRecordReward() { // Show the receipt for this exact record and account, never the latest arbitrary ledger entry.
+  const current=recordReward,dialog=$('#observation-reward-dialog'),status=$('#observation-reward-status');
   if(!current||!dialog.open||current.complete||current.loading)return;
   if(current.owner!==(state.sync.participant?.id??null)){dialog.close();return;}
-  if(!current.owner){status.textContent='Observation saved on this device. Sign in and sync to receive your sticker.';return;}
-  if(!navigator.onLine){status.textContent='Observation saved on this device. Your sticker will appear after you reconnect and sync.';return;}
-  if(state.sync.conflicts.some(record=>record.id===current.id)){status.textContent='Observation saved on this device. Review its sync conflict in Settings before collecting your sticker.';return;}
-  if(state.sync.queue.some(change=>change.id===current.id)){status.textContent='Observation saved on this device. Your sticker is waiting for this check-in to sync.';return;}
-  current.loading=true;status.textContent='Observation saved. Finding your earned sticker?';
+  if(!current.owner){status.textContent=`${current.label} saved on this device. Sign in and sync to receive your sticker.`;return;}
+  if(!navigator.onLine){status.textContent=`${current.label} saved on this device. Your sticker will appear after you reconnect and sync.`;return;}
+  if(state.sync.conflicts.some(record=>record.id===current.id)){status.textContent=`${current.label} saved on this device. Review its sync conflict in Settings before collecting your sticker.`;return;}
+  if(state.sync.queue.some(change=>change.id===current.id)){status.textContent=`${current.label} saved on this device. Your sticker is waiting for this record to sync.`;return;}
+  current.loading=true;status.textContent=`${current.label} saved. Finding your earned sticker...`;
   $('#observation-reward-retry').disabled=true;
   try {
     const result=await apiRequest('record-reward?id='+encodeURIComponent(current.id));
-    if(current!==observationReward||!dialog.open)return;
+    if(current!==recordReward||!dialog.open)return;
     if(result.participant.id!==current.owner||state.sync.participant?.id!==current.owner){dialog.close();return;}
-    if(!result.reward){status.textContent='Observation saved. Your sticker is waiting for the collection to become available. Check again shortly.';return;}
+    if(!result.reward){status.textContent=`${current.label} saved. Your sticker is waiting for the collection to become available. Check again shortly.`;return;}
     const sticker=result.reward,image=$('#observation-reward-image');
     image.alt=sticker.name;image.src=sticker.url;
     $('#observation-reward-name').textContent=sticker.name;
@@ -157,19 +157,19 @@ async function refreshObservationReward() { // Show the receipt for this exact o
     $('#observation-reward-title').textContent='You earned a sticker!';
     status.textContent='Thank you for checking in! +1 sticker has been added to your collection.';
     $('#observation-reward-retry').hidden=true;current.complete=true;
-  } catch {if(current===observationReward&&dialog.open)status.textContent='Your observation is saved. We could not load your sticker yet. Reconnect or sign in again, then check for your sticker.';}
-  finally {current.loading=false;if(current===observationReward)$('#observation-reward-retry').disabled=false;}
+  } catch {if(current===recordReward&&dialog.open)status.textContent=`${current.label} saved. We could not load your sticker yet. Reconnect or sign in again, then check for your sticker.`;}
+  finally {current.loading=false;if(current===recordReward)$('#observation-reward-retry').disabled=false;}
 }
-function celebrateObservationSticker() { // Image load can fire more than once; one visible receipt earns one celebration.
-  const current=observationReward,image=$('#observation-reward-image');
+function celebrateRecordSticker() { // Image load can fire more than once; one visible receipt earns one celebration.
+  const current=recordReward,image=$('#observation-reward-image');
   if(!current?.complete||current.celebrated||!$('#observation-reward-dialog').open||!image.naturalWidth||image.hidden)return;
   current.celebrated=true;rewardCelebration.play();
 }
-$('#observation-reward-image').addEventListener('load',celebrateObservationSticker);
-$('#observation-reward-dialog').addEventListener('close',()=>{observationReward=null;rewardCelebration.clear();}); // A delayed response cannot reopen a dismissed celebration.
-$('#observation-reward-retry').addEventListener('click',async()=>{rewardCelebration.prepare();await syncNow();await refreshObservationReward();});
+$('#observation-reward-image').addEventListener('load',celebrateRecordSticker);
+$('#observation-reward-dialog').addEventListener('close',()=>{recordReward=null;rewardCelebration.clear();}); // A delayed response cannot reopen a dismissed celebration.
+$('#observation-reward-retry').addEventListener('click',async()=>{rewardCelebration.prepare();await syncNow();await refreshRecordReward();});
 $('#observation-reward-image').addEventListener('error',()=>{ // Keep the actual reward name available when its artwork cannot load.
-  if(!observationReward)return;
+  if(!recordReward)return;
   $('#observation-reward-image').hidden=true;
   $('#observation-reward-status').textContent='Your sticker was added to your collection. Its picture is temporarily unavailable.';
 });
@@ -213,7 +213,7 @@ function commit(nextState, fromServer = false) { // Atomically saves records and
 function renderSync() { // Separates local saving, pending uploads, conflicts, and confirmed server persistence.
   $('#admin-nav').hidden = serverSession?.role !== 'admin'; // Navigation follows the server role; admin APIs independently enforce access.
   const sync = state.sync ?? emptySync();
-  if(observationReward&&observationReward.owner!==(sync.participant?.id??null))$('#observation-reward-dialog').close();
+  if(recordReward&&recordReward.owner!==(sync.participant?.id??null))$('#observation-reward-dialog').close();
   let status = 'On this device only';
   if (sync.participant) status = sync.conflicts.length ? `${sync.conflicts.length} conflicts need review` : sync.queue.length ? `${sync.queue.length} changes waiting to sync` : sync.lastSyncedAt ? 'Saved to central database' : 'Waiting for first sync';
   if (syncRunning) status = 'Syncing with lidoll.dev…';
@@ -298,7 +298,7 @@ async function syncNow() { // Retries durable mutations in bounded batches; a lo
       if (!state.sync.queue.length) break;
     }
   } catch (error) { syncMessage = `${error.message} Unsynced changes are kept on this device.`; }
-  finally { syncRunning = false; renderSync(); void refreshObservationReward(); }
+  finally { syncRunning = false; renderSync(); void refreshRecordReward(); }
 }
 
 async function checkSession() { // Restores a signed-in browser after redirect without uploading old local records before the connection action.
@@ -559,7 +559,7 @@ $('#log-form').addEventListener('submit', event => { // Saves interval intake an
     commit({ ...state, entries: [...enroll(state.entries), candidate] });
     $('#occurred-at').value = localInput();
     seedForm();
-    showObservationReward(candidate.id);
+    showRecordReward(candidate);
     navigator.storage?.persist?.().catch(() => {});
   } catch (error) { notify(error.message); }
 });
@@ -607,7 +607,7 @@ $('#wetting-form').addEventListener('submit', event => { // Saves one classified
     $('#wetting-category').value = '';
     $('#wetting-time').value = localInput();
     delete $('#wetting-time').dataset.edited;
-    notify('Event saved. One event added to the daily classification totals.');
+    showRecordReward(entry); // Display the receipt for this saved event, including bedwetting and potty use.
   } catch (error) { notify(error.message); }
 });
 $('#close-wetting-edit').addEventListener('click', () => $('#wetting-edit-dialog').close());
@@ -661,7 +661,7 @@ $('#diaper-change-form').addEventListener('submit', event => { // Record one com
     for (const selector of ['#diaper-change-time', '#diaper-change-number', '#diaper-change-wettings']) delete $(selector).dataset.edited;
     seedDiaperChange(true);
     $('#diaper').value = diaperSummary(state.entries, $('#occurred-at').value.slice(0, 10) || localDay()).currentDiaper;
-    notify('Diaper change saved with its final wetting count.');
+    showRecordReward(entry); // Reuse the same pending, earned-sticker, sound and confetti flow as observations.
   } catch (error) { notify(error.message); }
 });
 $('#close-diaper-change-edit').addEventListener('click', () => $('#diaper-change-edit-dialog').close());

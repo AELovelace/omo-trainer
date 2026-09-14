@@ -58,22 +58,22 @@ try {
     assert.deepEqual(await page.$$eval(selector + ' option', options => options.filter(option => option.value).map(option => option.textContent)), ['Forced (F)', 'Semi-Forced (SF)', 'Voluntary (V)', 'Semi-involuntary (SI)', 'Involuntary (I)', 'Bedwetting', 'Used the potty']);
   }
   await fill(page, '#wetting-category', 'semi-forced');
-  await page.click('#wetting-form button[type="submit"]');
+  await page.click('#wetting-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'wetting').length, 1);
   assert.equal((await saved(page)).entries.find(entry => entry.kind === 'wetting').wettingsCount, undefined);
   assert.equal(await page.$('#wettings'), null, 'Per-diaper totals belong to the change card');
   assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '1');
   await fill(page, '#diaper-change-wettings', '3');
-  await page.click('#diaper-change-form button[type="submit"]');
+  await page.click('#diaper-change-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.find(entry => entry.kind === 'diaper-change').wettingsCount, 3);
   assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '1');
   assert.equal(await page.$('#wetting-diaper'), null, 'The wetting form assigns diaper numbers automatically');
   assert.equal(await page.$eval('#diaper-change-wettings', input => input.value), '0');
-  await page.click('#diaper-change-form button[type="submit"]');
+  await page.click('#diaper-change-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2);
   assert.equal(await page.$eval('#stat-diaper', element => element.textContent), '2');
   await fill(page, '#liquids', '250');
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'roll').length, 1, 'Saving an observation must not create a roll');
   assert.equal((await saved(page)).entries.find(entry => entry.kind === 'observation').liquidsMl, 250);
   assert.equal(await page.$eval('#liquids', input => input.value), '0');
@@ -91,7 +91,7 @@ try {
   await clock(page, '2026-09-22T00:00:00Z');
   await chance(page, 50);
   await fill(page, '#wetting-category', 'involuntary');
-  await page.click('#wetting-form button[type="submit"]');
+  await page.click('#wetting-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   await clock(page, '2026-09-23T00:00:00Z');
   await chance(page, 55);
   state = await saved(page);
@@ -202,7 +202,7 @@ try {
     await page.click('#intake-unit-toggle');
     assert.equal(await page.$eval('#liquids', node => node.value), '12.5', 'Repeated unit switches retain the exact draft');
   }
-  await page.click('#save-observation');
+  await page.click('#save-observation');await page.click('#observation-reward-dialog .primary');
   const intakeEntries = (await saved(page)).entries.filter(entry => entry.kind === 'observation');
   assert.equal(intakeEntries.at(-1).liquidsMl, 370, 'Decimal US ounces save as the nearest whole milliliter');
   assert.equal(await page.$eval('#liquids', node => node.value), '0');
@@ -239,7 +239,7 @@ try {
   await selectAction('change');
   assert.deepEqual(await visiblePanels(), ['change']);
   await fill(page, '#diaper-change-wettings', '2');
-  await page.click('#diaper-change-form button[type="submit"]');
+  await page.click('#diaper-change-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'diaper-change').length, 2, 'Mobile Record change saves a completed diaper');
   await page.screenshot({ path: resolve('artifacts/diaper-change-mobile.png'), fullPage: true });
 
@@ -248,7 +248,7 @@ try {
     await navigateMenu(page,'[data-page="overview"]');
     const before=Number(await page.$eval('#diaper-change-wettings',input=>input.value));
     await fill(page,'#wetting-category',category);
-    await page.click('#wetting-form button[type="submit"]');
+    await page.click('#wetting-form button[type="submit"]');await page.click('#observation-reward-dialog .primary');
     const entry=(await saved(page)).entries.filter(entry=>entry.kind==='wetting').at(-1);
     assert.equal(entry.category,category);
     assert.equal(Number(await page.$eval('#diaper-change-wettings',input=>input.value)),before+(category==='bedwetting'?1:0));

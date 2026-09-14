@@ -213,7 +213,7 @@ try {
   await alice.bringToFront(); // The SSO tab was active; foreground this device before interacting with its native date form.
   await navigateMenu(alice,'[data-page="overview"]');
   await fill(alice, '#wetting-category', 'semi-involuntary');
-  await alice.click('#wetting-form button[type="submit"]');
+  await alice.click('#wetting-form button[type="submit"]');await alice.click('#observation-reward-dialog .primary');
   console.log('Wetting submitted on the first device');
   await settled(alice, 3);
   await second.bringToFront();

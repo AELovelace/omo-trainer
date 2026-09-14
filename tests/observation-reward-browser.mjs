@@ -47,8 +47,46 @@ try {
  await page.setOfflineMode(true);await submit();await page.keyboard.press('Escape');await page.setOfflineMode(false);await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.waitForFunction(()=>!JSON.parse(localStorage.getItem('lidoll.little-log.v1')).sync.queue.length);assert.equal(await page.$eval('#observation-reward-dialog',e=>e.open),false);
  assert.deepEqual(await page.evaluate(()=>window.celebrationChecks),{tones:3,pieces:36},'A dismissed reward cannot play effects after syncing');
  const total=db.economy.snapshot(alice.id).types.reduce((n,t)=>n+t.quantity,0);assert.equal(total,3);
+ await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+ const cases=[{kind:'wetting',category:'voluntary',label:'Event'}, {kind:'wetting',category:'bedwetting',label:'Event'}, {kind:'wetting',category:'used-the-potty',label:'Event'}, {kind:'diaper-change',label:'Diaper change'}];
+ let earned=3;
+ for(const record of cases)for(const offline of [false,true]) { // Verify every new save path uses its own server receipt, including delayed offline delivery.
+  const form=record.kind==='wetting'?'#wetting-form':'#diaper-change-form';
+  if(record.category)await page.select('#wetting-category',record.category);
+  else await page.$eval('#diaper-change-wettings',input=>input.value='0'); // A dry change still earns the existing sticker reward.
+  await page.setOfflineMode(offline);
+  await page.click(form+' button[type="submit"]');
+  await page.waitForFunction(()=>document.querySelector('#observation-reward-dialog').open);
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lidoll.little-log.v1')).entries.at(-1));
+  assert.equal(saved.kind,record.kind);if(record.category)assert.equal(saved.category,record.category);
+  if(offline) {
+   assert.match(await page.$eval('#observation-reward-status',node=>node.textContent),new RegExp('^'+record.label+' saved on this device'));
+   assert.equal(await page.$eval('#observation-reward-sticker',node=>node.hidden),true);
+   await page.setOfflineMode(false);await page.$eval('#observation-reward-retry',button=>{if(!button.hidden&&!button.disabled)button.click();}); // Reconnection may finish the receipt before a retry is needed.
+  }
+  await page.waitForFunction(()=>document.querySelector('#observation-reward-title').textContent==='You earned a sticker!');
+  await page.waitForFunction(()=>document.querySelector('#observation-reward-image').naturalWidth>0);
+  const receipt=db.economy.recordReward(alice.id,saved.id);
+  assert.equal(await page.$eval('#observation-reward-name',node=>node.textContent),receipt.name);
+  assert.equal(await page.$eval('#observation-reward-image',node=>node.getAttribute('src')),receipt.url);
+  assert.equal(db.economy.snapshot(alice.id).types.reduce((sum,type)=>sum+type.quantity,0),++earned,'One new sticker per saved record');
+  assert.equal(await page.$eval('#reward-sound',button=>button.getAttribute('aria-pressed')),'false','Mute preference is shared by all save types');
+  await page.waitForFunction(minimum=>window.celebrationChecks.pieces>=minimum,{},36+(earned-3)*36);
+  await page.click('#observation-reward-dialog .primary');
+  assert.equal(await page.$eval('#observation-reward-dialog',node=>node.open),false);
+ }
  const guest=await (await browser.createBrowserContext()).newPage();await guest.goto(origin+'/tracker/',{waitUntil:'networkidle0'});
  const unauthorized=await guest.evaluate(async id=>(await fetch('./api/record-reward?id='+id)).status,entry.id);assert.equal(unauthorized,401);
  await guest.$eval('#log-form',f=>{f.querySelector('#liquids').value='100';f.requestSubmit();});await guest.waitForFunction(()=>document.querySelector('#observation-reward-dialog').open);assert.match(await guest.$eval('#observation-reward-status',e=>e.textContent),/Sign in and sync/);assert.equal(await guest.$eval('#observation-reward-sticker',e=>e.hidden),true);
+ await guest.click('#observation-reward-dialog .primary');
+ for(const record of [cases[0],cases.at(-1)]) { // Signed-out saves stay local and show accurate pending copy without a fabricated sticker.
+  const form=record.kind==='wetting'?'#wetting-form':'#diaper-change-form';
+  if(record.category)await guest.select('#wetting-category',record.category);
+  await guest.click(form+' button[type="submit"]');
+  await guest.waitForFunction(()=>document.querySelector('#observation-reward-dialog').open);
+  assert.match(await guest.$eval('#observation-reward-status',node=>node.textContent),new RegExp('^'+record.label+' saved on this device.*Sign in and sync'));
+  assert.equal(await guest.$eval('#observation-reward-sticker',node=>node.hidden),true);
+  await guest.click('#observation-reward-dialog .primary');
+ }
  assert.deepEqual(errors,[]);console.log('PASS: exact earned sticker, authenticated receipt, mobile sizing/focus/Escape, offline recovery, dismissed modal stays closed, and guest pending state. '+directory);
 }finally{await browser?.close();db?.close();if(server)await new Promise(r=>server.close(r));}

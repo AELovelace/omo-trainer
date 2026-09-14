@@ -83,3 +83,8 @@ Open Settings and choose **Little Tracker** for soft pastels or **Caregiver Trac
 ## Additional event choices
 
 Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule.
+
+
+## Shared recording reward modal
+
+After saving an observation, a wetting or a diaper change, dismiss the reward modal to continue. Online synced saves show the earned sticker with the same sound and confetti preferences. Offline or signed-out saves show a pending message; reconnect and sync, then use the retry button to retrieve the sticker.

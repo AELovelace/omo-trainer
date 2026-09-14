@@ -117,3 +117,8 @@ The first change after a date rollover starts the next diaper at #1, while the c
 ## Additional event choices
 
 Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule.
+
+
+## Shared recording reward modal
+
+All three new-record save handlers call showRecordReward(entry) after a successful local commit. The shared dialog keeps its existing observation-reward DOM IDs for compatibility; recordReward tracks the exact record ID and account while sync delivers the existing server entitlement. Editing records does not reopen the reward modal.

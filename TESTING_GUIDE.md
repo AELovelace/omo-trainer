@@ -175,3 +175,8 @@ The overnight regression also checks that the first morning change starts diaper
 ## Additional event choices
 
 Bedwetting and Used the potty are separate choices in Record a wetting and its edit dialog. Both retain their category through history, JSON/CSV and account sync. Used the potty does not increase the suggested diaper wetting total. Both count as recorded events for interval estimates, but have no F/SF/V/SI/I probability weight, ordinal action score or category performance bonus; a day with none of the original five categories follows the existing empty-day rule. Verify both options can be saved, reloaded, edited and deleted, and that potty use leaves the diaper suggestion unchanged.
+
+
+## Shared recording reward modal
+
+Run node tests/observation-reward-browser.mjs with PUPPETEER_MODULE and CHROME_PATH configured. It verifies exact receipts for observations, wettings (Voluntary, Bedwetting and Used the potty) and dry diaper changes; offline recovery, guest pending copy, shared mute/confetti behavior, one sticker per record, and dismissal. Other recording browser workflows dismiss the shared modal before continuing.
