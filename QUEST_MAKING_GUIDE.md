@@ -30,3 +30,7 @@ The reward modal now appears for all three tracker record forms. It uses existin
 ## Login bonuses and diamonds
 
 Login bonuses are tracker attendance rewards and do not add quests or game_editor_gui.py fields. External games can request explicit diamond wallet scopes; current game prices remain unchanged. See LOGIN_BONUSES_GUIDE.md and LIDOLLCOIN_API.md.
+
+## Administrator reports
+
+AI analysis is an admin-console reporting tool. It introduces no quest definitions or game_editor_gui.py fields. Its prompt and worker configuration are documented in [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).

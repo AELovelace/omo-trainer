@@ -45,6 +45,11 @@ export function createApi(database, login) { // Resolves each app session to an 
       if(route==='coin-revoke'&&request.method==='POST')return send(response,200,database.economy.coins('revoke',participant.id,(await body(request,4096)).id));
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
+        if(route==='admin/ai-analysis'&&request.method==='GET')return send(response,200,database.aiAnalysis.overview(participant.id,{before:new URL(request.url,login.origin).searchParams.get('before')??undefined}));
+        if(route==='admin/ai-analysis/settings'&&request.method==='POST')return send(response,200,database.aiAnalysis.save(participant.id,await body(request,40000)));
+        if(route==='admin/ai-analysis/run'&&request.method==='POST')return send(response,202,database.aiAnalysis.queue(participant.id,await body(request,4096))); // Persist and return immediately; the worker owns inference.
+        if(route==='admin/ai-analysis/action'&&request.method==='POST')return send(response,200,database.aiAnalysis.change(participant.id,await body(request,4096)));
+        if(route==='admin/ai-analysis/report'&&request.method==='GET')return send(response,200,database.aiAnalysis.report(participant.id,new URL(request.url,login.origin).searchParams.get('id')??''));
         const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';
         if(route==='admin/notifications'&&request.method==='GET')return send(response,200,database.notifications.messages.overview(participant.id));
         if(route==='admin/notifications'&&request.method==='POST')return send(response,200,database.notifications.messages.queue(participant.id,await body(request,8192)));

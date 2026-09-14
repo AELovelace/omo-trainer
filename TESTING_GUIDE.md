@@ -187,3 +187,7 @@ Run node tests/observation-reward-browser.mjs with PUPPETEER_MODULE and CHROME_P
 Login bonuses and diamonds are covered by tests/login-bonuses.test.mjs, tests/diamond-api.test.mjs, and tests/login-bonuses-browser.mjs. Existing performance/economy fixtures now include the independent day-one 10-coin attendance payout. See LOGIN_BONUSES_GUIDE.md for the complete test scope.
 
 With the MommyBot checkout beside this project (or MOMMYBOT_ROOT set), run `node tests/mommybot-diamonds-integration.mjs` to exercise its real WalletClient against an isolated tracker HTTP API: consent, balances, credit/retry, debit/refund and revocation. It sends no Discord messages and touches no live wallets.
+
+## Admin AI analysis checks
+
+Run `npm test` for the durable queue, saved prompt/source snapshots, admin/CSRF boundaries, Los Angeles midnight and DST cases, inference failures, cancellation and recovery. Run `node tests/ai-analysis-browser.mjs` with `PUPPETEER_MODULE` and `CHROME_PATH` configured for the real worker/browser flow using a synthetic local model endpoint. Verify the actual LAN endpoint from the deployed host separately; see [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).

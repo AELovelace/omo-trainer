@@ -2,7 +2,8 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { openDatabase } from '../server/database.mjs';
+import { openDatabase, databasePath } from '../server/database.mjs';
+import { startAnalysisWorker } from '../server/ai-analysis-supervisor.mjs';
 import { createApi } from '../server/api.mjs';
 import { createLogin } from '../server/login.mjs';
 import { stickerCatalog } from '../server/sticker-catalog.mjs';
@@ -14,12 +15,14 @@ const port = Number(process.env.PORT ?? 4173);
 const base = process.env.BASE_PATH ?? '/tracker/';
 if (!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(base)) throw new Error('BASE_PATH must start and end with / and contain only simple path segments.');
 const database = openDatabase();
+const stopAnalysisWorker=startAnalysisWorker(databasePath()); // One supervised background worker shares the private durable report queue.
 const login = createLogin(database, base);
 const api = createApi(database, login);
 const games = createGamesRoute(base);
 const stickerAssets = stickerCatalog();
 const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
+  ['admin/ai-analysis.js','text/javascript; charset=utf-8'],
   ['lib/login-bonuses.js', 'text/javascript; charset=utf-8'], ['lib/login-bonuses.css', 'text/css; charset=utf-8'],
   ['lib/games.js', 'text/javascript; charset=utf-8'],
   ...stickerAssets.map(item => [item.url, item.mime]),
@@ -74,7 +77,7 @@ export const server = http.createServer(async (request, response) => { // Serves
 });
 
 const rewardTimer=setInterval(()=>database.economy.tryFlush(),30000);rewardTimer.unref(); // Resume reward delivery even without another record submission.
-server.on('close', () => {clearInterval(rewardTimer);database.close();}); // Flushes and closes the persistent connection during controlled shutdowns and tests.
+server.on('close', () => {stopAnalysisWorker();clearInterval(rewardTimer);database.close();}); // Flushes and closes the persistent connection during controlled shutdowns and tests.
 server.requestTimeout = 15000;
 server.headersTimeout = 10000;
 

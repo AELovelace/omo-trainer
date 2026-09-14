@@ -18,7 +18,24 @@
     <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
     <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LiD0llID</a></section>
     <div id="admin-workspace" hidden>
-      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#notifications" data-tab="notifications">Notifications</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#notifications" data-tab="notifications">Notifications</a><a href="#ai-analysis" data-tab="ai-analysis">AI analysis</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <section data-panel="ai-analysis" aria-labelledby="ai-title" hidden>
+        <section class="card"><h2 id="ai-title">AI analysis</h2><p>Daily reports run at midnight Los Angeles time and remain private to administrators. Reports cover all participants, independently of the analytics filters.</p><p id="ai-schedule" class="field-help"></p>
+          <form id="ai-settings"><label for="ai-prompt">Analysis prompt</label><textarea id="ai-prompt" rows="8" maxlength="8000" required></textarea>
+            <label for="ai-days">Days to include, ending on the report date</label><input id="ai-days" type="number" min="1" max="31" required>
+            <label for="ai-model">Model (leave blank to use the endpoint's first model)</label><input id="ai-model" maxlength="200">
+            <label for="ai-tokens">Maximum output tokens</label><input id="ai-tokens" type="number" min="256" max="16384" required>
+            <label for="ai-temperature">Temperature</label><input id="ai-temperature" type="number" min="0" max="2" step="0.05" required>
+            <label class="reminder-enabled-label"><input id="ai-enabled" type="checkbox"> Enable daily reports</label>
+            <div class="admin-buttons"><button id="ai-save" class="button primary" type="submit">Save settings</button><button id="ai-reload" class="button secondary" type="button">Load latest settings</button></div>
+          </form>
+          <p class="field-help">The model receives daily aggregate tracking counts, liquid intake and chart stars, with no names or notes. Dates follow each record's saved local date, matching admin analytics. Reports use the prompt and settings saved when queued.</p>
+          <form id="ai-run-form"><label for="ai-day">Report date</label><input id="ai-day" type="date" min="2000-01-01" required><button id="ai-run" class="button primary" type="submit">Run now</button></form>
+          <p id="ai-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="card"><h2>Saved reports and queued work</h2><p>Work continues after you close this page. Failed attempts retry up to three times, five minutes apart.</p><div class="admin-buttons"><button id="ai-refresh" class="button secondary" type="button">Newest reports</button><button id="ai-older" class="button secondary" type="button" hidden>Older reports</button></div><div id="ai-history" class="table-scroll"></div></section>
+        <section id="ai-report" class="card" hidden><h2 id="ai-report-title">Report</h2><p id="ai-report-meta"></p><p id="ai-report-warning" role="status"></p><button id="ai-download" class="button secondary" type="button">Download Markdown</button><pre id="ai-document" class="ai-document"></pre><details><summary>Saved prompt and source statistics</summary><pre id="ai-source" class="ai-document"></pre></details></section>
+      </section>
       <section class="card admin-filters" aria-label="Dataset selection">
         <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>
         <div><label for="date-from">Analysis from</label><input id="date-from" type="date"></div>

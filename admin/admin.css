@@ -86,3 +86,15 @@
 .push-preview { padding:16px; border:1px solid #805069; border-radius:12px; margin-bottom:18px; }
 .push-preview p { white-space:pre-wrap; overflow-wrap:anywhere; }
 #push-composer input,#push-composer select,#push-composer textarea { max-width:100%; }
+.ai-document { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.65; }
+#ai-prompt { display:block; width:100%; min-height:180px; resize:vertical; padding:14px; margin:10px 0 20px; border:1px solid var(--border); background:var(--panel-deep); color:var(--ink); font:inherit; line-height:1.5; }
+#ai-enabled { width:18px; min-height:18px; margin:0; flex:0 0 18px; }
+#ai-run-form { margin-top:24px; }
+#ai-history button { margin:4px; }
+@media(max-width:600px) {
+  #ai-history table, #ai-history tbody, #ai-history tr, #ai-history td { display:block; width:100%; min-width:0; }
+  #ai-history thead { display:none; }
+  #ai-history tr { padding:12px 0; border-bottom:1px solid var(--border); }
+  #ai-history td { border:0; padding:8px 0; white-space:normal; }
+  #ai-history td::before { content:attr(data-label); display:block; font-weight:bold; margin-bottom:5px; }
+}

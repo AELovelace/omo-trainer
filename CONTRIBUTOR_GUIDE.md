@@ -127,3 +127,7 @@ All three new-record save handlers call showRecordReward(entry) after a successf
 ## Login bonuses and diamonds
 
 Daily attendance is inserted only after a successful batch accepts a new observation, wetting or diaper change. Keep the scientific receipt and outbox atomic, market delivery idempotent, and diamond API permissions explicit. See LOGIN_BONUSES_GUIDE.md for boundaries and migration details.
+
+## Admin AI analysis
+
+The admin-only AI analysis panel uses a supervised worker thread and a private SQLite job queue. Keep inference out of request handlers; retain live role/CSRF checks, lease ownership checks and prompt/source snapshots. Setup, scheduling and privacy boundaries are in [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).

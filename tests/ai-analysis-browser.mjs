@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {mkdir,mkdtemp} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {openDatabase} from '../server/database.mjs';
+
+const puppeteer=(await import(pathToFileURL(process.env.PUPPETEER_MODULE||'C:/Users/langley/GameMakerProjects/lidollquest/node_modules/puppeteer/lib/esm/puppeteer/puppeteer.js').href)).default;
+let generation=null,sent=null;
+const llama=createServer(async(req,res)=>{ // A controlled inference server lets the browser reload while real worker-thread work remains pending.
+  if(req.url==='/v1/models'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({data:[{id:'synthetic-model'}]}));return;}
+  const chunks=[];for await(const chunk of req)chunks.push(chunk);sent=JSON.parse(Buffer.concat(chunks).toString());
+  generation=()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({model:'synthetic-model',choices:[{message:{content:'# Daily report\n\nSynthetic result. <img src=x onerror="window.reportInjected=true">'},finish_reason:'length'}]}));};
+});
+await new Promise(done=>llama.listen(0,'127.0.0.1',done));
+const probe=createServer();await new Promise(done=>probe.listen(0,'127.0.0.1',done));const port=probe.address().port;await new Promise(done=>probe.close(done));
+await mkdir('artifacts',{recursive:true});process.env.DATA_DIR=await mkdtemp(resolve('artifacts/ai-browser-'));process.env.PORT=String(port);process.env.HOST='127.0.0.1';process.env.PUBLIC_ORIGIN='http://127.0.0.1:'+port;process.env.AI_ANALYSIS_URL='http://127.0.0.1:'+llama.address().port;
+const {server}=await import('../scripts/serve.mjs');if(!server.listening)await new Promise(done=>server.once('listening',done));
+const origin=process.env.PUBLIC_ORIGIN,base=origin+'/tracker/',db=openDatabase(resolve(process.env.DATA_DIR,'little-log.sqlite'));
+const admin=db.ensureParticipant('test','admin','Admin'),member=db.ensureParticipant('test','member','Member');db.admin.bootstrap(admin.id);
+const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+try{
+  const context=await browser.createBrowserContext();await context.setCookie({name:'little_log',value:db.createSession(admin.id),domain:'127.0.0.1',path:'/tracker/',httpOnly:true});
+  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.setViewport({width:1280,height:950});
+  await page.goto(base+'admin/#ai-analysis');await page.waitForFunction(()=>!document.querySelector('#admin-workspace').hidden&&!document.querySelector('#ai-run').disabled);
+  assert.equal(await page.$eval('.admin-filters',element=>element.hidden),true);
+  await page.$eval('#ai-prompt',element=>{element.value='Compare the final day to the preceding days. Use concise Markdown.';element.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(await page.$eval('#ai-run',element=>element.disabled),true);await page.click('#ai-save');await page.waitForFunction(()=>document.querySelector('#ai-status').textContent==='Analysis settings saved.');
+  await page.click('#ai-run');await page.waitForFunction(()=>document.querySelector('#ai-status').textContent.includes('Report queued'));
+  const deadline=Date.now()+15000;while(!generation&&Date.now()<deadline)await new Promise(done=>setTimeout(done,100));assert.ok(generation,'The real background worker should call the local model stub');
+  assert.equal(sent.messages[1].content.startsWith('Compare the final day'),true);
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#ai-history').textContent.includes('running'));
+  generation();await page.waitForFunction(()=>document.querySelector('#ai-history').textContent.includes('completed'),{timeout:20000});
+  await page.click('#ai-history button');await page.waitForFunction(()=>document.querySelector('#ai-document').textContent.includes('Synthetic result.'));
+  assert.equal(await page.$eval('#ai-document',element=>element.querySelector('img')),null);assert.equal(await page.evaluate(()=>window.reportInjected),undefined);
+  assert.match(await page.$eval('#ai-report-warning',element=>element.textContent),/incomplete/);
+  await page.evaluate(()=>{window.downloaded=null;const original=URL.createObjectURL;URL.createObjectURL=blob=>{void blob.text().then(text=>{window.downloaded=text;});return original(blob);};});
+  await page.click('#ai-download');await page.waitForFunction(()=>window.downloaded);assert.match(await page.evaluate(()=>window.downloaded),/Saved configuration and source statistics/);
+  await page.screenshot({path:resolve(process.env.DATA_DIR,'desktop.png'),fullPage:true});await page.setViewport({width:390,height:844});await page.screenshot({path:resolve(process.env.DATA_DIR,'mobile.png'),fullPage:true});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true,'The report panel must fit a phone viewport');
+  db.admin.updateUser(admin.id,{id:member.id,action:'update',version:0,role:'admin',disabled:false});db.admin.updateUser(member.id,{id:admin.id,action:'update',version:1,role:'participant',disabled:false});
+  await page.waitForFunction(()=>document.querySelector('#admin-workspace').hidden,{timeout:12000});assert.equal(await page.$eval('#ai-document',element=>element.textContent),'');
+  assert.deepEqual(errors,[]);console.log('AI analysis browser passed: prompt editing, worker execution, reload, stored report, safe text, download, mobile layout and revoked admin access.');
+  console.log('Screenshots:',process.env.DATA_DIR);
+}finally{await browser.close();await new Promise(done=>server.close(done));db.close();llama.closeAllConnections();await new Promise(done=>llama.close(done));}

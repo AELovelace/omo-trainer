@@ -33,3 +33,7 @@ Observation, wetting and diaper-change saves share the reward modal. Pending mes
 ## Login bonuses and diamonds
 
 The shared recording modal now announces a daily bonus only when the server returns the receipt attached to that exact save. Calendar and pending-reward copy are factual interface status, not NPC dialogue. See LOGIN_BONUSES_GUIDE.md.
+
+## AI report status copy
+
+The admin-only AI analysis panel distinguishes queued, running, completed, failed and cancelled jobs. Report text is model output for administrator review and is never NPC dialogue or a participant-facing message. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).

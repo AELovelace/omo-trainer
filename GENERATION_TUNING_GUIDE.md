@@ -56,3 +56,7 @@ Observation, wetting (including Bedwetting and Used the potty), and diaper-chang
 ## Login bonuses and diamonds
 
 Daily bonuses pay 10/20/30 coins on streak days 1/2/3, then streak minus 3 diamonds each day. A missed day resets the streak. Diamond exchange is fixed at 50 coins per diamond. These rewards are separate from classification performance bonuses and probability rules; see LOGIN_BONUSES_GUIDE.md.
+
+## AI report prompt tuning
+
+Admin console → AI analysis offers an editable report prompt, 1–31 day comparison window, model, temperature and output token limit. Save before queueing. Reports retain their settings and aggregate source statistics; prompt changes affect future jobs. This customizes inference instructions, not model weights. See [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md).
