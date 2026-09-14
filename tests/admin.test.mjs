@@ -134,7 +134,7 @@ test('analytics separate participant-day intake, actual events, random draws and
   assert.equal(view.graphs.find(g=>g.id==='classification').rows.find(row=>row[0]==='semi-forced')[1],1);
   assert.equal(view.chartRows.filter(row=>row[2]==='custom').length,2);
   assert.equal(new Set(view.chartRows.filter(row=>row[2]==='custom').map(row=>row[3])).size,2);
-  assert.equal(view.graphs.length,24);
+  assert.equal(view.graphs.length,27);
   assert.equal(analyzeDataset(data,{from:'2026-09-12'}).totals.wettings,0);
 });
 
@@ -145,4 +145,19 @@ test('legacy individual CSV without IDs has repeatable import identity and prese
   assert.equal(value.liquidsMl,400);
   assert.equal(parseAdminImport({format:'csv',text,participantId:'alice'})[0].records[0].id,value.id);
   assert.throws(()=>parseAdminImport({format:'csv',text}),/Select a user/);
+});
+
+
+test('categorical counts respect local hour boundaries and daily ordinal scores retain sample sizes and gaps',()=>{
+ const wet=(id,day,hour,category,position='sitting',offset='+14:00')=>({id,kind:'wetting',occurredAt:day+'T'+hour+':00'+offset,category,position});
+ const entries=[wet('f','2026-09-01','02:59','forced'),wet('sf','2026-09-01','03:00','semi-forced'),wet('v','2026-09-01','05:59','voluntary','standing'),wet('si','2026-09-01','06:00','semi-involuntary','laying-down'),wet('i','2026-09-03','23:59','involuntary','sitting','-12:00'),observation('ignored')];
+ const data={users:[{id:'a',label:'Same',records:entries.map(entry=>({entry}))},{id:'b',label:'Same',records:[{entry:wet('b','2026-09-01','03:00','involuntary')}]}]};
+ const get=(view,id)=>view.graphs.find(g=>g.id===id),view=analyzeDataset(data,{timeBinHours:3,interval:'month'});
+ assert.deepEqual(get(view,'position-action').rows.find(r=>r[0]==='Sitting'),['Sitting',1,1,0,0,2,4]);
+ const hours=get(view,'time-action').rows;assert.equal(hours.length,8);assert.deepEqual(hours[0],['00:00 to 03:00',1,0,0,0,0,1]);assert.deepEqual(hours[1],['03:00 to 06:00',0,1,1,0,1,3]);assert.equal(hours[2][4],1);assert.equal(hours[7][5],1);
+ const score=get(view,'action-score');assert.deepEqual(score.rows,[['2026-09-01',3,5,2],['2026-09-03',5,1,1]]);assert.deepEqual(score.yDomain,[1,5]);assert.equal(score.breakOnDayGap,true);assert.deepEqual(score.plotColumns,[1]);
+ const six=get(analyzeDataset(data,{timeBinHours:6}),'time-action').rows;assert.equal(six.length,4);assert.deepEqual(six[0],['00:00 to 06:00',1,1,1,0,1,4]);
+ const individual=analyzeDataset({users:[data.users[0]]},{from:'2026-09-01',to:'2026-09-01'});assert.deepEqual(get(individual,'action-score').rows,[['2026-09-01',2.5,4,1]]);
+ assert.deepEqual(get(analyzeDataset(data,{from:'2026-09-04'}),'action-score').rows,[]);assert.throws(()=>analyzeDataset(data,{timeBinHours:4}),/3- or 6-hour/);
+ assert.equal(entries[0].category,'forced','Analytics never rewrites categorical records');
 });

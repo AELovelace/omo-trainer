@@ -152,3 +152,19 @@ and app assets together.
 Run `node tests/observation-reward-browser.mjs` with `PUPPETEER_MODULE` (module
 file path) and `CHROME_PATH` to check real saved rewards, offline recovery, guest
 feedback, focus, and mobile sizing using disposable local accounts.
+
+Admin Analytics includes **Action by position**, **Action by time of day**
+(choose 3- or 6-hour bins), and **Daily action score**. Only actual classified
+wettings contribute. F=1, SF=2, V=3, SI=4, I=5; the daily event-weighted mean
+uses a fixed 1-5 axis and calendar-day spacing with gaps for unrecorded days.
+This ordinal coding assumes equal category spacing; it is descriptive rather
+than a measure of training effectiveness. Select one participant for an individual
+trend. Everyone pools events, so frequent loggers carry more weight. Exact tables
+and CSV include event counts and the number of contributing participants.
+Position/time tables include per-group totals, and SVG downloads retain the axis.
+Times use the saved local offset; date/participant filters apply, but weekly or
+monthly grouping does not change the daily score graph. No stored records change.
+
+`tests/admin-actions-browser.mjs` checks these charts, filter controls, fixed
+axis, missing-day gaps and mobile layout. Set `PUPPETEER_MODULE` and
+`CHROME_PATH` as for the other browser checks.

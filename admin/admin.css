@@ -63,3 +63,5 @@
 .reminder-preview { padding:16px; border:1px solid var(--border); background:var(--panel-deep); white-space:pre-wrap; overflow-wrap:anywhere; }
 
 #prediction-selection { overflow-wrap:anywhere; } /* Long participant labels and IDs remain readable on phones. */
+
+.action-bin-control { max-width:240px; margin:20px 0; } /* Keep the time-bin selector usable at phone widths. */

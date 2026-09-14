@@ -53,7 +53,7 @@ try {
   if(page.url().startsWith(issuer))await Promise.all([page.waitForNavigation({waitUntil:'networkidle0'}),page.click('button[type="submit"]')]);
   assert.equal(page.url(),origin+'/tracker/admin/');
   await page.waitForSelector('#graphs .admin-graph');
-  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),20);
+  assert.equal(await page.$$eval('#graphs .admin-graph',nodes=>nodes.length),23);
   assert.equal(await page.$$eval('#potty-graphs .admin-graph',nodes=>nodes.length),4);
   assert.match(await page.$eval('#chart-lines',node=>node.textContent),/A custom line/);
   assert.equal(await page.evaluate(()=>localStorage.length),0,'The admin console must not cache everyone’s data in localStorage');
@@ -182,7 +182,7 @@ try {
   assert.equal(await ordinary.$$eval('#graphs .admin-graph',nodes=>nodes.length),0,'Ordinary users must not receive shared analytics');
   assert.equal(await ordinary.evaluate(async()=> (await fetch('../api/admin/data')).status),403);
   assert.deepEqual(errors,[]);
-  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 24 graphs, potty chart drilldown, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
+  console.log('PASS: trusted lid0ll bootstrap + backup, real admin OAuth callback, 27 graphs, potty chart drilldown, cohort/individual exports, CSV preview/import, access controls, participant denial, private caching and four viewport widths.');
   console.log('Screenshots: '+directory);
 }finally{
   if(browser)await browser.close();db.close();

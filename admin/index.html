@@ -39,6 +39,7 @@
       <section data-panel="analytics" aria-labelledby="analytics-title">
         <h2 id="analytics-title" tabindex="-1">Advanced analytics</h2>
         <p class="section-copy">Date filters use each record's saved local date. Graphs count recorded activity; missing records do not establish that no events occurred. Current protocol and chart counters use complete saved history. Each graph includes exact data and an SVG download.</p>
+        <div class="action-bin-control"><label for="action-time-bin">Time-of-day groups</label><select id="action-time-bin"><option value="3">3 hours</option><option value="6" selected>6 hours</option></select></div>
         <div id="admin-summary" class="admin-summary"></div>
         <div id="graphs" class="admin-graphs"></div>
         <section class="card"><h2>Participant snapshots</h2><p class="section-copy">Current enrollment and chart dates, timezone, probability, refusal count and reveal status.</p><div id="participant-snapshots" class="table-scroll"></div></section>

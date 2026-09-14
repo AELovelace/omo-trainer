@@ -4,7 +4,7 @@ import { datasetCsv } from '../lib/admin-format.js';
 
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); // Escape user-authored labels before creating HTML or SVG.
-const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7'];
+const colors=['#ff96c8','#b3a4f4','#ffe66f','#7fd9c7','#88bfff']; // Five distinct keys cover every action category.
 const fmt=value=>typeof value==='number'?Number(value.toFixed(2)).toLocaleString():String(value??'');
 let csrf='',actor=null,users=[],dataset=null,analysis=null,preview=null,recordLimit=100,loading=false,accessEpoch=0;
 const pottyGraphIds=new Set(['stars','row-stars','refusals','reveal']);
@@ -53,21 +53,25 @@ function plot(graph) { // Dependency-free SVG plots use explicit axes and toolti
   const w=720,h=300,left=58,right=16,top=16,bottom=62,pw=w-left-right,ph=h-top-bottom;
   const max=Math.max(1,...rows.flatMap(row=>(graph.type==='scatter'?[row[2]]:cols.map(i=>row[i])).map(Number)));
   const maxX=Math.max(1,...rows.map(row=>graph.type==='scatter'?Number(row[1]):0));
-  const y=value=>top+ph-(Number(value)/max)*ph;
+  const [yMin,yMax]=graph.yDomain??[0,max];
+  const y=value=>top+ph-((Number(value)-yMin)/(yMax-yMin))*ph;
   let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+escape(graph.title)+'"><title>'+escape(graph.title)+'</title><rect width="'+w+'" height="'+h+'" fill="#260b20"/>';
   for(let i=0;i<=4;i++) {
-    const value=max*i/4,py=y(value);
+    const value=yMin+(yMax-yMin)*i/4,py=y(value);
     svg+='<path d="M'+left+' '+py+'H'+(w-right)+'" stroke="#5f344e"/><text x="'+(left-8)+'" y="'+(py+4)+'" text-anchor="end" fill="#cca9bd" font-size="11">'+escape(fmt(value))+'</text>';
   }
   if(graph.type==='scatter') {
     for(const row of rows) svg+='<circle cx="'+(left+Number(row[1])/maxX*pw)+'" cy="'+y(row[2])+'" r="4" fill="#ff96c8" opacity=".65"><title>'+escape(row[0]+': '+fmt(row[1])+' mL, '+fmt(row[2])+' events')+'</title></circle>';
     svg+='<text x="'+left+'" y="'+(h-34)+'" fill="#cca9bd" font-size="11">0</text><text x="'+(w-right)+'" y="'+(h-34)+'" text-anchor="end" fill="#cca9bd" font-size="11">'+escape(fmt(maxX))+'</text><text x="'+(w/2)+'" y="'+(h-10)+'" text-anchor="middle" fill="#cca9bd" font-size="12">Logged intake (mL)</text>';
   } else {
-    const step=pw/Math.max(1,rows.length),x=i=>left+step*(i+.5);
+    const step=pw/Math.max(1,rows.length),dates=graph.dateAxis?rows.map(row=>Date.parse(row[0]+'T00:00:00Z')):null;
+    const x=i=>dates?(dates.at(-1)===dates[0]?left+pw/2:left+8+(dates[i]-dates[0])/(dates.at(-1)-dates[0])*(pw-16)):left+step*(i+.5); // Calendar spacing keeps gaps proportional to elapsed days.
     for(const [series,col] of cols.entries()) {
       const color=colors[series%colors.length];
       if(graph.type==='line') {
-        svg+='<polyline fill="none" stroke="'+color+'" stroke-width="2" points="'+rows.map((row,i)=>x(i)+','+y(row[col])).join(' ')+'"/>';
+        const segments=[[]];
+        rows.forEach((row,i)=>{if(graph.breakOnDayGap&&i&&dates[i]-dates[i-1]>86400000)segments.push([]);segments.at(-1).push(x(i)+','+y(row[col]));});
+        svg+=segments.filter(points=>points.length>1).map(points=>'<polyline fill="none" stroke="'+color+'" stroke-width="2" points="'+points.join(' ')+'"/>').join(''); // No trend is drawn through a day with no recorded events.
         svg+=rows.map((row,i)=>'<circle cx="'+x(i)+'" cy="'+y(row[col])+'" r="3" fill="'+color+'"><title>'+escape(row[0]+' / '+graph.columns[col]+': '+fmt(row[col]))+'</title></circle>').join('');
       } else {
         const bw=step*.76/cols.length;
@@ -77,6 +81,8 @@ function plot(graph) { // Dependency-free SVG plots use explicit axes and toolti
     const stride=Math.max(1,Math.ceil(rows.length/7));
     rows.forEach((row,i)=>{if(i%stride===0) svg+='<text x="'+x(i)+'" y="'+(h-34)+'" text-anchor="middle" fill="#cca9bd" font-size="10">'+escape(String(row[0]).slice(0,18))+'</text>';});
   }
+  if(graph.xLabel)svg+='<text x="'+(left+pw/2)+'" y="'+(h-8)+'" text-anchor="middle" fill="#cca9bd" font-size="12">'+escape(graph.xLabel)+'</text>';
+  if(graph.yLabel)svg+='<text transform="translate(13 '+(top+ph/2)+') rotate(-90)" text-anchor="middle" fill="#cca9bd" font-size="11">'+escape(graph.yLabel)+'</text>';
   svg+='</svg>';
   if(graph.rows.length>limit) svg+='<p>Plot shows '+(graph.type==='line'?'the latest ':'the first ')+limit+' rows. Exact data and exports include all '+graph.rows.length+' rows.</p>';
   return svg;
@@ -85,7 +91,7 @@ function renderAnalytics() { // Date and participant filters recompute charts lo
   if(!dataset) return;
   const from=$('#date-from').value,to=$('#date-to').value;
   if(from && to && from>to) { status('Analysis start must be on or before its end.'); return; }
-  analysis=analyzeDataset(cohort(),{from,to,interval:$('#interval').value});
+  analysis=analyzeDataset(cohort(),{from,to,interval:$('#interval').value,timeBinHours:Number($('#action-time-bin').value)});
   const t=analysis.totals;
   $('#admin-summary').innerHTML=[['Participants',t.users],['Observations',t.observations],['Classified wettings',t.wettings],['Diaper changes',t.changes],['Random rolls',t.randomRolls],['Logged intake (mL)',t.liquids],['Chart stars',t.stars]].map(([label,n])=>'<article><strong>'+escape(fmt(n))+'</strong><span>'+label+'</span></article>').join('');
   const graphCard=graph=>{
@@ -284,7 +290,7 @@ $('#participant-filter').addEventListener('change',()=>{
   chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); resetPreview(); renderAnalytics();
   if(selectedId() && location.hash==='#potty-charts') void loadPottyChart(selectedId());
 });
-for(const selector of ['#date-from','#date-to','#interval']) $(selector).addEventListener('change',renderAnalytics);
+for(const selector of ['#date-from','#date-to','#interval','#action-time-bin']) $(selector).addEventListener('change',renderAnalytics);
 $('#all-dates').addEventListener('click',()=>{$('#date-from').value='';$('#date-to').value='';renderAnalytics();});
 $('#user-search').addEventListener('input',renderUsers);
 $('#record-kind').addEventListener('change',()=>{recordLimit=100;renderRecords();});
