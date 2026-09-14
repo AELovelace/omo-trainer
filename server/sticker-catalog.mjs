@@ -16,6 +16,8 @@ export function stickerCatalog() { // Stable IDs follow relative filenames; rest
     if(STICKER_DUPLICATES.some(duplicate=>duplicate.path===path))return []; // Duplicate scans are not separate collectible designs.
     if(!types[extension] || path.split('/').some(part=>part.startsWith('.') || part === '_originals')) return [];
     const label=item.name.slice(0,-extension.length).replace(/[_-]/g,' '); // Numbered assets get readable names without changing their stable IDs.
-    return [{id:createHash('sha256').update(path).digest('hex').slice(0,24),name:/^\d+$/.test(label)?'Sticker '+label:label,path:'sprites/'+path,url:'sprites/'+path.split('/').map(encodeURIComponent).join('/'),mime:types[extension]}];
+    const collection=label.match(/^(animal|sun) (\d+)$/i); // Give new sticker sets readable names while keeping filename-based ownership IDs unchanged.
+    const name=collection?`${collection[1][0].toUpperCase()+collection[1].slice(1)} Sticker ${Number(collection[2])}`:/^\d+$/.test(label)?'Sticker '+label:label;
+    return [{id:createHash('sha256').update(path).digest('hex').slice(0,24),name,path:'sprites/'+path,url:'sprites/'+path.split('/').map(encodeURIComponent).join('/'),mime:types[extension]}];
   }).sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
 }

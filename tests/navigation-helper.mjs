@@ -1,5 +1,6 @@
 export async function navigateMenu(page,selector) { // Exercise the same drawer interaction as a participant before selecting a destination.
-  if(!await page.$eval('#main-navigation',dialog=>dialog.open))await page.click('#menu-toggle');
+  const mobile=await page.evaluate(()=>matchMedia('(max-width: 680px)').matches);
+  if(mobile&&!await page.$eval('#main-navigation',dialog=>dialog.open))await page.click('#menu-toggle');
   await page.$eval('#main-navigation',dialog=>Promise.all(dialog.getAnimations().map(animation=>animation.finished.catch(()=>{}))));
   const target=await page.$eval(selector,link=>link.dataset.page);
   await page.click(selector);

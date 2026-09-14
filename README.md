@@ -60,7 +60,7 @@ Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](dep
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
 2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.sadgirlsclub.wtf** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, sprites/ (active images 1.png-12.png only; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, sprites/ (active images 1.png-12.png, animal_01.png-animal_09.png, and sun_01.png-sun_16.png; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 
@@ -171,7 +171,7 @@ axis, missing-day gaps and mobile layout. Set `PUPPETEER_MODULE` and
 
 ### Custom XY chart builder
 
-Open **Admin > Analytics > Build your own chart**. Select a recorded period or
+Open **Admin > Advanced Drilldown > Build your own chart**. Select a recorded period or
 any available numeric statistic for X, then check up to six Y statistics and
 choose their line colors. The 26 available statistics cover recorded activity,
 intake, classifications, positions, desperation levels, random outcomes/chance,
@@ -210,11 +210,26 @@ With `PUPPETEER_MODULE` and `CHROME_PATH` set, run
 `node tests/chart-builder-browser.mjs` for actual PNG/SVG/CSV/JSON downloads,
 selection controls, preset persistence, mobile layout and access cleanup.
 
-The participant webapp opens its main navigation with the **Menu** button in the
-top bar. The directory is a vertical drawer on phones and desktops, closed by
-default. Choose a destination, use Close/Escape, or tap the backdrop to dismiss
+The participant webapp keeps its persistent sidebar on desktop. On mobile
+(screens up to 680px wide), the **Menu** button in the top bar opens a vertical
+drawer, closed by default. Resizing to desktop closes the drawer and restores
+the sidebar. Choose a destination, use Close/Escape, or tap the backdrop to dismiss
 it. Keyboard focus stays inside the open menu and returns to its opener when
 dismissed. Navigation retains form drafts; the bottom mobile recording actions
 remain available. Both themes and offline PWA use are covered by
 `tests/theme-browser.mjs`. Deploy the app shell and updated service worker
 together so installed copies receive the new navigation.
+
+### Roll coin rewards
+
+New independent rolls accepted through participant sync earn **5 LiDollCoins for
+Hold** or **10 for Pee**. Sign in and enable sync to receive account rewards;
+offline rolls wait for their first successful sync. Existing server records and
+admin imports are not retroactively credited. Edits, deletes/restores and retries
+do not issue a second reward. Sticker and star rewards retain their existing rules.
+
+The scientific database queues the original amount in its durable reward outbox.
+The separate market database (schema 7) keeps only an opaque source receipt, coin
+amount, account balance and ledger entry. Market outages leave scientific saves
+intact; pending credits retry after recovery without duplicate issuance. Deploy
+the Node service and app shell together for the reward rules and display copy.

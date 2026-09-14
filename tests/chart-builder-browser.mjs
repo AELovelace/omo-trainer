@@ -14,12 +14,19 @@ const readDownload=async name=>{for(let i=0;i<100;i++){try{return await readFile
 try {
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH,headless:true,pipe:true});const context=await browser.createBrowserContext();await context.setCookie({name:'little_log',value:db.createSession(admin.id),domain:'127.0.0.1',path:'/tracker/',httpOnly:true});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&m.text().includes('Content Security Policy'))errors.push(m.text());});const cdp=await page.createCDPSession();await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
  await page.setViewport({width:1440,height:1100});await page.goto(origin+'/tracker/admin/',{waitUntil:'networkidle0'});await page.waitForSelector('#builder-plot svg');
+ assert.equal(await page.$eval('#chart-builder',e=>e.getClientRects().length),0,'Builder is no longer displayed in Analytics');
+ await page.click('[data-tab="advanced-drilldown"]');await page.waitForSelector('#chart-builder',{visible:true});
+ assert.equal(await page.$eval('[data-panel="analytics"]',e=>e.hidden),true);
+ assert.equal(await page.$eval('[data-tab="advanced-drilldown"]',e=>e.getAttribute('aria-current')),'page');
  const choose=async ids=>page.$$eval('#builder-metrics input[type="checkbox"]',(inputs,ids)=>{inputs.forEach(e=>{e.checked=ids.includes(e.value);});inputs[0].dispatchEvent(new Event('change',{bubbles:true}));},ids);
  await page.select('#participant-filter',alice.id);await choose(['wettings','liquids']);await page.select('#builder-x','liquids');await page.select('#builder-scale','normalized');assert.equal(await page.$$eval('#builder-plot circle',els=>els.length),8);
  await page.$eval('[data-color="wettings"]',e=>{e.value='#123456';e.dispatchEvent(new Event('change',{bubbles:true}));});assert.ok(await page.$eval('#builder-plot svg',e=>e.innerHTML.includes('#123456')));
+ await page.click('[data-tab="analytics"]');await page.waitForSelector('#chart-builder',{hidden:true});
+ await page.click('[data-tab="advanced-drilldown"]');await page.waitForSelector('#chart-builder',{visible:true});
+ assert.equal(await page.$eval('#builder-x',e=>e.value),'liquids','Navigation preserves the chart setup');
  await page.type('#builder-preset-name','Intake comparison');await page.click('#builder-save');assert.match(await page.$eval('#builder-status',e=>e.textContent),/setup saved/);
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('little-log.chart-presets.v1')));assert.deepEqual(saved[0].settings.y,['wettings','liquids']);assert.equal(JSON.stringify(saved).includes(alice.id),false);assert.equal(JSON.stringify(saved).includes('records'),false);
- await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('#builder-plot svg');await page.select('#builder-presets','Intake comparison');assert.equal(await page.$eval('#builder-x',e=>e.value),'liquids');assert.equal(await page.$eval('[data-color="wettings"]',e=>e.value),'#123456');
+ await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('#builder-plot svg',{visible:true});assert.equal(new URL(page.url()).hash,'#advanced-drilldown');await page.select('#builder-presets','Intake comparison');assert.equal(await page.$eval('#builder-x',e=>e.value),'liquids');assert.equal(await page.$eval('[data-color="wettings"]',e=>e.value),'#123456');
  await page.select('#participant-filter',alice.id);await page.$eval('.builder-picker',e=>e.open=false);
  await page.click('[data-builder-export="png"]');const png=await readDownload('little-log-custom-chart.png');assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),2200);assert.ok(png.readUInt32BE(20)>900);
  await page.click('[data-builder-export="svg"]');assert.match((await readDownload('little-log-custom-chart.svg')).toString(),/<svg/);

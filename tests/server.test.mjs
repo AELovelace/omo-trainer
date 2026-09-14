@@ -90,12 +90,13 @@ test('bundled chart stays inside the PWA and serves only its public assets under
 test('the actual sticker collection serves its images while original backups remain private', async () => {
   const {stickerCatalog}=await import('../server/sticker-catalog.mjs');
   const catalog=stickerCatalog();
-  assert.equal(catalog.length,12);
+  assert.equal(catalog.length,37);
   assert.equal(new Set(catalog.map(type=>type.id)).size,catalog.length);
   assert.ok(catalog.every(type=>!type.path.includes('/_originals/')&&type.path.startsWith('sprites/')));
-  for(let number=1;number<=12;number++) {
-    const type=catalog.find(type=>type.path==='sprites/'+number+'.png');
-    assert.equal(type.name,'Sticker '+number);
+  const expected=[...Array.from({length:12},(_,i)=>[String(i+1),'Sticker '+(i+1)]),...['animal','sun'].flatMap(set=>Array.from({length:set==='animal'?9:16},(_,i)=>[set+'_'+String(i+1).padStart(2,'0'),(set==='animal'?'Animal':'Sun')+' Sticker '+(i+1)]))];
+  for(const [file,name] of expected) {
+    const type=catalog.find(type=>type.path==='sprites/'+file+'.png');
+    assert.ok(type,'Reward catalog includes '+file);assert.equal(type.name,name);
     const response=await fetch(origin+'/tracker/'+type.url);
     assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');
     assert.deepEqual([...Buffer.from(await response.arrayBuffer()).subarray(0,8)],[137,80,78,71,13,10,26,10]);

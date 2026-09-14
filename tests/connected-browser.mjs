@@ -90,6 +90,7 @@ try {
   await navigateMenu(alice,'[data-page="settings"]');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
   await alice.waitForSelector('#confirm-password');
+  assert.equal(await alice.$eval('#age-confirmed', element => element.required && !element.checked), true, 'Age confirmation must be required and unchecked');
   await alice.setViewport({ width: 1280, height: 1100 });
   await alice.screenshot({ path: resolve(directory, 'registration-desktop.png'), fullPage: true });
   for (const width of [320, 390]) {
@@ -100,17 +101,22 @@ try {
   await fill(alice, '#username', 'alice');
   await fill(alice, '#password', password);
   await fill(alice, '#confirm-password', 'mismatched-password-value');
+  assert.equal(await alice.$eval('form', form => form.checkValidity()), false, 'Unchecked age confirmation prevents submission');
+  await alice.click('#age-confirmed');
+  assert.equal(await alice.$eval('form', form => form.checkValidity()), true);
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
   assert.match(await alice.$eval('#form-error', element => element.textContent), /Passwords do not match/);
   assert.equal(await alice.$eval('#password', element => element.value), '', 'Validation must not echo passwords');
   await fill(alice, '#username', 'bob');
   await fill(alice, '#password', password);
   await fill(alice, '#confirm-password', password);
+  await alice.click('#age-confirmed');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
   assert.match(await alice.$eval('#form-error', element => element.textContent), /username is unavailable/);
   await fill(alice, '#username', 'Alice');
   await fill(alice, '#password', password);
   await fill(alice, '#confirm-password', password);
+  await alice.click('#age-confirmed');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
   assert.equal(await alice.$('#password'), null, 'Successful registration must proceed to app consent');
   assert.match(await alice.$eval('h1', element => element.textContent), /Authorize access/);

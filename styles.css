@@ -1655,8 +1655,12 @@ dialog .primary {
 #observation-reward-name { margin-top:12px; font-weight:700; }
 #observation-reward-status { line-height:1.6; }
 
-/* The main directory is a closed-by-default modal drawer on every screen size. */
-.app-shell { grid-template-columns:minmax(0,1fr); }
+/* Desktop retains its sidebar; only mobile uses the modal directory. */
+#navigation-content { display:contents; }
+.topbar .menu-toggle { display:none; }
+@media (max-width:680px) {
+  #desktop-navigation { display:none; }
+}
 #main-navigation:not([open]) { display:none; }
 #main-navigation { position:fixed; inset:0 auto 0 0; margin:0; width:min(340px,calc(100vw - 44px)); max-width:none; height:100dvh; max-height:100dvh; padding: max(18px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom)); border:0; border-right:1px solid var(--border); border-radius:0 22px 22px 0; overflow-y:auto; overscroll-behavior:contain; color:var(--ink); }
 #main-navigation[open] { display:flex; flex-direction:column; }
@@ -1673,8 +1677,21 @@ dialog .primary {
 #main-navigation .nav-item small { display:block; margin-left:auto; }
 #main-navigation .nav-item.active { border-bottom:1px solid var(--border); }
 #main-navigation .sidebar-bottom { display:block; margin-top:auto; padding-top:24px; }
-.topbar-heading { display:flex; align-items:center; gap:16px; min-width:0; }
-.topbar .menu-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-size:12px; flex-shrink:0; }
+.topbar-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+/* Reuse the existing sigil and wordmark beside the mobile menu without a bulky image. */
+#topbar-brand { gap:9px; min-width:0; }
+#topbar-brand > span { font:800 22px/1.2 'Segoe UI',sans-serif; letter-spacing:-.6px; white-space:nowrap; }
+#topbar-brand .brand-sub { font:11px/1.5 'Segoe UI',sans-serif; letter-spacing:.3px; margin-top:5px; }
+#topbar-brand .brand-sigil { width:30px; height:36px; }
+@media (max-width:680px) {
+  .topbar-heading { width:100%; }
+  #topbar-brand > span { font-size:20px; }
+  #topbar-brand .brand-sub { font-size:9px; }
+  #topbar-brand .brand-sigil { width:26px; height:32px; }
+}
+@media (max-width:680px) {
+  .topbar .menu-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-size:12px; flex-shrink:0; }
+}
 html.navigation-open,html.navigation-open body { overflow:hidden; }
 @media(prefers-reduced-motion:no-preference) {
   #main-navigation[open] { animation:navigation-enter 160ms ease-out; }

@@ -10,6 +10,7 @@ import {openDatabase} from '../server/database.mjs';
 import {createApi} from '../server/api.mjs';
 const collection=[{id:'rose',name:'Rose',url:'stickers/rose.png'},{id:'moon',name:'Moon',url:'stickers/moon.png'}];
 const observation=id=>({id,kind:'observation',occurredAt:'2026-09-12T12:00:00+00:00',liquidsMl:100,liquidsMode:'interval',diaperNumber:1});
+const roll=(id,result='hold')=>({id,kind:'roll',occurredAt:observation('x').occurredAt,rolledAt:observation('x').occurredAt,result,rolledResult:result,probability:50,source:'random'});
 const chart=(stars={})=>({name:'Test',since:'2026-09-12',refusals:0,escaped:false,rows:[{id:'potty',label:'Potty',note:''},{id:'custom',label:'Water',note:'Recorded intake'}],stars});
 function fixture(path=':memory:',catalog=[collection[0]]) { // Tests use disposable accounts and deterministic single-sticker collections.
   const db=openDatabase(path,{stickerCatalog:catalog});
@@ -29,8 +30,8 @@ test('observations, wettings and changes each earn one random sticker; edits, re
     save(db,a,{...records[0],liquidsMl:200},1);assert.equal(save(db,a,records[0],0).conflicts.length,1);
     db.sync(a.id,[{id:'obs',mutationId:'delete',baseVersion:2,entry:null}]);save(db,a,records[0],3);
     const roll={id:'roll',kind:'roll',occurredAt:observation('x').occurredAt,rolledAt:observation('x').occurredAt,result:'hold',rolledResult:'hold',probability:50,source:'random'};save(db,a,roll);
-    const snap=db.economy.snapshot(a.id);assert.equal(snap.types.reduce((n,t)=>n+t.quantity,0),3);assert.equal(snap.history.length,3);
-    assert.ok(snap.history.every(row=>collection.some(type=>type.id===row.asset)));
+    const snap=db.economy.snapshot(a.id);assert.equal(snap.types.reduce((n,t)=>n+t.quantity,0),3);assert.equal(snap.history.length,4);assert.equal(snap.wallet.coins,5);
+    assert.ok(snap.history.filter(row=>row.asset!=='coins').every(row=>collection.some(type=>type.id===row.asset)));
     assert.equal(db.economy.snapshot(b.id).types.reduce((n,t)=>n+t.quantity,0),0);
   }finally{db.close();}
 });
@@ -162,12 +163,15 @@ test('scientific saves succeed while market is locked; durable outbox recovery a
     assert.equal(science.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name LIKE 'sticker_%' OR name LIKE 'economy_%'").get().n,0);
     assert.equal(market.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name IN ('entries','growth_charts','participants','app_sessions')").get().n,0);
     market.exec('BEGIN IMMEDIATE');
+    save(db,a,roll('pending-roll','pee'));
     save(db,a,observation('outage'));db.saveGrowthChart(a.id,{chart:chart({'2026-09-12:custom':true}),baseVersion:0,mutationId:'outage-chart'});
-    assert.equal(db.records(a.id).length,1);assert.equal(science.prepare('SELECT COUNT(*) AS n FROM reward_outbox WHERE delivered=0').get().n,2);
+    assert.equal(db.records(a.id).length,2);assert.equal(science.prepare('SELECT COUNT(*) AS n FROM reward_outbox WHERE delivered=0').get().n,3);
     market.exec('ROLLBACK');db.close();db=openDatabase(path,{stickerCatalog:[collection[0]]});
-    const recovered=db.economy.snapshot(a.id);assert.equal(recovered.types[0].quantity,1);assert.equal(recovered.wallet.stars,1);
+    const recovered=db.economy.snapshot(a.id);assert.equal(recovered.types[0].quantity,1);assert.equal(recovered.wallet.stars,1);assert.equal(recovered.wallet.coins,10);
+    assert.equal(market.prepare('SELECT source_id FROM roll_coin_rewards').get().source_id.length,64);
     science.exec('UPDATE reward_outbox SET delivered=0'); // Simulate a crash after market commit and before outbox acknowledgement.
     db.economy.tryFlush();assert.equal(db.economy.snapshot(a.id).types[0].quantity,1);assert.equal(db.economy.snapshot(a.id).wallet.stars,1);
+    assert.equal(db.economy.snapshot(a.id).wallet.coins,10);
     assert.equal(market.prepare("SELECT COUNT(*) AS n FROM sticker_rewards WHERE kind<>'record'").get().n,0);
     assert.equal(market.prepare("SELECT COUNT(*) AS n FROM star_rewards WHERE cell LIKE '%custom%'").get().n,0);
   }finally{market.close();science.close();db.close();rmSync(directory,{recursive:true});}
@@ -203,7 +207,7 @@ test('duplicate designs merge user and bank inventory, rewards and escrow while 
     const wanted=perform('bob',{action:'list',sticker:second.id,quantity:1,wantSticker:duplicate.id,wantQuantity:1});
     economy=createEconomy(market,stickerCatalog());
     const alice=economy.snapshot('alice'),bob=economy.snapshot('bob'),merged=alice.types.find(type=>type.id===first.id);
-    assert.equal(alice.types.length,12);assert.ok(!alice.types.some(type=>type.id===duplicate.id));
+    assert.equal(alice.types.length,stickerCatalog().length);assert.ok(!alice.types.some(type=>type.id===duplicate.id));
     assert.equal(merged.quantity,5);assert.equal(merged.escrow,1);assert.equal(merged.earned,7);assert.equal(merged.bankQuantity,2);
     assert.equal(merged.traders,2);assert.equal(merged.price,12);assert.equal(bob.types.find(type=>type.id===first.id).quantity,1);
     assert.equal(alice.wallet.coins,10);assert.equal(bob.wallet.coins,10);assert.equal(alice.bank.issuedCoins,20);
@@ -250,4 +254,26 @@ test('missing sticker assets keep the record reward pending without failing its 
  const {db,a}=fixture(':memory:',[]);
  try {save(db,a,observation('pending'));assert.equal(db.economy.recordReward(a.id,'pending'),null);assert.equal(db.records(a.id).length,1);assert.equal(db.economy.snapshot(a.id).pendingRewards,1);}
  finally{db.close();}
+});
+
+
+test('rolls credit integer coins once per owner and record, without stickers or edit/restore rewards',()=>{
+ const {db,a,b}=fixture();
+ try {
+  const changes=[roll('hold'),roll('pee','pee')].map(entry=>({id:entry.id,mutationId:entry.id,baseVersion:0,entry}));
+  db.sync(a.id,changes);db.sync(a.id,changes);
+  save(db,a,roll('hold','pee'),1); // Changing the outcome cannot increase an existing reward.
+  assert.equal(save(db,a,roll('hold'),0).conflicts.length,1);
+  db.sync(a.id,[{id:'pee',mutationId:'delete-roll',baseVersion:1,entry:null}]);save(db,a,roll('pee','pee'),2);
+  const snap=db.economy.snapshot(a.id);
+  assert.equal(snap.wallet.coins,15);assert.equal(snap.wallet.stars,0);
+  assert.equal(snap.types.reduce((sum,t)=>sum+t.quantity,0),0);
+  assert.deepEqual(snap.history.map(row=>row.delta).sort((a,b)=>a-b),[5,10]);
+  assert.ok(snap.history.every(row=>row.asset==='coins'&&row.reason==='roll reward'));
+  assert.equal(db.economy.snapshot(b.id).wallet.coins,0);
+  save(db,b,roll('hold'));assert.equal(db.economy.snapshot(b.id).wallet.coins,5);
+  assert.throws(()=>db.sync(a.id,[{id:'rolled-back',mutationId:'new-roll',baseVersion:0,entry:roll('rolled-back')},{...changes[0],entry:roll('hold','pee')}]),e=>e.status===400);
+  assert.equal(db.economy.snapshot(a.id).wallet.coins,15,'A failed scientific transaction cannot issue coins');
+  assert.equal(db.records(a.id).some(e=>e.id==='rolled-back'),false);
+ }finally{db.close();}
 });

@@ -78,6 +78,8 @@ export const authServer = http.createServer(async (request, response) => { // De
           return view(response, details.uid, 'register', clientName, 'Registration is busy or has had too many attempts. Try again in 15 minutes.', username.slice(0, 40), 429);
         }
         if (registrationsInFlight.has(details.uid)) return view(response, details.uid, 'register', clientName, 'Your registration is already being processed.', username.slice(0, 40), 409);
+        // Requires an explicit adult self-confirmation even when browser validation is bypassed.
+        if (form.get('ageConfirmed') !== 'yes') return view(response, details.uid, 'register', clientName, 'Confirm that you are 18 or older to create an account.', username.slice(0, 40), 400);
         if (password !== form.get('confirmPassword')) return view(response, details.uid, 'register', clientName, 'Passwords do not match. Enter them again.', username.slice(0, 40), 400);
         registrationsInFlight.add(details.uid);
         try {

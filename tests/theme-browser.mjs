@@ -13,15 +13,23 @@ try {
   const context=await browser.createBrowserContext(),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.setViewport({width:1440,height:1100});await page.goto(origin,{waitUntil:'networkidle0'});
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'little-tracker');
+  assert.equal(await page.$eval('#menu-toggle',el=>getComputedStyle(el).display),'none');
+  assert.equal(await page.$eval('#desktop-navigation',el=>el.contains(document.querySelector('[data-page="overview"]'))),true);
+  await page.setViewport({width:390,height:844});
   assert.equal(await page.$eval('#main-navigation',el=>el.open),false);
   await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));
   assert.equal(await page.$eval('#menu-toggle',el=>el.getAttribute('aria-expanded')),'true');
   for(let i=0;i<14;i++){await page.keyboard.press('Tab');assert.equal(await page.$eval('#main-navigation',el=>el.contains(document.activeElement)),true);}
   await page.keyboard.press('Escape');assert.equal(await page.$eval('#menu-toggle',el=>el.getAttribute('aria-expanded')),'false');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'menu-toggle');
-  await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));await page.mouse.click(1000,100);
+  await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));await page.mouse.click(380,100);
   assert.equal(await page.$eval('#main-navigation',el=>el.open),false);
 
+  await page.click('#menu-toggle');
+  await page.setViewport({width:1440,height:1100});
+  await page.waitForFunction(()=>!document.querySelector('#main-navigation').open);
+  assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('navigation-open')),false,'Resizing an open drawer releases the page');
+  assert.equal(await page.$eval('#desktop-navigation',el=>el.contains(document.activeElement)),true,'Focus returns to the desktop links');
   assert.equal(await page.$eval('#crt-toggle',el=>el.getAttribute('aria-pressed')),'false');
   await page.screenshot({path:resolve(directory,'little-tracker-desktop.png'),fullPage:true});
   await page.$eval('#liquids',el=>{el.value='321';el.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -33,14 +41,21 @@ try {
   await navigateMenu(page,'[data-page="overview"]');await page.screenshot({path:resolve(directory,'caregiver-tracker-desktop.png'),fullPage:true});
   for(const theme of ['little-tracker','caregiver-tracker']) {
     await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector',theme);
-    for(const width of [320,390,680,1024,1440]) {
+    for(const width of [320,390,680,681,1024,1440]) {
       await page.setViewport({width,height:900});
+      await page.waitForFunction(mobile=>document.querySelector('#navigation-content').parentElement.id===(mobile?'main-navigation':'desktop-navigation'),{},width<=680);
+      if(width<=680) {
       await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));
       assert.equal(await page.$eval('#main-navigation',el=>el.scrollWidth<=el.clientWidth),true,'Drawer overflow '+theme+' '+width);
       const links=await page.$$eval('#main-navigation [data-page]',els=>els.map(el=>({top:el.getBoundingClientRect().top,left:el.getBoundingClientRect().left})));
       assert.equal(new Set(links.map(link=>link.left)).size,1);assert.ok(links.every((link,i)=>!i||link.top>links[i-1].top));
       if(width===390)await page.screenshot({path:resolve(directory,theme+'-drawer-mobile.png')});
       await page.click('#menu-close');
+      } else {
+        assert.equal(await page.$eval('#menu-toggle',el=>getComputedStyle(el).display),'none');
+        assert.equal(await page.$$eval('#desktop-navigation [data-page]',els=>els.filter(el=>el.getClientRects().length).length),6,'Desktop destinations remain visible');
+        assert.equal(await page.$eval('#desktop-navigation',el=>el.getBoundingClientRect().right<=document.querySelector('main').getBoundingClientRect().left),true,'Sidebar sits beside the content');
+      }
 
       for(const route of ['settings','overview','history','potty-chart','stickers']) {
         await page.evaluate(route=>{location.hash='#'+route;},route);await page.waitForFunction(route=>!document.querySelector('#page-'+route).hidden,{},route);
@@ -66,5 +81,5 @@ try {
   await blocked.evaluateOnNewDocument(()=>{const save=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='little-log.theme')throw new Error('Storage blocked');return save.call(this,key,value);};});
   await blocked.goto(origin+'#settings',{waitUntil:'networkidle0'});await blocked.select('#theme-selector','caregiver-tracker');
   assert.equal(await blocked.evaluate(()=>document.documentElement.dataset.theme),'caregiver-tracker');assert.match(await blocked.$eval('#theme-status',el=>el.textContent),/could not save/);
-  assert.deepEqual(errors,[]);console.log('Theme browser passed: default, both designs, persistent selection, draft preservation, five widths and routes, cross-tab updates, offline reload and blocked storage. Screenshots: '+directory);
+  assert.deepEqual(errors,[]);console.log('Theme browser passed: default, both designs, persistent selection, draft preservation, six widths, responsive navigation and routes, cross-tab updates, offline reload and blocked storage. Screenshots: '+directory);
 }finally{await browser?.close();await new Promise(done=>server.close(done));}

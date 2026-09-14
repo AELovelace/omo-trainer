@@ -33,8 +33,8 @@
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
   </svg>
   <div class="app-shell">
-    <dialog id="main-navigation" class="sidebar" aria-label="Main menu">
-      <div class="navigation-heading"><strong>Menu</strong><button id="menu-close" type="button" class="button small secondary" autofocus>Close</button></div>
+    <aside id="desktop-navigation" class="sidebar">
+      <div id="navigation-content">
       <a class="brand" href="#overview" aria-label="Little Log home"><svg class="brand-sigil"><use href="#i-sigil"/></svg><span><span class="caregiver-brand-name">CHRYSALIS</span><span class="little-brand-name">Little Tracker</span><span class="brand-sub"><span class="caregiver-brand-name">RESEARCH SYSTEMS DIVISION</span><span class="little-brand-name">little steps, lovely days</span></span></span></a>
       <div class="sidebar-code"><span>TERMINAL / LL-01</span><span>◆</span></div><span class="nav-label">OBSERVATION DIRECTORY</span>
       <nav aria-label="Main navigation">
@@ -46,9 +46,13 @@
         <a href="#about" data-page="about" class="nav-item"><svg class="icon"><use href="#i-info"/></svg><span>About</span><small>06</small></a>
       </nav>
       <div class="sidebar-bottom"><div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><strong>RECORD ACCESS</strong><p>Sign in to sync with lidoll.dev. The organizer can access synced records for analysis.</p></div><a class="site-link" href="https://lidoll.dev">RETURN TO LIDOLL.DEV <span>↗</span></a></div>
+      </div>
+    </aside>
+    <dialog id="main-navigation" class="sidebar" aria-label="Main menu">
+      <div class="navigation-heading"><strong>Menu</strong><button id="menu-close" type="button" class="button small secondary" autofocus>Close</button></div>
     </dialog>
     <main id="main-content" tabindex="-1">
-      <header class="topbar"><div class="topbar-heading"><button id="menu-toggle" type="button" class="button small secondary menu-toggle" aria-haspopup="dialog" aria-controls="main-navigation" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button><span class="breadcrumb">CHRYSALIS <span>/</span> INTERNAL ARCHIVE</span></div><div class="topbar-actions"><button id="crt-toggle" class="button small secondary" type="button" aria-pressed="false">CRT FX // OFF</button><div class="sync-summary"><span class="local-badge"><span></span> Saved on this device</span><button id="topbar-sign-in" class="button small primary" type="button">Sign in to sync</button></div><button id="install-button" class="button small secondary" hidden>Install app <span>↓</span></button></div></header>
+      <header class="topbar"><div class="topbar-heading"><button id="menu-toggle" type="button" class="button small secondary menu-toggle" aria-haspopup="dialog" aria-controls="main-navigation" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button><a id="topbar-brand" class="brand" href="#overview" aria-label="Little Tracker home"><svg class="brand-sigil" aria-hidden="true"><use href="#i-sigil"/></svg><span>Little Tracker<span class="brand-sub">little steps, lovely days</span></span></a></div><div class="topbar-actions"><button id="crt-toggle" class="button small secondary" type="button" aria-pressed="false">CRT FX // OFF</button><div class="sync-summary"><span class="local-badge"><span></span> Saved on this device</span><button id="topbar-sign-in" class="button small primary" type="button">Sign in to sync</button></div><button id="install-button" class="button small secondary" hidden>Install app <span>↓</span></button></div></header>
       <div id="storage-warning" class="notice error" role="alert" hidden></div>
       <section id="page-overview" class="page">
         <aside id="admin-reminder" class="admin-reminder" aria-label="Admin reminder" hidden>
@@ -104,6 +108,7 @@
               <p class="field-help"><a href="#about" class="text-link">About the daily protocol</a></p>
               <p id="cooldown-status" class="field-help" role="timer" aria-live="off"></p><p class="prompt-note">A random prompt, never permission. Use the bathroom whenever you need. A result doesn't add a wetting.</p>
               <button class="button primary roll-button" type="button"><svg class="icon"><use href="#i-dice"/></svg>Roll <span>↗</span></button>
+              <p class="field-help">Account rewards: Hold earns 5 LiDollCoins; Pee earns 10. Sign in and sync your rolls to receive coins.</p>
               <div id="roll-result" class="result-message" role="status" aria-live="polite" hidden></div>
             </section>
             <section class="card prediction-card" data-mobile-panel="analysis" aria-labelledby="prediction-title">

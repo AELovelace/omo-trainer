@@ -24,12 +24,22 @@ function renderChartHeader() { // Match the top bar to the current chart, accoun
 window.addEventListener('little-log-chart-status',event=>{chartHeader=event.detail;renderChartHeader();});
 window.addEventListener('little-log-economy-status',event=>{economyHeader=event.detail;renderChartHeader();});
 const navigationDrawer=$('#main-navigation');
+const mobileNavigation=window.matchMedia('(max-width: 680px)');
 function closeNavigation() { // Native dialog restores focus to the menu opener and keeps background controls out of the tab order while open.
   if(navigationDrawer.open)navigationDrawer.close();
   $('#menu-toggle').setAttribute('aria-expanded','false');
   document.documentElement.classList.remove('navigation-open');
 }
+function updateNavigationLayout() { // Moves the same links between the desktop sidebar and mobile dialog, preserving the current page.
+  const hadFocus=navigationDrawer.contains(document.activeElement);
+  closeNavigation();
+  (mobileNavigation.matches?navigationDrawer:$('#desktop-navigation')).append($('#navigation-content'));
+  if(hadFocus&&!mobileNavigation.matches)$('#navigation-content [aria-current="page"]')?.focus({preventScroll:true});
+}
+mobileNavigation.addEventListener('change',updateNavigationLayout);
+updateNavigationLayout();
 $('#menu-toggle').addEventListener('click',()=>{
+  if(!mobileNavigation.matches)return;
   if(navigationDrawer.open){closeNavigation();return;}
   navigationDrawer.showModal();
   $('#menu-toggle').setAttribute('aria-expanded','true');
@@ -561,7 +571,7 @@ $('.roll-button').addEventListener('click', () => { // Draws independently, leav
     const savedEntries = result === 'hold'
       ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt } : entry) : entries;
     commit({ ...state, entries: [...savedEntries, candidate] });
-    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
+    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. Account reward: ${result === 'pee' ? 10 : 5} LiDollCoins when this roll syncs. You're always free to use the bathroom.`;
     $('#roll-result').hidden = false;
   } catch (error) { notify(error.message); }
 });

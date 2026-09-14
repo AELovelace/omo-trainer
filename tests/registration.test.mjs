@@ -52,18 +52,21 @@ async function begin(address) { // Starts a genuine registered-client authorizat
 
 function submit(flow, fields = {}, headers = {}) { // Sends registration directly so server validation is tested independently of HTML constraints.
   return flow.request(flow.path, { method: 'POST', headers: { Origin: issuer, 'Content-Type': 'application/x-www-form-urlencoded', ...headers },
-    body: new URLSearchParams({ csrf: flow.csrf, username: 'candidate', password: 'synthetic-new-password', confirmPassword: 'synthetic-new-password', ...fields }),
+    body: new URLSearchParams({ csrf: flow.csrf, username: 'candidate', password: 'synthetic-new-password', confirmPassword: 'synthetic-new-password', ageConfirmed: 'yes', ...fields }),
   });
 }
 
 test('signup pages require an OIDC interaction and use uncached, isolated forms', async () => {
   const flow = await begin();
   assert.match(flow.html, /autocomplete="new-password"/);
+  assert.match(flow.html, /<input id="age-confirmed" name="ageConfirmed" type="checkbox" value="yes" required>/);
   const response = await flow.request(flow.path);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   const login = await flow.request(flow.path.replace('/register', ''));
-  assert.match(await login.text(), /id="create-account-link"/);
+  const loginHtml = await login.text();
+  assert.match(loginHtml, /id="create-account-link"/);
+  assert.doesNotMatch(loginHtml, /id="age-confirmed"/);
   assert.equal((await session()(flow.path)).status, 400, 'A URL without the matching interaction cookie is insufficient');
   assert.equal((await flow.request('/interaction/expired/register')).status, 400);
   assert.equal(store.list().length, 0);
@@ -94,6 +97,20 @@ test('registration validates credentials and confirmation without reflecting pas
     assert.doesNotMatch(html, /synthetic-new-password|<img|value="short"/);
   }
   assert.equal(store.list().length, 0);
+});
+
+test('registration requires explicit adult confirmation before creating an account', async () => {
+  const flow = await begin('192.0.2.16');
+  const before = store.list().length;
+  // Direct requests verify that HTML's required checkbox cannot be bypassed.
+  for (const value of [null, '', 'no', 'false', 'true', 'on']) {
+    const body = new URLSearchParams({ csrf: flow.csrf, username: 'unconfirmed-user', password: 'synthetic-new-password', confirmPassword: 'synthetic-new-password' });
+    if (value !== null) body.set('ageConfirmed', value);
+    const response = await flow.request(flow.path, { method: 'POST', headers: { Origin: issuer, 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+    assert.equal(response.status, 400);
+    assert.match(await response.text(), /Confirm that you are 18 or older/);
+    assert.equal(store.list().length, before, 'Unconfirmed registration must not create an identity');
+  }
 });
 
 test('signup normalizes usernames, persists an identity, and rejects replay and duplicate password replacement', async () => {

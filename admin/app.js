@@ -208,7 +208,7 @@ async function renderAudit() {
   $('#audit-table').innerHTML=table(['When','Actor','Action','Target','Details'],result.audit.map(row=>[row.created_at,users.find(user=>user.id===row.actor_id)?.label??row.actor_id,row.action,row.target_id,row.details_json]));
 }
 function navigate() {
-  const route=['analytics','potty-charts','predictions','users','transfer','reminders','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
+  const route=['analytics','advanced-drilldown','potty-charts','predictions','users','transfer','reminders','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
   $('.admin-filters').hidden=route==='reminders';
