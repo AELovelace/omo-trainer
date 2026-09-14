@@ -1654,3 +1654,29 @@ dialog .primary {
 #observation-reward-image { max-width:100%; height:192px; object-fit:contain; }
 #observation-reward-name { margin-top:12px; font-weight:700; }
 #observation-reward-status { line-height:1.6; }
+
+/* The main directory is a closed-by-default modal drawer on every screen size. */
+.app-shell { grid-template-columns:minmax(0,1fr); }
+#main-navigation:not([open]) { display:none; }
+#main-navigation { position:fixed; inset:0 auto 0 0; margin:0; width:min(340px,calc(100vw - 44px)); max-width:none; height:100dvh; max-height:100dvh; padding: max(18px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom)); border:0; border-right:1px solid var(--border); border-radius:0 22px 22px 0; overflow-y:auto; overscroll-behavior:contain; color:var(--ink); }
+#main-navigation[open] { display:flex; flex-direction:column; }
+#main-navigation::backdrop { background:#160c2466; backdrop-filter:blur(3px); }
+.navigation-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }
+#main-navigation .brand { flex-shrink:0; }
+#main-navigation .brand > span { display:block; font-size:20px; }
+#main-navigation .brand-sub { display:block; font-size:9px; }
+#main-navigation .sidebar-code { display:flex; margin-top:20px; }
+#main-navigation .nav-label { display:block; margin:22px 0 12px; }
+#main-navigation nav { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; margin-top:0; }
+#main-navigation .nav-item { display:flex; flex-direction:row; justify-content:flex-start; text-align:left; gap:12px; padding:12px; margin:0; min-height:48px; font-size:14px; white-space:normal; }
+#main-navigation .nav-item .icon { width:20px; height:20px; }
+#main-navigation .nav-item small { display:block; margin-left:auto; }
+#main-navigation .nav-item.active { border-bottom:1px solid var(--border); }
+#main-navigation .sidebar-bottom { display:block; margin-top:auto; padding-top:24px; }
+.topbar-heading { display:flex; align-items:center; gap:16px; min-width:0; }
+.topbar .menu-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-size:12px; flex-shrink:0; }
+html.navigation-open,html.navigation-open body { overflow:hidden; }
+@media(prefers-reduced-motion:no-preference) {
+  #main-navigation[open] { animation:navigation-enter 160ms ease-out; }
+  @keyframes navigation-enter { from { transform:translateX(-100%); } to { transform:translateX(0); } }
+}

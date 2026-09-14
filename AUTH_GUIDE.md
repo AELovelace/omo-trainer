@@ -22,11 +22,11 @@ Default local issuer: `http://127.0.0.1:4180`. Default client: `little-log`. Def
 
 ## Self-service registration
 
-Choose **Settings & data → Create account** in Little Log, or **Create an account** on the shared sign-in page. Registration asks for a username, password, and password confirmation. Usernames are normalized to lowercase and must contain 3–40 letters, numbers, dots, underscores, or hyphens, starting with a letter or number. Passwords must contain 12–128 characters. No email address is collected or email verification performed; password resets remain administrator-managed.
+Choose **Settings & data → Create account** in Little Log, or **Register for LiD0llID** on the shared sign-in page. Registration asks for a username, password, and password confirmation. Usernames are normalized to lowercase and must contain 3–40 letters, numbers, dots, underscores, or hyphens, starting with a letter or number. Passwords must contain 12–128 characters. No email address is collected or email verification performed; password resets remain administrator-managed.
 
 Little Log starts registration at `/tracker/auth/register`. This creates a normal server-side OIDC login attempt with PKCE, state, and nonce, using `screen_hint=signup` and `prompt=login` to request the auth service's registration screen. The form lives at `/interaction/<uid>/register` and requires the matching, unexpired interaction cookie. Do not bookmark or publish an interaction URL. Future registered apps can request the same signup hint using their own client and callback.
 
-Successful registration signs into the shared identity service and proceeds through app consent. From Little Log's **Create account** button, existing local entries remain on the device until **Connect & upload my entries** is selected. Someone who follows **Create an account** during an already-started sign-in/connect flow continues that original connection request. Account creation itself never grants access to another participant's records.
+Successful registration signs into the shared identity service and proceeds through app consent. From Little Log's **Create account** button, existing local entries remain on the device until **Connect & upload my entries** is selected. Someone who follows **Register for LiD0llID** during an already-started sign-in/connect flow continues that original connection request. Account creation itself never grants access to another participant's records.
 
 Registration is enabled for visitors after deploying this version; no new environment variables, ports, Nginx locations, or schema migration are required. Deploy both Node services and the frontend together. Duplicate usernames, including disabled accounts, cannot be overwritten. Registration POSTs require a matching Origin, interaction cookie, and action-bound CSRF token. Responses are not cached and never redisplay submitted passwords. Attempts are limited to 10 per source IP and 60 globally per 15 minutes, persisted in SQLite, with at most four concurrent registration password hashes per auth process. The proxy must supply the real client IP using the existing trusted-proxy configuration.
 
@@ -141,3 +141,9 @@ also requires a coordinated issuer-key migration or the recovery backup.
 
 See [Growth Chart integration](GROWTH_CHART_GUIDE.md) for linking, offline changes,
 conflict resolution and chart exports.
+
+The shared sign-in page shows a prominent, full-width **Register for LiD0llID**
+button for every registered app. It opens registration inside the current OAuth
+interaction, preserving the requesting client, callback, PKCE and requested
+permissions. No extra client registration or external-app update is needed.
+Deploy the auth view and restart `lidoll-auth` to publish the button.

@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -33,7 +34,7 @@ try {
   await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   await page.goto(origin, { waitUntil: 'networkidle0' });
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.click('[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');await navigateMenu(page,'[data-page="overview"]');
   await page.click('#crt-toggle');
   assert.equal(await page.$eval('#crt-toggle', element => element.getAttribute('aria-pressed')), 'false');
   await page.reload({ waitUntil: 'networkidle0' });
@@ -90,7 +91,7 @@ try {
   assert.match(await page.$eval('#chart svg', element => element.getAttribute('aria-label')), /milliliters/);
   await fill(page, '#chart-days', 30);
   assert.equal(await page.$$eval('#chart-data tr', elements => elements.length), 30);
-  await page.click('[data-page="history"]');
+  await navigateMenu(page,'[data-page="history"]');
   assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 4);
   await fill(page, '#filter-result', 'observation');
   assert.equal(await page.$$eval('#history-body tr', elements => elements.length), 3);
@@ -105,7 +106,7 @@ try {
   const cdp = await page.createCDPSession();
   await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDirectory });
   await page.click('#export-csv');
-  await page.click('[data-page="settings"]');
+  await navigateMenu(page,'[data-page="settings"]');
   await page.click('#export-json');
   await page.waitForFunction(() => !document.querySelector('#page-settings').hidden);
   let downloads = [];
@@ -133,7 +134,7 @@ try {
   await fill(page, '#default-position', 'standing');
   await page.click('#settings-form button');
   assert.equal((await saved(page)).settings.probability, 50);
-  await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="overview"]');
   assert.equal(await page.$eval('#probability', element => element.value), '50');
 
   await page.setOfflineMode(true);
@@ -147,22 +148,22 @@ try {
 
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
   for (const route of ['overview', 'history', 'settings', 'about', 'potty-chart']) {
-    await page.click(`[data-page="${route}"]`);
+    await navigateMenu(page,`[data-page="${route}"]`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} must not overflow the phone viewport`);
   }
-  await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="overview"]');
   await page.screenshot({ path: resolve(artifacts, 'mobile.png'), fullPage: true });
   await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   await page.screenshot({ path: resolve(artifacts, 'desktop.png'), fullPage: true });
 
-  await page.click('[data-page="history"]');
+  await navigateMenu(page,'[data-page="history"]');
   page.once('dialog', dialog => dialog.accept());
   await page.click('[data-delete]');
   assert.equal((await saved(page)).entries.length, 3);
 
   const before = await saved(page);
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException('Storage full', 'QuotaExceededError'); }; });
-  await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="overview"]');
   await page.click('#save-observation');
   assert.deepEqual(await saved(page), before);
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
@@ -173,7 +174,7 @@ try {
   assert.equal(await page.$eval('#storage-warning', element => element.hidden), false);
   await page.click('#save-observation');
   assert.equal(await page.evaluate(() => localStorage.getItem('lidoll.little-log.v1')), 'invalid JSON recovery test');
-  await page.click('[data-page="settings"]');
+  await navigateMenu(page,'[data-page="settings"]');
   page.once('dialog', dialog => dialog.accept());
   await page.click('#delete-all');
   assert.equal(await saved(page), null);

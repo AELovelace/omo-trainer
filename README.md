@@ -209,3 +209,12 @@ Run `node --test tests/chart-builder.test.mjs` for aggregation/export checks.
 With `PUPPETEER_MODULE` and `CHROME_PATH` set, run
 `node tests/chart-builder-browser.mjs` for actual PNG/SVG/CSV/JSON downloads,
 selection controls, preset persistence, mobile layout and access cleanup.
+
+The participant webapp opens its main navigation with the **Menu** button in the
+top bar. The directory is a vertical drawer on phones and desktops, closed by
+default. Choose a destination, use Close/Escape, or tap the backdrop to dismiss
+it. Keyboard focus stays inside the open menu and returns to its opener when
+dismissed. Navigation retains form drafts; the bottom mobile recording actions
+remain available. Both themes and offline PWA use are covered by
+`tests/theme-browser.mjs`. Deploy the app shell and updated service worker
+together so installed copies receive the new navigation.

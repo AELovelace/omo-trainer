@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,mkdtemp} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -37,7 +38,7 @@ try {
   await home.click('#reminder-pause');await home.mouse.move(0,0);await home.evaluate(()=>document.activeElement.blur());
   assert.equal(await home.$eval('.reminder-track',el=>getComputedStyle(el).animationPlayState),'running');
   for(const theme of ['little-tracker','caregiver-tracker']) {
-    await home.click('[data-page="settings"]');await home.select('#theme-selector',theme);await home.click('[data-page="overview"]');
+    await navigateMenu(home,'[data-page="settings"]');await home.select('#theme-selector',theme);await navigateMenu(home,'[data-page="overview"]');
     for(const width of [320,390,680,1024,1440]) {await home.setViewport({width,height:900});assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' overflow '+width);}
     await home.setViewport({width:390,height:844});await home.screenshot({path:resolve(directory,theme+'-mobile.png')});
   }

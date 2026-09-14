@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -51,7 +52,7 @@ async function settled(page, count) { // Waits for both the expected local count
   }, { timeout: 20000 }, count).catch(async error => { throw new Error(`${error.message}: ${await page.$eval('#sync-status', element => element.textContent)}; ${JSON.stringify(await saved(page))}`); });
 }
 async function signIn(page, username, fromHeader = false) { // Exercises both sign-in entry points through the real shared identity and callback flow.
-  await page.click(`[data-page="${fromHeader ? 'history' : 'settings'}"]`);
+  await navigateMenu(page,`[data-page="${fromHeader ? 'history' : 'settings'}"]`);
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click(fromHeader ? '#topbar-sign-in' : '#connect-account')]);
   await page.waitForSelector('#username');
   await page.screenshot({ path: resolve(directory, 'auth-signin.png'), fullPage: true }); // Captures the shared identity theme before any synthetic password is entered.
@@ -67,7 +68,7 @@ async function signIn(page, username, fromHeader = false) { // Exercises both si
   if (fromHeader) {
     await page.waitForFunction(() => document.querySelector('#topbar-sign-in').textContent === 'Connect device');
     assert.equal((await saved(page))?.sync.participant ?? null, null, 'Header sign-in must not silently approve uploading records');
-    await page.click('[data-page="overview"]');
+    await navigateMenu(page,'[data-page="overview"]');
     await page.click('#topbar-sign-in');
     await page.waitForFunction(() => !document.querySelector('#page-settings').hidden && document.activeElement.id === 'connect-account');
     await page.click('#connect-account');
@@ -86,7 +87,7 @@ try {
   await fill(alice, '#liquids', 400);
   await alice.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; });
   await alice.click('#save-observation');
-  await alice.click('[data-page="settings"]');
+  await navigateMenu(alice,'[data-page="settings"]');
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('#register-account')]);
   await alice.waitForSelector('#confirm-password');
   await alice.setViewport({ width: 1280, height: 1100 });
@@ -139,7 +140,7 @@ try {
   assert.equal((await saved(second)).entries[0].liquidsMl, 400);
   await second.evaluate(() => navigator.serviceWorker.ready);
   await second.setOfflineMode(true);
-  await second.click('[data-page="overview"]');
+  await navigateMenu(second,'[data-page="overview"]');
   await fill(second, '#liquids', 700);
   await second.evaluate(() => { crypto.getRandomValues = values => { values.fill(0); return values; }; }); // Keeps this queue-size assertion independent of an additional failure-deadline update.
   await second.click('#save-observation');
@@ -147,7 +148,7 @@ try {
   await second.reload({ waitUntil: 'networkidle0' });
   assert.equal((await saved(second)).entries.length, 2);
   await second.setOfflineMode(false);
-  await second.click('[data-page="settings"]');
+  await navigateMenu(second,'[data-page="settings"]');
   await second.click('#sync-now');
   await settled(second, 2);
   await alice.click('#sync-now');
@@ -163,23 +164,23 @@ try {
   console.log('PASS: participant isolation');
 
   await second.setOfflineMode(true);
-  await second.click('[data-page="history"]');
+  await navigateMenu(second,'[data-page="history"]');
   await second.click('[data-edit]');
   await fill(second, '#edit-liquids', 900);
   await second.click('#edit-form button[type="submit"]');
-  await alice.click('[data-page="history"]');
+  await navigateMenu(alice,'[data-page="history"]');
   await alice.click('[data-edit]');
   await fill(alice, '#edit-liquids', 800);
   await alice.click('#edit-form button[type="submit"]');
   await settled(alice, 2);
   await second.setOfflineMode(false);
-  await second.click('[data-page="settings"]');
+  await navigateMenu(second,'[data-page="settings"]');
   await second.click('#sync-now');
   await second.waitForSelector('.sync-conflict');
   assert.equal((await saved(second)).sync.conflicts[0].local.liquidsMl, 900);
   await second.click('.sync-conflict button');
   await settled(second, 2);
-  await alice.click('[data-page="settings"]');
+  await navigateMenu(alice,'[data-page="settings"]');
   await alice.click('#sync-now');
   await alice.waitForFunction(() => JSON.parse(localStorage.getItem('lidoll.little-log.v1')).entries.some(entry => entry.liquidsMl === 900));
   console.log('PASS: concurrent edits require an explicit conflict choice');
@@ -199,7 +200,7 @@ try {
   console.log('PASS: a second OIDC app reuses the account; authorization codes cannot be replayed');
 
   await alice.bringToFront(); // The SSO tab was active; foreground this device before interacting with its native date form.
-  await alice.click('[data-page="overview"]');
+  await navigateMenu(alice,'[data-page="overview"]');
   await fill(alice, '#wetting-category', 'semi-involuntary');
   await alice.click('#wetting-form button[type="submit"]');
   console.log('Wetting submitted on the first device');
@@ -208,10 +209,10 @@ try {
   await second.click('#sync-now');
   await settled(second, 3);
   assert.equal((await saved(second)).entries.find(entry => entry.kind === 'wetting').category, 'semi-involuntary');
-  await second.click('[data-page="overview"]');
+  await navigateMenu(second,'[data-page="overview"]');
   assert.equal(await second.$eval('#protocol-probability', element => element.textContent), await alice.$eval('#protocol-probability', element => element.textContent));
   await alice.bringToFront();
-  await alice.click('[data-page="settings"]');
+  await navigateMenu(alice,'[data-page="settings"]');
   console.log('PASS: classified wettings and enrollment sync to the second device');
 
   const database = openDatabase(resolve(dataDirectory, 'little-log.sqlite'));

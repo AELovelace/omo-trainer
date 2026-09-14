@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -64,7 +65,7 @@ try {
   for (const page of [first, second]) { page.on('pageerror', error => errors.push(error.message)); await page.setViewport({ width: 390, height: 844 }); }
   await first.goto(origin + '/tracker/', { waitUntil: 'networkidle0' });
   await first.evaluate(()=>{window.integrationMarker='same-document';});
-  await first.click('#growth-chart-nav');
+  await navigateMenu(first,'#growth-chart-nav');
   await first.waitForFunction(()=>!document.querySelector('#page-potty-chart').hidden);
   assert.equal(await first.evaluate(()=>window.integrationMarker),'same-document','Chart navigation must not reload Little Log');
   assert.equal(await first.$('iframe'),null);
@@ -89,9 +90,9 @@ try {
   assert.equal(db.growthChart(alice.id).chart, null, 'An anonymous chart stays local before sign-in');
   await first.click('.row-tool:not(.row-tool-delete):not(.is-locked-tool)');
   await first.$eval('.row-edit-note',node=>{node.value='Draft kept inside Little Log';});
-  await first.click('[data-page="overview"]');
+  await navigateMenu(first,'[data-page="overview"]');
   await first.$eval('#liquids',node=>{node.value='123';node.dispatchEvent(new Event('input',{bubbles:true}));});
-  await first.click('#growth-chart-nav');
+  await navigateMenu(first,'#growth-chart-nav');
   assert.equal(await first.$eval('.row-edit-note',node=>node.value),'Draft kept inside Little Log');
   await first.click('.row-edit-cancel');
   assert.equal(await first.$eval('#liquids',node=>node.value),'123');
@@ -217,7 +218,7 @@ try {
   assert.deepEqual(db.growthChart(alice.id).chart.stars, {});
   await first.screenshot({ path: resolve(directory, 'chart-phone.png'), fullPage: true });
   const centralBeforeLogout=db.growthChart(alice.id);
-  await first.click('[data-page="settings"]');
+  await navigateMenu(first,'[data-page="settings"]');
   first.once('dialog',dialog=>dialog.accept());
   await first.click('#disconnect-account');
   await first.waitForFunction(()=>JSON.parse(localStorage.getItem('ldq-growth-chart-v2')).sync===null);

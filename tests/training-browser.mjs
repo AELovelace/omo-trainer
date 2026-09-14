@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
@@ -95,7 +96,7 @@ try {
   await chance(page, 55);
   state = await saved(page);
   const first = state.entries.find(entry => entry.kind === 'wetting' && entry.category === 'semi-forced');
-  await page.click('[data-page="history"]');
+  await navigateMenu(page,'[data-page="history"]');
   assert.match(await page.$eval('#history-body', element => element.textContent), /Semi-Forced/);
   await page.click(`[data-edit="${first.id}"]`);
   assert.equal(await page.$eval('#wetting-edit-category', element => element.value), 'semi-forced');
@@ -112,10 +113,10 @@ try {
   await page.click(`[data-delete="${first.id}"]`);
   assert.equal((await saved(page)).entries.filter(entry => entry.kind === 'wetting').length, 1);
   await page.setOfflineMode(false);
-  await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="overview"]');
   await page.click('.roll-button');
   const failed = (await saved(page)).entries.filter(entry => entry.rolledAt).at(-1);
-  await page.click('[data-page="history"]');
+  await navigateMenu(page,'[data-page="history"]');
   await page.click('#clear-filters');
   page.once('dialog', dialog => dialog.accept());
   await page.click(`[data-delete="${failed.id}"]`);
@@ -123,11 +124,11 @@ try {
   for (const width of [320, 390, 680, 768, 1024, 1440]) {
     await page.setViewport({ width, height: 1000 });
     for (const route of ['overview', 'history', 'settings', 'about', 'potty-chart']) {
-      await page.click(`[data-page="${route}"]`);
+      await navigateMenu(page,`[data-page="${route}"]`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} overflows at ${width}px`);
     }
   }
-  await page.click('[data-page="overview"]');
+  await navigateMenu(page,'[data-page="overview"]');
   await page.screenshot({ path: resolve('artifacts/protocol-desktop.png'), fullPage: true });
   await page.setViewport({ width: 390, height: 844 });
 
@@ -170,7 +171,7 @@ try {
   await page.goForward(); await page.waitForFunction(() => location.hash === '#wetting');
   assert.deepEqual(await visiblePanels(), ['wetting']);
   assert.equal((await saved(page)).entries.length, entriesBeforeNavigation, 'Navigation must never save an observation, wetting or roll');
-  await page.click('[data-page="settings"]');
+  await navigateMenu(page,'[data-page="settings"]');
   await page.waitForFunction(() => !document.querySelector('#page-settings').hidden);
   assert.equal(await page.$('.mobile-actions [aria-current]'), null);
   await selectAction('change');
@@ -224,7 +225,7 @@ try {
   await page.setOfflineMode(false);
 
 
-  await page.click('[data-page="history"]');
+  await navigateMenu(page,'[data-page="history"]');
   const completed = (await saved(page)).entries.find(entry => entry.kind === 'diaper-change');
   await page.click('[data-edit="' + completed.id + '"]');
   await fill(page, '#diaper-change-edit-wettings', '5');

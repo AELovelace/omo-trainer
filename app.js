@@ -23,6 +23,39 @@ function renderChartHeader() { // Match the top bar to the current chart, accoun
 }
 window.addEventListener('little-log-chart-status',event=>{chartHeader=event.detail;renderChartHeader();});
 window.addEventListener('little-log-economy-status',event=>{economyHeader=event.detail;renderChartHeader();});
+const navigationDrawer=$('#main-navigation');
+function closeNavigation() { // Native dialog restores focus to the menu opener and keeps background controls out of the tab order while open.
+  if(navigationDrawer.open)navigationDrawer.close();
+  $('#menu-toggle').setAttribute('aria-expanded','false');
+  document.documentElement.classList.remove('navigation-open');
+}
+$('#menu-toggle').addEventListener('click',()=>{
+  if(navigationDrawer.open){closeNavigation();return;}
+  navigationDrawer.showModal();
+  $('#menu-toggle').setAttribute('aria-expanded','true');
+  document.documentElement.classList.add('navigation-open');
+});
+$('#menu-close').addEventListener('click',closeNavigation);
+navigationDrawer.addEventListener('keydown',event=>{ // Wrap keyboard traversal inside the drawer, including its first and last links.
+  if(event.key!=='Tab')return;
+  const items=[...navigationDrawer.querySelectorAll('button:not([disabled]),a[href]')].filter(el=>el.getClientRects().length);
+  const first=items[0],last=items.at(-1);
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+});
+navigationDrawer.addEventListener('cancel',event=>{event.preventDefault();closeNavigation();});
+navigationDrawer.addEventListener('close',()=>{if(!navigationDrawer.open)closeNavigation();}); // Escape and programmatic dismissal both restore the same UI state.
+let backdropPress=false;
+const outsideNavigation=event=>{const bounds=navigationDrawer.getBoundingClientRect();return event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom;};
+navigationDrawer.addEventListener('pointerdown',event=>{backdropPress=event.target===navigationDrawer&&outsideNavigation(event);});
+navigationDrawer.addEventListener('click',event=>{
+  if(backdropPress&&event.target===navigationDrawer&&outsideNavigation(event)){backdropPress=false;closeNavigation();return;}
+  backdropPress=false;
+  const link=event.target.closest('a[href]');if(!link)return;
+  closeNavigation();
+  if(link.getAttribute('href').startsWith('#'))requestAnimationFrame(()=>{navigate();$('#main-content').focus({preventScroll:true});}); // Selecting the current page also closes the drawer without clearing forms.
+});
+window.addEventListener('hashchange',closeNavigation);
 const positions = { standing: 'Standing', sitting: 'Sitting', 'laying-down': 'Laying down' };
 const categories = { forced: 'Forced', 'semi-forced': 'Semi-Forced', voluntary: 'Voluntary', 'semi-involuntary': 'Semi-involuntary', involuntary: 'Involuntary' };
 let editedWetting = null, editedDiaperChange = null;

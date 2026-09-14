@@ -1,3 +1,4 @@
+import {navigateMenu} from './navigation-helper.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,mkdtemp} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -12,37 +13,55 @@ try {
   const context=await browser.createBrowserContext(),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.setViewport({width:1440,height:1100});await page.goto(origin,{waitUntil:'networkidle0'});
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'little-tracker');
+  assert.equal(await page.$eval('#main-navigation',el=>el.open),false);
+  await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));
+  assert.equal(await page.$eval('#menu-toggle',el=>el.getAttribute('aria-expanded')),'true');
+  for(let i=0;i<14;i++){await page.keyboard.press('Tab');assert.equal(await page.$eval('#main-navigation',el=>el.contains(document.activeElement)),true);}
+  await page.keyboard.press('Escape');assert.equal(await page.$eval('#menu-toggle',el=>el.getAttribute('aria-expanded')),'false');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'menu-toggle');
+  await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));await page.mouse.click(1000,100);
+  assert.equal(await page.$eval('#main-navigation',el=>el.open),false);
+
   assert.equal(await page.$eval('#crt-toggle',el=>el.getAttribute('aria-pressed')),'false');
   await page.screenshot({path:resolve(directory,'little-tracker-desktop.png'),fullPage:true});
   await page.$eval('#liquids',el=>{el.value='321';el.dispatchEvent(new Event('input',{bubbles:true}));});
-  await page.click('[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');
+  await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector','caregiver-tracker');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(26, 6, 17)');
   assert.equal(await page.$eval('#crt-toggle',el=>el.getAttribute('aria-pressed')),'true');
   assert.equal(await page.$eval('#liquids',el=>el.value),'321','Switching themes retains unfinished forms');
   await page.reload({waitUntil:'networkidle0'});assert.equal(await page.$eval('#theme-selector',el=>el.value),'caregiver-tracker');
-  await page.click('[data-page="overview"]');await page.screenshot({path:resolve(directory,'caregiver-tracker-desktop.png'),fullPage:true});
+  await navigateMenu(page,'[data-page="overview"]');await page.screenshot({path:resolve(directory,'caregiver-tracker-desktop.png'),fullPage:true});
   for(const theme of ['little-tracker','caregiver-tracker']) {
-    await page.click('[data-page="settings"]');await page.select('#theme-selector',theme);
+    await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector',theme);
     for(const width of [320,390,680,1024,1440]) {
       await page.setViewport({width,height:900});
+      await page.click('#menu-toggle');await page.$eval('#main-navigation',el=>Promise.all(el.getAnimations().map(a=>a.finished)));
+      assert.equal(await page.$eval('#main-navigation',el=>el.scrollWidth<=el.clientWidth),true,'Drawer overflow '+theme+' '+width);
+      const links=await page.$$eval('#main-navigation [data-page]',els=>els.map(el=>({top:el.getBoundingClientRect().top,left:el.getBoundingClientRect().left})));
+      assert.equal(new Set(links.map(link=>link.left)).size,1);assert.ok(links.every((link,i)=>!i||link.top>links[i-1].top));
+      if(width===390)await page.screenshot({path:resolve(directory,theme+'-drawer-mobile.png')});
+      await page.click('#menu-close');
+
       for(const route of ['settings','overview','history','potty-chart','stickers']) {
         await page.evaluate(route=>{location.hash='#'+route;},route);await page.waitForFunction(route=>!document.querySelector('#page-'+route).hidden,{},route);
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' '+route+' overflows '+width);
       }
     }
   }
-  await page.setViewport({width:390,height:844});await page.click('[data-page="settings"]');await page.select('#theme-selector','little-tracker');
+  await page.setViewport({width:390,height:844});await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector','little-tracker');
   await page.screenshot({path:resolve(directory,'little-tracker-settings-mobile.png'),fullPage:true});
-  await page.click('[data-page="overview"]');await page.screenshot({path:resolve(directory,'little-tracker-mobile.png'),fullPage:true});
-  await page.click('[data-page="potty-chart"]');await page.screenshot({path:resolve(directory,'little-tracker-chart.png'),fullPage:true});
+  await navigateMenu(page,'[data-page="overview"]');await page.screenshot({path:resolve(directory,'little-tracker-mobile.png'),fullPage:true});
+  await navigateMenu(page,'[data-page="potty-chart"]');await page.screenshot({path:resolve(directory,'little-tracker-chart.png'),fullPage:true});
   const second=await context.newPage();await second.goto(origin+'#settings',{waitUntil:'networkidle0'});
   await second.select('#theme-selector','caregiver-tracker');await page.waitForFunction(()=>document.documentElement.dataset.theme==='caregiver-tracker',{polling:100});
-  await second.close();await page.bringToFront();await page.click('[data-page="settings"]');
+  await second.close();await page.bringToFront();await navigateMenu(page,'[data-page="settings"]');
   await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
   await page.setOfflineMode(true);await page.select('#theme-selector','little-tracker');await page.reload({waitUntil:'networkidle0'});
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'little-tracker');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(255, 245, 250)');
   await page.select('#theme-selector','caregiver-tracker');assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(26, 6, 17)');
+  await navigateMenu(page,'[data-page="overview"]');assert.equal(await page.$eval('#page-overview',el=>el.hidden),false);
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);await page.click('#menu-toggle');assert.equal(await page.$eval('#main-navigation',el=>el.getAnimations().length),0);await page.keyboard.press('Escape');
   const isolated=await browser.createBrowserContext(),blocked=await isolated.newPage();blocked.on('pageerror',error=>errors.push(error.message));
   await blocked.evaluateOnNewDocument(()=>{const save=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='little-log.theme')throw new Error('Storage blocked');return save.call(this,key,value);};});
   await blocked.goto(origin+'#settings',{waitUntil:'networkidle0'});await blocked.select('#theme-selector','caregiver-tracker');
