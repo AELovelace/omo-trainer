@@ -41,25 +41,25 @@ try {
   assert.equal(await a.$eval('#economy-form',form=>form.closest('dialog')?.id),'market-dialog');
   await a.click('#sticker-gallery button');await a.waitForFunction(()=>document.querySelector('#market-dialog').open);
   assert.equal(await a.$eval('#market-sticker',select=>select.value),type.id);
-  assert.equal(db.economy.snapshot(alice.id).wallet.coins,0,'Opening the dialog does not submit a sale');
+  assert.equal(db.economy.snapshot(alice.id).wallet.coins,15,'Opening the dialog does not submit a sale');
   for(const width of [320,390,680,1024,1440]) {
     await a.setViewport({width,height:844});assert.equal(await a.$eval('#market-dialog',dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Sale modal fits '+width);
   }
   await a.setViewport({width:390,height:844});await a.screenshot({path:resolve(directory,'sale-modal-mobile.png')});
   await a.keyboard.press('Escape');await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);
-  assert.equal(db.economy.snapshot(alice.id).wallet.coins,0,'Escape cancels without a transaction');
+  assert.equal(db.economy.snapshot(alice.id).wallet.coins,15,'Escape cancels without a transaction');
   assert.equal(await a.$('#market-bank-open'),null,'Bank browsing is removed');
   assert.equal(await a.$('#market-action option[value="bank-buy"]'),null,'Bank purchases are removed from the sale dialog');
   await a.$eval('#sticker-gallery button',button=>button.scrollIntoView({block:'center'})); // Keep the target above the fixed mobile navigation after closing the dialog.
   await a.click('#sticker-gallery button');
-  await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='10');
+  await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='25');
   await a.waitForFunction(()=>!document.querySelector('#market-dialog').open);await a.click('#sticker-gallery button');
   await a.select('#market-action','list-coins');await a.$eval('#market-price',el=>{el.value='7';el.dispatchEvent(new Event('input',{bubbles:true}));});
   await a.click('#market-submit');await a.waitForFunction(()=>document.querySelector('#market-listings').textContent.includes('Your listing:'));
   await b.bringToFront();await b.click('#economy-refresh');await b.waitForFunction(()=>document.querySelector('#market-listings').textContent.includes('Buy bundle'));
-  await b.click('#sticker-gallery button');assert.equal(await b.$eval('#market-sticker',select=>select.value),type.id);await b.click('#market-submit');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='11');
-  await b.click('#market-listings button');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='4');
-  assert.equal(db.economy.snapshot(alice.id).wallet.coins,17);assert.equal(db.economy.snapshot(bob.id).types.find(t=>t.id===type.id).quantity,3);
+  await b.click('#sticker-gallery button');assert.equal(await b.$eval('#market-sticker',select=>select.value),type.id);await b.click('#market-submit');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='26');
+  await b.click('#market-listings button');await b.waitForFunction(()=>document.querySelector('#economy-coins').textContent==='19');
+  assert.equal(db.economy.snapshot(alice.id).wallet.coins,32);assert.equal(db.economy.snapshot(bob.id).types.find(t=>t.id===type.id).quantity,3);
   // Drop a successful response after the server commits, then retry through the actual UI.
   await b.setRequestInterception(true);let dropped=false;
   b.on('request',async request=>{

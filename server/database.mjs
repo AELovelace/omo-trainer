@@ -1,3 +1,4 @@
+import {createNotifications} from './notifications.mjs';
 import { DatabaseSync, backup } from 'node:sqlite';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
@@ -215,14 +216,17 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
       json_extract(payload_json, '$.protocolVersion') AS protocol_version, json_extract(payload_json, '$.timeZone') AS time_zone,
       json_extract(payload_json, '$.lastFailureAt') AS last_failure_at,
       CASE WHEN json_extract(payload_json, '$.kind') IS NULL THEN 'cumulative'
-        ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode, json_extract(payload_json, '$.desperation') AS desperation
+        ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode, json_extract(payload_json, '$.desperation') AS desperation,
+      json_extract(payload_json, '$.baseProbability') AS base_probability, json_extract(payload_json, '$.probabilityModifier') AS probability_modifier,
+      json_extract(payload_json, '$.rollRuleVersion') AS roll_rule_version
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 
   const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
+  const notifications=createNotifications(db,records,options.notifications);
   return {
-    economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    notifications, economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),

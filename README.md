@@ -60,7 +60,7 @@ Use [tracker.env.example](deploy/tracker.env.example) and [auth.env.example](dep
 
 1. **Proxy the complete tracker:** add [nginx-proxy.conf](deploy/nginx-proxy.conf) inside the existing lidoll.dev HTTPS server block. It forwards /tracker/, including the API and callbacks, to your configured service address **10.1.1.23:4173**.
 2. **Publish shared authentication:** follow [AUTH_PROXY_SETUP.md](AUTH_PROXY_SETUP.md) to create the complete **auth.sadgirlsclub.wtf** HTTP/HTTPS server configuration and certificate. If a suitable HTTPS block already exists, use [nginx-auth.conf](deploy/nginx-auth.conf) inside it instead. Both options forward to **10.1.1.23:4180**.
-3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, lib/reward-celebration.js, sprites/ (active images 1.png-12.png, animal_01.png-animal_09.png, and sun_01.png-sun_16.png; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
+3. **Optional direct frontend hosting:** copy only index.html, styles.css, themes.css, theme-init.js, lib/theme.js, lib/reminder.js, app.js, sw.js, manifest.webmanifest, lib/model.js, lib/sync.js, lib/training.js, lib/diapers.js, lib/economy.js, lib/reward-celebration.js, lib/notifications.js, sprites/ (active images 1.png-12.png, animal_01.png-animal_09.png, and sun_01.png-sun_16.png; exclude duplicate scans and _originals/), icons/, and the bundled potty_chart/ into /srv/lidoll/public/tracker/. Use [nginx-static.conf](deploy/nginx-static.conf), which still proxies API/login routes to Node. Central storage requires the backend even with static frontend hosting.
 
 Only the reverse proxy should reach the private service ports. The TLS certificate and HTTPS listener belong to your existing server setup. Validate with nginx -t before reloading. No live server or DNS configuration has been modified by this implementation.
 
@@ -220,22 +220,50 @@ remain available. Both themes and offline PWA use are covered by
 `tests/theme-browser.mjs`. Deploy the app shell and updated service worker
 together so installed copies receive the new navigation.
 
-### Roll coin rewards
+### Performance bonuses
 
-New independent rolls accepted through participant sync earn **5 LiDollCoins for
-Hold** or **10 for Pee**. Sign in and enable sync to receive account rewards;
-offline rolls wait for their first successful sync. Existing server records and
-admin imports are not retroactively credited. Edits, deletes/restores and retries
-do not issue a second reward. Sticker and star rewards retain their existing rules.
-
-The scientific database queues the original amount in its durable reward outbox.
-The separate market database (schema 7) keeps only an opaque source receipt, coin
-amount, account balance and ledger entry. Market outages leave scientific saves
-intact; pending credits retry after recovery without duplicate issuance. Deploy
-the Node service and app shell together for the reward rules and display copy.
+New observations, classified wettings, diaper changes and independent rolls
+accepted through participant sync earn coin bonuses. The wallet displays the
+actual deposit amount with a cute Performance bonus message. Formulas remain in
+server/performance-bonus.mjs and the operator ECONOMY_GUIDE.md, outside the public
+asset allowlist. Offline records earn after sync; existing server records and
+admin imports are not retroactively credited. Edits, restores and retries do not
+issue second bonuses. Market schema 8 preserves prior roll receipts and balances.
 
 Earned observation stickers celebrate once when their artwork loads, with a brief
 confetti burst and a quiet synthesized success chime. Reduced-motion preferences
 disable confetti. The modal's Sound on/off button remembers this browser's choice.
 Closing the modal stops effects; pending and guest saves do not celebrate an
 unawarded sticker. Include lib/reward-celebration.js when deploying static assets.
+
+### Random base adjustments
+
+Version 2 rolls have a 2.5% chance each of a persistent +10-point base change,
+a persistent -10-point change, or a one-roll 100% chance. The other 92.5% use the
+current base. The persistent base stays within 20-80%, alongside the unchanged
+daily +/-5-point rule. Roll events replay in timestamp/ID order, then each
+completed day's adjustment; edits/deletions of historical records can recalculate
+that history. A guaranteed roll never writes 100% into the persistent base.
+Version 1 rolls retain their original temporary semantics. Base/actual probability,
+modifier and rule version remain in CSV/JSON exports and sync records.
+
+### Optional PWA potty reminders
+
+Settings offers opt-in Web Push with a message preview and quiet hours (22:00-08:00
+by default). The browser supplies its IANA timezone; recorded timestamp offsets
+remain absolute instants. A server minute timer saves one 1% lottery per account
+and local three-hour block. A winning block sends only within 15 minutes of the
+latest actual wetting plus that person's mean valid interval. At least 8 usable
+intervals over 3 recorded days are required; gaps outside 5-480 minutes, future
+records and data older than 90 days are excluded. Missing/stale records produce
+no reminder. New wettings update the estimate. Quiet hours and disabled accounts
+suppress delivery. Each block is claimed before sending, so a crash may lose a
+reminder but cannot repeatedly send it. Expired push endpoints are removed.
+
+Deploy npm dependencies, Node, app assets and service worker together. Generate
+stable VAPID keys with npx web-push generate-vapid-keys, put PUSH_VAPID_PUBLIC_KEY,
+PUSH_VAPID_PRIVATE_KEY and PUSH_VAPID_SUBJECT (your contact URL/mailto) in the
+tracker environment, then restart lidoll-tracker. Do not commit private keys.
+The server needs outbound HTTPS to browser push services. Users must explicitly
+enable notifications; this cannot be enabled for them by the server. iOS/iPadOS
+requires a supported Home Screen web app: https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/.

@@ -15,6 +15,7 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
     CREATE TABLE IF NOT EXISTS sticker_inventory(owner TEXT NOT NULL REFERENCES economy_wallets(owner),sticker TEXT NOT NULL REFERENCES sticker_types(id),quantity INTEGER NOT NULL CHECK(typeof(quantity)='integer' AND quantity BETWEEN 0 AND 2147483647),PRIMARY KEY(owner,sticker));
     CREATE TABLE IF NOT EXISTS sticker_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),entry_id TEXT NOT NULL,kind TEXT NOT NULL,sticker TEXT REFERENCES sticker_types(id),created_at TEXT NOT NULL,PRIMARY KEY(owner,entry_id));
     CREATE TABLE IF NOT EXISTS roll_coin_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),source_id TEXT NOT NULL,amount INTEGER NOT NULL CHECK(amount IN (5,10)),created_at TEXT NOT NULL,PRIMARY KEY(owner,source_id));
+    CREATE TABLE IF NOT EXISTS performance_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),source_id TEXT NOT NULL,amount INTEGER NOT NULL CHECK(typeof(amount)='integer' AND amount BETWEEN 1 AND 2147483647),created_at TEXT NOT NULL,PRIMARY KEY(owner,source_id));
     CREATE TABLE IF NOT EXISTS star_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),cell TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(owner,cell));
     CREATE TABLE IF NOT EXISTS economy_ledger(id INTEGER PRIMARY KEY,operation TEXT NOT NULL,owner TEXT NOT NULL REFERENCES economy_wallets(owner),asset TEXT NOT NULL,delta INTEGER NOT NULL CHECK(typeof(delta)='integer'),reason TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sticker_listings(id TEXT PRIMARY KEY,owner TEXT NOT NULL REFERENCES economy_wallets(owner),sticker TEXT NOT NULL REFERENCES sticker_types(id),quantity INTEGER NOT NULL CHECK(quantity>0),want_sticker TEXT REFERENCES sticker_types(id),want_quantity INTEGER NOT NULL CHECK(want_quantity>0),status TEXT NOT NULL,created_at TEXT NOT NULL);
@@ -29,6 +30,7 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
   db.exec('BEGIN IMMEDIATE');
   try {
     db.prepare('INSERT OR IGNORE INTO economy_wallets(owner) VALUES (?)').run(BANK);
+    db.exec('INSERT OR IGNORE INTO performance_rewards SELECT owner,source_id,amount,created_at FROM roll_coin_rewards'); // Carry old receipts forward without changing balances or historical ledger entries.
     db.exec('UPDATE sticker_types SET active=0');
     for(const sticker of catalog) db.prepare('INSERT INTO sticker_types VALUES (?,?,?,1) ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,active=1').run(sticker.id,sticker.name,sticker.url);
     mergeStickerDuplicates(db,catalog,adjust,duplicates);
@@ -58,11 +60,14 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
     db.prepare('INSERT OR IGNORE INTO sticker_rewards VALUES (?,?,?,NULL,?)').run(owner,entry.id,'record',new Date().toISOString());
     assignPending(owner);
   }
-  function awardRollCoins(owner,source,amount) { // The bridge transaction commits one receipt, balance credit and ledger entry together; only an opaque source and amount cross databases.
-    if(amount!==5&&amount!==10)fail(400,'Invalid roll reward amount.');
+  function awardPerformanceBonus(owner,source,amount) { // The bridge transaction commits one receipt, balance credit and ledger entry together; only an opaque source and amount cross databases.
+    integer(amount);
     wallet(owner);
-    const inserted=db.prepare('INSERT OR IGNORE INTO roll_coin_rewards VALUES (?,?,?,?)').run(owner,source,amount,new Date().toISOString()).changes;
-    if(inserted)adjust(owner,'coins',amount,'roll:'+source,'roll reward');
+    const inserted=db.prepare('INSERT OR IGNORE INTO performance_rewards VALUES (?,?,?,?)').run(owner,source,amount,new Date().toISOString()).changes;
+    if(inserted) {
+      const messages=['a little sparkle for your day!','a pocketful of sunshine!','a little hooray for you!','a sprinkle of happy!'];
+      adjust(owner,'coins',amount,'performance:'+source,'Performance bonus: '+messages[randomInt(messages.length)]);
+    }
   }
   function assignPending(owner) { // Missing assets leave durable pending rewards that resolve when the collection becomes available.
     if(!catalog.length) return;
@@ -172,5 +177,5 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.exec('COMMIT');return reward?{...reward,quantity:1}:null;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }
-  return {awardRecord,awardRollCoins,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
+  return {awardRecord,awardPerformanceBonus,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
 }

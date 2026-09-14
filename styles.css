@@ -1704,3 +1704,6 @@ html.navigation-open,html.navigation-open body { overflow:hidden; }
 #reward-confetti span:nth-child(3n) { border-radius:50%; width:9px; height:9px; }
 #reward-sound { margin:0 0 16px; }
 @media(prefers-reduced-motion:reduce) { #reward-confetti { display:none; } }
+
+.notification-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.notification-actions .button { white-space:normal; }

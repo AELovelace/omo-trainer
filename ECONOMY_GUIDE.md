@@ -51,3 +51,20 @@ Market schema version 2 merges duplicate types 13-16 into 1-4 on initialization.
 Choose **Sell this sticker** in your gallery to open the sale dialog with that type selected. Choose the quantity and either sell to the bank, list for coins, or offer a swap. Opening or closing the dialog never submits a transaction. A successful exchange closes it; errors and pending retries stay visible. Bank buying controls have been removed. Older clients receive an explicit rejection for new bank purchases; retries of already completed purchases return the existing receipt without transferring anything again. The standalone selling card has been removed.
 
 Linked external games use the same coin balance through LIDOLLCOIN_API.md. Their grants and operation receipts are in market schema version 3. Game credits are separately recorded as `game credit` ledger entries; the stickerbank issuance counter covers bank-issued coins only. Game tokens cannot access scientific records or spend chart stars.
+
+## Performance bonus policy (operator reference)
+
+New participant sync records use server/performance-bonus.mjs: observations earn
+5 coins; wettings earn F=5, SF=10, V=15, SI=20, I=25; diaper changes earn
+5 * (1 + wettingsCount), including 5 for a dry change; rolls earn their Hold=5 or
+Pee=10 base plus Low=0, Medium=2, High=4, Crisis=6. A missing desperation level
+adds zero. Values stay whole numbers; validated wetting counts are 0-10,000.
+
+Participant screens do not list these formulas. Ledger deposits show their true
+amount with a randomized cute Performance bonus message, chosen independently
+of the classification or desperation level. This is a game reward label, not a
+scientific assessment. The policy is not served as a public asset or API config.
+Scientific outbox entitlements freeze the first accepted amount. Market schema 8
+copies old roll receipts into performance_rewards without crediting again or
+rewriting old ledger rows. New market receipts contain only owner, hashed source,
+amount and timestamp. Existing records/admin imports only backfill stickers.

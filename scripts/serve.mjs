@@ -23,6 +23,7 @@ const files = new Map([
   ['coins/index.html','text/html; charset=utf-8'], ['coins/app.js','text/javascript; charset=utf-8'], ['coins/style.css','text/css; charset=utf-8'],
   ['lib/prediction.js', 'text/javascript; charset=utf-8'], ['lib/prediction-view.js', 'text/javascript; charset=utf-8'],
   ['lib/reward-celebration.js', 'text/javascript; charset=utf-8'],
+  ['lib/notifications.js', 'text/javascript; charset=utf-8'],
   ['lib/economy.js', 'text/javascript; charset=utf-8'],
   ['lib/reminder.js', 'text/javascript; charset=utf-8'],
   ['lib/theme.js', 'text/javascript; charset=utf-8'], ['theme-init.js', 'text/javascript; charset=utf-8'], ['themes.css', 'text/css; charset=utf-8'],
@@ -73,3 +74,7 @@ server.headersTimeout = 10000;
 server.listen(port, host, () => { // Binds locally by default; set HOST to a private interface when the reverse proxy runs on another server.
   console.log(`Little Log is running at http://${host}:${server.address().port}${base}`);
 });
+
+const notificationTimer=setInterval(()=>{void database.notifications.tick().catch(()=>{});},60000); // Deliver even while the PWA is closed.
+notificationTimer.unref();
+server.on('close',()=>clearInterval(notificationTimer));

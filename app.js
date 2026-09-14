@@ -1,7 +1,8 @@
+import './lib/notifications.js';
 import { createRewardCelebration } from './lib/reward-celebration.js';
 import { renderPrediction } from './lib/prediction-view.js';
 import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
-  timestampFromInput, rollResult, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
+  timestampFromInput, rollResult, rollProbability, sortedEntries, daySummary, dailySeries, mergeBackup, toCsv } from './lib/model.js';
 import { deviceState, emptySync, queueChanges, connectAccount, reconcile, resolveConflict } from './lib/sync.js';
 import { isRoll, isObservation } from './lib/model.js';
 import { diaperSummary, diaperAtTime, suggestedDiaperWettings } from './lib/diapers.js';
@@ -388,7 +389,7 @@ function renderProtocol() { // Shows the current chance and an auditable daily b
   const view = protocolView, counts = view.counts;
   $('#probability').value = view.probability;
   $('#protocol-probability').textContent = `${view.probability}%`;
-  $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's chance is fixed by completed days.` : 'Starts at 50% with your first saved check-in, wetting, or roll. Earlier, unclassified snapshots are kept in your archive.';
+  $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's base chance comes from completed days. Random adjustments can change the base; a 100% roll is temporary.` : 'Starts at 50% with your first saved check-in, wetting, or roll. Earlier, unclassified snapshots are kept in your archive.';
   $('#protocol-today').textContent = `Today: F ${counts.forced} · SF ${counts['semi-forced']} · V ${counts.voluntary} · SI ${counts['semi-involuntary']} · I ${counts.involuntary}. If today ended now: ${view.nextProbability}%.`;
   $('#protocol-days').innerHTML = view.days.slice(-90).reverse().map(day => `<tr><th scope="row">${day.day}</th><td>${day.forced}</td><td>${day['semi-forced']}</td><td>${day.voluntary}</td><td>${day['semi-involuntary']}</td><td>${day.involuntary}</td><td>${day.adjustment > 0 ? '+' : ''}${day.adjustment} pp</td><td>${day.before}% → ${day.probability}%</td></tr>`).join('');
   renderCooldown();
@@ -571,16 +572,17 @@ $('.roll-button').addEventListener('click', () => { // Draws independently, leav
     refreshStoredState();
     const now = new Date();
     if (cooldownRemaining(state.entries, now) > 0) throw new Error('The previous Hold result is still in its 10-minute cooldown.');
-    const entries = enroll(state.entries, now), probability = trainingState(entries, now).probability;
+    const entries = enroll(state.entries, now), variation=rollProbability(trainingState(entries, now).probability);
+    const {probability}=variation; // Sample only on a real roll, after the cooldown check; never on render or reload.
     const result = rollResult(probability), occurredAt = instantTimestamp(now);
-    const candidate = validateEntry({ id: crypto.randomUUID(), kind: 'roll', occurredAt, probability, result,
+    const candidate = validateEntry({ id: crypto.randomUUID(), kind: 'roll', occurredAt, ...variation, result,
       source: 'random', rolledAt: occurredAt, rolledResult: result, position: $('.roll-card input[name="position"]:checked').value,
       desperation: DESPERATION_LEVELS[Number($('#roll-desperation').value)] });
     const enrollment = protocolFor(entries);
     const savedEntries = result === 'hold'
       ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt } : entry) : entries;
     commit({ ...state, entries: [...savedEntries, candidate] });
-    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. Account reward: ${result === 'pee' ? 10 : 5} LiDollCoins when this roll syncs. You're always free to use the bathroom.`;
+    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
     $('#roll-result').hidden = false;
   } catch (error) { notify(error.message); }
 });

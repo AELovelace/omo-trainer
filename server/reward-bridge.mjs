@@ -1,3 +1,4 @@
+import {performanceBonus} from './performance-bonus.mjs';
 import {DatabaseSync,backup} from 'node:sqlite';
 import {dirname,resolve} from 'node:path';
 import {mkdirSync} from 'node:fs';
@@ -18,15 +19,19 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     if(marketPath!==':memory:')mkdirSync(dirname(marketPath),{recursive:true,mode:0o700});
     market=new DatabaseSync(marketPath);
     try {
-      if(market.prepare('PRAGMA user_version').get().user_version>7)throw Error('The market database requires a newer service version.');
+      if(market.prepare('PRAGMA user_version').get().user_version>8)throw Error('The market database requires a newer service version.');
       market.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=100;');
       store=createEconomy(market,options.stickerCatalog,id=>Boolean(science.prepare('SELECT p.id FROM participants p LEFT JOIN participant_access a ON a.participant_id=p.id WHERE p.id=? AND COALESCE(a.disabled,0)=0').get(id)),options.stickerDuplicates);
-      market.exec('PRAGMA user_version=7');
+      market.exec('PRAGMA user_version=8');
       return store;
     } catch(error) {market.close();market=null;store=null;throw error;}
   }
   function awardRecord(owner,entry) { // Persist only the source identity in the scientific transaction; the market never receives health payloads.
-    if(entry?.kind==='roll'&&['hold','pee'].includes(entry.result))science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id,amount) VALUES (?,'coins',?,?)").run(owner,entry.id,entry.result==='pee'?10:5);
+    const amount=performanceBonus(entry);
+    if(amount>0)science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id,amount) VALUES (?,'coins',?,?)").run(owner,entry.id,amount);
+    awardSticker(owner,entry);
+  }
+  function awardSticker(owner,entry) { // Historical/import backfill retains sticker-only behavior, without retroactive coin payouts.
     if(eligible.has(entry?.kind))science.prepare("INSERT OR IGNORE INTO reward_outbox(owner,asset,source_id) VALUES (?,'sticker',?)").run(owner,entry.id);
   }
   function awardStars(owner,chart) { // Preserve one economic entitlement per chart cell independently of later chart edits.
@@ -40,7 +45,7 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
       for(const reward of rewards) {
         const source=opaque(reward.source_id);
         if(reward.asset==='sticker')economy.awardRecord(reward.owner,{id:source});
-        else if(reward.asset==='coins')economy.awardRollCoins(reward.owner,source,reward.amount);
+        else if(reward.asset==='coins')economy.awardPerformanceBonus(reward.owner,source,reward.amount);
         else if(reward.asset==='star')economy.awardStars(reward.owner,{stars:{[source]:true}});
         else throw Error('Unknown pending reward asset.');
       }
@@ -59,7 +64,7 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
   function stageExisting(owner) { // Backfill existing/imported records by stable ID without ever importing balances or market transactions.
     science.exec('BEGIN IMMEDIATE');
     try {
-      for(const row of science.prepare("SELECT id,json_extract(payload_json,'$.kind') AS kind FROM entries e WHERE participant_id=? AND deleted_at IS NULL AND json_extract(payload_json,'$.kind') IN ('observation','wetting','diaper-change') AND NOT EXISTS(SELECT 1 FROM reward_outbox r WHERE r.owner=e.participant_id AND r.asset='sticker' AND r.source_id=e.id)").all(owner))awardRecord(owner,row);
+      for(const row of science.prepare("SELECT id,json_extract(payload_json,'$.kind') AS kind FROM entries e WHERE participant_id=? AND deleted_at IS NULL AND json_extract(payload_json,'$.kind') IN ('observation','wetting','diaper-change') AND NOT EXISTS(SELECT 1 FROM reward_outbox r WHERE r.owner=e.participant_id AND r.asset='sticker' AND r.source_id=e.id)").all(owner))awardSticker(owner,row);
       const chart=science.prepare('SELECT payload_json FROM growth_charts WHERE participant_id=?').get(owner);
       if(chart)awardStars(owner,JSON.parse(chart.payload_json));
       science.exec('COMMIT');

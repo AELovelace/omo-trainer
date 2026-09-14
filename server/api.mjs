@@ -36,6 +36,9 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if(route==='notifications'&&request.method==='GET')return send(response,200,{...database.notifications.status(participant.id),csrf,participant});
+      if(route==='notifications'&&request.method==='POST')return send(response,200,database.notifications.save(participant.id,await body(request,8192)));
+      if(route==='notifications/disable'&&request.method==='POST')return send(response,200,database.notifications.remove(participant.id,await body(request,4096)));
       if(route==='coin-connections'&&request.method==='GET')return send(response,200,{participant,csrf,connections:database.economy.coins('connections',participant.id)});
       if(route==='coin-inspect'&&request.method==='POST')return send(response,200,database.economy.coins('inspect',participant.id,(await body(request,4096)).user_code));
       if(route==='coin-approve'&&request.method==='POST')return send(response,200,database.economy.coins('approve',participant.id,await body(request,4096)));

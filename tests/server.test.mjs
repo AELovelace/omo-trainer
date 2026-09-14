@@ -101,5 +101,5 @@ test('the actual sticker collection serves its images while original backups rem
     assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');
     assert.deepEqual([...Buffer.from(await response.arrayBuffer()).subarray(0,8)],[137,80,78,71,13,10,26,10]);
   }
-  for(const path of ['sprites/13.png','sprites/14.png','sprites/15.png','sprites/16.png','sprites/_originals/1.png','sprites/README.md','sprites/../server/economy.mjs'])assert.equal((await fetch(origin+'/tracker/'+path)).status,404);
+  for(const path of ['sprites/13.png','sprites/14.png','sprites/15.png','sprites/16.png','sprites/_originals/1.png','server/performance-bonus.mjs','ECONOMY_GUIDE.md','sprites/README.md','sprites/../server/economy.mjs'])assert.equal((await fetch(origin+'/tracker/'+path)).status,404);
 });
