@@ -70,4 +70,4 @@ preserved form drafts, cached offline navigation and reconnect behavior. They
 use disposable data and never spend real coins.
 
 
-The potty tracker's top-right **Join Discord** link opens https://discord.gg/D2SburkeQn in a new tab, including before sign-in.
+The potty tracker's top-right **Join Discord** link opens https://discord.gg/DBzvxxdvXt in a new tab, including before sign-in.
