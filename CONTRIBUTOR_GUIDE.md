@@ -135,3 +135,7 @@ The admin-only AI analysis panel uses a supervised worker thread and a private S
 ## Registration grants
 
 New participant creation atomically stages a one-time 50-coin welcome entitlement. Keep its market receipt, credit and ledger entry transactional; never award from ordinary wallet reads or repeated sign-ins. Existing accounts are excluded. See [ECONOMY_GUIDE.md](ECONOMY_GUIDE.md).
+
+## Report API integrations
+
+MommyBot can read completed analysis documents using a dedicated admin-issued `reports:read` token. Keep credentials separate from wallet grants and recheck the issuing admin's live role. Commit `ai_report_feed` cursors with completed documents, using completion order rather than job creation order. See [AI_REPORT_API.md](AI_REPORT_API.md).

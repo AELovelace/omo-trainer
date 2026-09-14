@@ -2,7 +2,17 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
   const $=id=>document.getElementById('ai-'+id);
   let settings=null,dirty=false,busy=false,epoch=0,requestId=null,report=null,nextCursor=null,page=null;
   const message=text=>{$('status').textContent=text;};
-  function controls(){for(const id of ['save','reload','run','refresh','older'])$(id).disabled=busy||!authorized()||(id==='run'&&(!settings||dirty));} // Unsaved prompt changes cannot accidentally launch with an older prompt.
+  function controls(){for(const id of ['save','reload','run','refresh','older','token-create'])$(id).disabled=busy||!authorized()||(id==='run'&&(!settings||dirty));} // Unsaved prompt changes cannot accidentally launch with an older prompt.
+  async function loadTokens(){ // Only token metadata is reloaded; saved credentials cannot be retrieved from the server.
+    const version=epoch,value=await request('ai-analysis/tokens');if(version!==epoch||!authorized())return;
+    $('api-url').textContent=new URL('../api/ai-reports/v1/reports',location.href).href;
+    const list=document.createElement('ul');
+    for(const token of value.tokens){const item=document.createElement('li');item.textContent=token.name+' — '+(token.revoked===null?'Active':'Revoked')+' · '+new Date(token.created).toLocaleString()+' ';
+      if(token.revoked===null){const button=document.createElement('button');button.type='button';button.className='button secondary small';button.textContent='Revoke';button.addEventListener('click',()=>void perform(async()=>{await request('ai-analysis/tokens/revoke',{id:token.id});hideToken();message('Report token revoked.');await loadTokens();}));item.append(button);}list.append(item);
+    }
+    $('token-list').replaceChildren(list);if(!value.tokens.length)$('token-list').textContent='No report-read tokens created.';
+  }
+  function hideToken(){$('token-secret').value='';$('token-result').hidden=true;} // Remove the only browser copy when dismissed or authorization ends.
   function apply(value){settings=value;dirty=false;$('prompt').value=value.prompt;$('days').value=value.lookbackDays;$('tokens').value=value.maxTokens;$('temperature').value=value.temperature;$('model').value=value.model;$('enabled').checked=value.enabled;controls();}
   function renderReport(value){
     report=value;$('report').hidden=false;$('report-title').textContent='AI report — '+value.day;
@@ -32,6 +42,7 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
     nextCursor=value.nextCursor;$('older').hidden=!nextCursor;history(value.jobs);
     if(!$('day').value){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:value.timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));const today=`${parts.year}-${parts.month}-${parts.day}`;$('day').max=today;$('day').value=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10);}
     if(report&&['queued','running'].includes(report.status))await view(report.id);
+    await loadTokens();
   }
   async function perform(action){if(busy||!authorized())return;busy=true;controls();const version=epoch;try{await action();}catch(error){if(version===epoch)message(error.message);}finally{if(version===epoch){busy=false;controls();}}}
   $('settings').addEventListener('input',()=>{dirty=true;requestId=null;message('Save settings before running with this prompt.');controls();});
@@ -44,9 +55,14 @@ export function createAnalysisPanel({request,authorized,download}) { // All requ
   $('reload').addEventListener('click',()=>void perform(()=>refresh(true)));
   $('refresh').addEventListener('click',()=>void perform(()=>{page=null;return refresh();}));
   $('older').addEventListener('click',()=>void perform(()=>{page=nextCursor;return refresh();}));
+  $('token-form').addEventListener('submit',event=>{event.preventDefault();void perform(async()=>{
+    const version=epoch;hideToken();const result=await request('ai-analysis/tokens',{name:$('token-name').value});if(version!==epoch||!authorized())return;
+    $('token-secret').value=result.token;$('token-result').hidden=false;message('Read-only report token created. Copy it before leaving this page.');await loadTokens();
+  });});
+  $('token-hide').addEventListener('click',hideToken);
   $('download').addEventListener('click',()=>{if(report?.document&&authorized())download('little-log-ai-'+report.day+'-'+report.id+'.md',
     '# Little Log AI report — '+report.day+'\n\nAI-generated; review against source statistics.\n\nModel: '+report.model_used+'\n\nCompletion: '+report.finish_reason+'\n\n'+report.document+'\n\n## Saved configuration and source statistics\n\n```json\n'+JSON.stringify({settings:report.settings,statistics:report.input},null,2)+'\n```\n','text/markdown;charset=utf-8');});
   const load=()=>perform(()=>refresh());
   setInterval(()=>{if(location.hash==='#ai-analysis'&&!document.hidden)void load();},5000);
-  return {load,clear(){epoch++;settings=null;dirty=false;busy=false;requestId=null;report=null;nextCursor=null;page=null;$('settings').reset();$('day').value='';for(const id of ['history','document','source','schedule','status','report-meta','report-warning'])$(id).textContent='';$('report').hidden=true;controls();}};
+  return {load,clear(){epoch++;settings=null;dirty=false;busy=false;requestId=null;report=null;nextCursor=null;page=null;$('settings').reset();$('day').value='';hideToken();$('token-form').reset();for(const id of ['history','document','source','schedule','status','report-meta','report-warning','token-list','api-url'])$(id).textContent='';$('report').hidden=true;controls();}};
 }

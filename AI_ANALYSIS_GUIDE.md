@@ -3,7 +3,9 @@
 Open **Admin console → AI analysis**. The panel, settings, queue actions and saved
 reports require an enabled administrator session. Every API request rechecks that
 role; changes also require the existing same-origin CSRF token. There is no
-participant or MommyBot analysis API, and no report is published to the app.
+participant analysis API. Administrators can explicitly create a separate
+read-only token for MommyBot to retrieve completed report documents through
+[AI_REPORT_API.md](AI_REPORT_API.md). Reports are not published to the app.
 
 Edit the analysis prompt, comparison window (1–31 days), model, maximum output
 tokens and temperature, then **Save settings**. This customizes instructions for
@@ -11,6 +13,13 @@ inference; it does not train model weights. **Run now** queues a report ending o
 the selected date, using those saved settings. The default date is yesterday in
 Los Angeles. Selecting today produces a report of the data available so far.
 The prompt and source statistics can be reviewed with every saved report.
+
+The maximum output setting now allows **256–50,000 tokens** and defaults to
+**50,000**. The upgrade raises the active saved limit to 50,000 once, preserving
+the custom prompt and other settings. Later administrator choices are retained
+across restarts. Jobs already queued keep their original setting; create a new
+run to use the higher limit. The model still needs sufficient context and may
+finish before this maximum. The independent two-hour inference deadline remains.
 
 ## Connection and deployment
 

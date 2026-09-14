@@ -24,7 +24,7 @@
           <form id="ai-settings"><label for="ai-prompt">Analysis prompt</label><textarea id="ai-prompt" rows="8" maxlength="8000" required></textarea>
             <label for="ai-days">Days to include, ending on the report date</label><input id="ai-days" type="number" min="1" max="31" required>
             <label for="ai-model">Model (leave blank to use the endpoint's first model)</label><input id="ai-model" maxlength="200">
-            <label for="ai-tokens">Maximum output tokens</label><input id="ai-tokens" type="number" min="256" max="16384" required>
+            <label for="ai-tokens">Maximum output tokens (up to 50,000)</label><input id="ai-tokens" type="number" min="256" max="50000" required>
             <label for="ai-temperature">Temperature</label><input id="ai-temperature" type="number" min="0" max="2" step="0.05" required>
             <label class="reminder-enabled-label"><input id="ai-enabled" type="checkbox"> Enable daily reports</label>
             <div class="admin-buttons"><button id="ai-save" class="button primary" type="submit">Save settings</button><button id="ai-reload" class="button secondary" type="button">Load latest settings</button></div>
@@ -35,6 +35,10 @@
         </section>
         <section class="card"><h2>Saved reports and queued work</h2><p>Work continues after you close this page. Failed attempts retry up to three times, five minutes apart.</p><div class="admin-buttons"><button id="ai-refresh" class="button secondary" type="button">Newest reports</button><button id="ai-older" class="button secondary" type="button" hidden>Older reports</button></div><div id="ai-history" class="table-scroll"></div></section>
         <section id="ai-report" class="card" hidden><h2 id="ai-report-title">Report</h2><p id="ai-report-meta"></p><p id="ai-report-warning" role="status"></p><button id="ai-download" class="button secondary" type="button">Download Markdown</button><pre id="ai-document" class="ai-document"></pre><details><summary>Saved prompt and source statistics</summary><pre id="ai-source" class="ai-document"></pre></details></section>
+        <section class="card"><h2>MommyBot report access</h2><p>Create a read-only token for MommyBot to retrieve completed reports. This grants access to all completed report documents, including earlier reports. Tokens cannot change settings or run analysis.</p><p>API feed: <code id="ai-api-url"></code></p>
+          <form id="ai-token-form"><label for="ai-token-name">Connection name</label><input id="ai-token-name" value="MommyBot" maxlength="80" required><button id="ai-token-create" class="button primary" type="submit">Create report-read token</button></form>
+          <div id="ai-token-result" hidden><label for="ai-token-secret">Copy this token to MommyBot's protected configuration. It is shown only once.</label><input id="ai-token-secret" readonly autocomplete="off" spellcheck="false"><button id="ai-token-hide" class="button secondary" type="button">Hide token</button></div><div id="ai-token-list"></div>
+        </section>
       </section>
       <section class="card admin-filters" aria-label="Dataset selection">
         <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>

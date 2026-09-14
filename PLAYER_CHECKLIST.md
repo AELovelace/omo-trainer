@@ -101,3 +101,7 @@ With an administrator account, open Admin console → AI analysis, save a prompt
 ## New-account coins
 
 A new Little Log account receives 50 lid0llcoins. Check Stickers & market for the balance and welcome entry. Spending the coins or signing in again does not refill this grant; existing tracker accounts retain their previous balances.
+
+## Administrator report sharing
+
+Admins can set a report output limit up to 50,000 tokens and create or revoke MommyBot report-read tokens from AI analysis. Ordinary wallet connections cannot read these reports. See [AI_REPORT_API.md](AI_REPORT_API.md) for setting up a consumer.

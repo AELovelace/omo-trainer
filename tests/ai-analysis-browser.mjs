@@ -24,11 +24,13 @@ try{
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.setViewport({width:1280,height:950});
   await page.goto(base+'admin/#ai-analysis');await page.waitForFunction(()=>!document.querySelector('#admin-workspace').hidden&&!document.querySelector('#ai-run').disabled);
   assert.equal(await page.$eval('.admin-filters',element=>element.hidden),true);
+  assert.equal(await page.$eval('#ai-tokens',element=>element.max),'50000');assert.equal(await page.$eval('#ai-tokens',element=>element.value),'50000');
   await page.$eval('#ai-prompt',element=>{element.value='Compare the final day to the preceding days. Use concise Markdown.';element.dispatchEvent(new Event('input',{bubbles:true}));});
   assert.equal(await page.$eval('#ai-run',element=>element.disabled),true);await page.click('#ai-save');await page.waitForFunction(()=>document.querySelector('#ai-status').textContent==='Analysis settings saved.');
   await page.click('#ai-run');await page.waitForFunction(()=>document.querySelector('#ai-status').textContent.includes('Report queued'));
   const deadline=Date.now()+15000;while(!generation&&Date.now()<deadline)await new Promise(done=>setTimeout(done,100));assert.ok(generation,'The real background worker should call the local model stub');
   assert.equal(sent.messages[1].content.startsWith('Compare the final day'),true);
+  assert.equal(sent.max_tokens,50000);
   await page.reload();await page.waitForFunction(()=>document.querySelector('#ai-history').textContent.includes('running'));
   generation();await page.waitForFunction(()=>document.querySelector('#ai-history').textContent.includes('completed'),{timeout:20000});
   await page.click('#ai-history button');await page.waitForFunction(()=>document.querySelector('#ai-document').textContent.includes('Synthetic result.'));
@@ -36,10 +38,18 @@ try{
   assert.match(await page.$eval('#ai-report-warning',element=>element.textContent),/incomplete/);
   await page.evaluate(()=>{window.downloaded=null;const original=URL.createObjectURL;URL.createObjectURL=blob=>{void blob.text().then(text=>{window.downloaded=text;});return original(blob);};});
   await page.click('#ai-download');await page.waitForFunction(()=>window.downloaded);assert.match(await page.evaluate(()=>window.downloaded),/Saved configuration and source statistics/);
+  await page.click('#ai-token-create');await page.waitForFunction(()=>document.querySelector('#ai-token-secret').value.startsWith('llreport_'));
+  const token=await page.$eval('#ai-token-secret',element=>element.value),reportApi=base+'api/ai-reports/v1/reports';
+  const feed=await fetch(reportApi,{headers:{Authorization:'Bearer '+token}});assert.equal(feed.status,200);assert.equal((await feed.json()).reports.length,1);
+  await page.click('#ai-token-hide');assert.equal(await page.$eval('#ai-token-secret',element=>element.value),'');
+  await page.click('#ai-token-list button');await page.waitForFunction(()=>document.querySelector('#ai-token-list').textContent.includes('Revoked'));
+  assert.equal((await fetch(reportApi,{headers:{Authorization:'Bearer '+token}})).status,401);
   await page.screenshot({path:resolve(process.env.DATA_DIR,'desktop.png'),fullPage:true});await page.setViewport({width:390,height:844});await page.screenshot({path:resolve(process.env.DATA_DIR,'mobile.png'),fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true,'The report panel must fit a phone viewport');
+  await page.click('#ai-token-create');await page.waitForFunction(()=>document.querySelector('#ai-token-secret').value.startsWith('llreport_'));
   db.admin.updateUser(admin.id,{id:member.id,action:'update',version:0,role:'admin',disabled:false});db.admin.updateUser(member.id,{id:admin.id,action:'update',version:1,role:'participant',disabled:false});
   await page.waitForFunction(()=>document.querySelector('#admin-workspace').hidden,{timeout:12000});assert.equal(await page.$eval('#ai-document',element=>element.textContent),'');
-  assert.deepEqual(errors,[]);console.log('AI analysis browser passed: prompt editing, worker execution, reload, stored report, safe text, download, mobile layout and revoked admin access.');
+  assert.equal(await page.$eval('#ai-token-secret',element=>element.value),'');
+  assert.deepEqual(errors,[]);console.log('AI analysis browser passed: 50k token setting, worker execution, reload, safe report review/download, report API token creation/revocation, mobile layout and revoked admin access.');
   console.log('Screenshots:',process.env.DATA_DIR);
 }finally{await browser.close();await new Promise(done=>server.close(done));db.close();llama.closeAllConnections();await new Promise(done=>llama.close(done));}

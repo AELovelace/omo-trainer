@@ -195,3 +195,7 @@ Run `npm test` for the durable queue, saved prompt/source snapshots, admin/CSRF 
 ## Registration starting balance
 
 `npm test` includes `tests/registration-bonus.test.mjs`: new accounts start at 50 coins, spending and repeat sign-ins never refill them, old accounts receive no retroactive grant, and market outages/replayed delivery preserve exactly one credit. Market, wallet API and daily-bonus tests account for the separate 50-coin starting balance.
+
+## Report-read API and 50k output
+
+`npm test` includes `tests/ai-report-api.test.mjs`: 50,000-token validation and inference payloads, one-time settings migration, out-of-order completion cursors, historical backfill, digest-only credentials, role checks, revocation and read-only HTTP access. `node tests/ai-analysis-browser.mjs` also checks token creation/hiding/revocation and credential cleanup after lost admin access. Tests use synthetic reports and send no Discord messages.
