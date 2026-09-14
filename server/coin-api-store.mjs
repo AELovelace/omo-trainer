@@ -13,7 +13,9 @@ export function coinApps(raw=process.env.LIDOLLCOIN_APPS) { // App registration 
     if(!Array.isArray(app.origins)||app.origins.some(origin=>{try {const url=new URL(origin);return url.origin!==origin||(url.protocol!=='https:'&&!(process.env.NODE_ENV==='test'&&url.hostname==='127.0.0.1'));}catch{return true;}}))throw Error('App origins must be exact HTTPS origins.');
     const starDailyLimit=app.starDailyLimit??app.dailyLimit; // Existing deployments inherit their configured earning cap, independently per currency.
     if(!Number.isSafeInteger(starDailyLimit)||starDailyLimit<1||starDailyLimit>2147483647)throw Error('Configure a positive whole-number starDailyLimit.');
-    return {...app,starDailyLimit};
+    const diamondDailyLimit=app.diamondDailyLimit??Math.max(1,Math.floor(app.dailyLimit/50)); // Default diamonds to the coin-equivalent earning cap, independently per currency.
+    if(!Number.isSafeInteger(diamondDailyLimit)||diamondDailyLimit<1||diamondDailyLimit>2147483647)throw Error('Configure a positive whole-number diamondDailyLimit.');
+    return {...app,starDailyLimit,diamondDailyLimit};
   });
 }
 export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=()=>Date.now()) {
@@ -45,7 +47,7 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
   function begin(input,address) { // The game holds a high-entropy device secret; the player confirms a separate human-readable code.
     const client=app(input?.client_id);rate('device:'+client.id+':'+hash(address),60);
     const scopes=String(input.scope??'wallet:read wallet:write').split(' ').filter(Boolean);
-    if(!scopes.length||scopes.some(s=>!['wallet:read','wallet:write','stars:read','stars:write'].includes(s)))fail(400,'Unsupported scope.','invalid_scope');
+    if(!scopes.length||scopes.some(s=>!['wallet:read','wallet:write','stars:read','stars:write','diamonds:read','diamonds:write'].includes(s)))fail(400,'Unsupported scope.','invalid_scope');
     db.prepare('DELETE FROM coin_devices WHERE expires<?').run(now());
     if(db.prepare('SELECT COUNT(*) AS n FROM coin_devices WHERE client=?').get(client.id).n>=1000)fail(429,'This app has too many pending connections.','slow_down');
     const device=randomBytes(32).toString('base64url'),code=randomBytes(6).toString('hex').toUpperCase();
@@ -55,7 +57,7 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
   function device(code) {const value=db.prepare('SELECT * FROM coin_devices WHERE user_code=?').get(String(code??'').replaceAll('-','').toUpperCase());if(!value||value.expires<=now()||value.state!=='pending')fail(400,'This connection code has expired or was already used.');return value;}
   function inspect(owner,code) { // Preview contains only the registered app and requested permissions, never a bearer credential.
     rate('verify:'+owner,30);const value=device(code),client=app(value.client);
-    return {client_id:client.id,name:client.name,scope:value.scope,daily_limit:client.dailyLimit,star_daily_limit:client.starDailyLimit,user_code:value.user_code};
+    return {client_id:client.id,name:client.name,scope:value.scope,daily_limit:client.dailyLimit,star_daily_limit:client.starDailyLimit,diamond_daily_limit:client.diamondDailyLimit,user_code:value.user_code};
   }
   function approve(owner,input) {
     if(!enabled(owner))fail(403,'Account access is disabled.');
@@ -100,8 +102,8 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
   }
   function balance(secret) { // Keep the legacy coin response intact; expose stars only with explicit read permission.
     const value=grant(secret),scopes=value.scope.split(' '),funds=wallet(value.owner);
-    if(!scopes.includes('wallet:read')&&!scopes.includes('stars:read'))fail(403,'This connection lacks read permission.','insufficient_scope');
-    return {account_id:hash(value.client+':'+value.owner),...(scopes.includes('wallet:read')?{currency:'LiDollCoin',balance:funds.coins}:{}),...(scopes.includes('stars:read')?{stars:funds.stars,stars_enabled:scopes.includes('stars:write')}:{})};
+    if(!['wallet:read','stars:read','diamonds:read'].some(scope=>scopes.includes(scope)))fail(403,'This connection lacks read permission.','insufficient_scope');
+    return {account_id:hash(value.client+':'+value.owner),...(scopes.includes('wallet:read')?{currency:'LiDollCoin',balance:funds.coins}:{}),...(scopes.includes('stars:read')?{stars:funds.stars,stars_enabled:scopes.includes('stars:write')}:{}),...(scopes.includes('diamonds:read')?{diamonds:funds.diamonds,diamonds_enabled:scopes.includes('diamonds:write'),diamond_coin_value:50}:{})}; // Existing grants gain no diamond access until the participant consents.
   }
   function connections(owner) {return db.prepare('SELECT id,client,scope,created_at AS createdAt,expires FROM coin_grants WHERE owner=? AND revoked=0 AND expires>? ORDER BY created_at DESC').all(owner,now()).map(value=>({...value,name:apps.find(a=>a.id===value.client)?.name??value.client}));}
   function revoke(owner,id) {if(db.prepare('SELECT 1 FROM coin_browser_grants b JOIN coin_grants g ON g.id=b.grant_id WHERE g.owner=? AND g.id=?').get(owner,id))db.prepare('DELETE FROM coin_browser_permissions WHERE owner=? AND client=?').run(owner,'lidollquest');db.prepare('UPDATE coin_grants SET revoked=1 WHERE owner=? AND id=?').run(owner,id);return {ok:true};}
@@ -123,14 +125,14 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
   }
   function operation(secret,input) { // Apply relative game earnings/spending; never accept a saved absolute balance.
     const asset=input?.asset??'coins'; // Omitted asset remains LiDollCoin for older clients. Never accept arbitrary ledger assets.
-    if(!['coins','stars'].includes(asset))fail(400,'Choose coins or stars.');
-    const scope=asset==='stars'?'stars:write':'wallet:write';
+    if(!['coins','stars','diamonds'].includes(asset))fail(400,'Choose coins, stars or diamonds.');
+    const scope=asset==='coins'?'wallet:write':asset+':write';
     const identity=grant(secret,scope),client=app(identity.client);
     if(!input||!/^[A-Za-z0-9_-]{1,80}$/.test(input.request_id??'')||!['credit','debit','refund'].includes(input.kind))fail(400,'Supply a request_id and credit, debit or refund kind.');
     if(input.kind==='refund'&&!/^[A-Za-z0-9_-]{1,80}$/.test(input.original_id??''))fail(400,'Supply the original debit request ID.');
     const amount=input.kind==='refund'?0:whole(input.amount);
     const signature=[input.kind,amount,input.kind==='refund'?input.original_id:null];
-    if(asset==='stars')signature.push(asset); // Preserve v1 coin retries while binding new star requests to their currency.
+    if(asset!=='coins')signature.push(asset); // Preserve old coin/star retry fingerprints while binding diamond requests to their currency.
     const fingerprint=hash(JSON.stringify(signature));
     return atomic(()=>{
       grant(secret,scope);
@@ -140,7 +142,7 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
       if(input.kind==='credit') {
         const day=Math.floor(now()/86400000)*86400000;
         const credited=db.prepare("SELECT COALESCE(SUM(amount),0) AS n FROM coin_game_operations WHERE client=? AND owner=? AND kind='credit' AND created_at>=? AND asset=?").get(client.id,identity.owner,day,asset).n;
-        if(credited+amount>(asset==='stars'?client.starDailyLimit:client.dailyLimit))fail(429,'This app daily earning limit has been reached. Retry tomorrow.','daily_limit');
+        if(credited+amount>(asset==='diamonds'?client.diamondDailyLimit:asset==='stars'?client.starDailyLimit:client.dailyLimit))fail(429,'This app daily earning limit has been reached. Retry tomorrow.','daily_limit');
       }
       if(input.kind==='refund') {
         const original=db.prepare("SELECT amount FROM coin_game_operations WHERE client=? AND owner=? AND id=? AND kind='debit' AND asset=?").get(client.id,identity.owner,input.original_id,asset);
@@ -149,7 +151,7 @@ export function createCoinApiStore(db,wallet,adjust,enabled,apps=coinApps(),now=
         delta=original.amount;db.prepare('INSERT INTO coin_refunds VALUES (?,?,?)').run(client.id,identity.owner,input.original_id);
       }
       const operationId=randomUUID();adjust(identity.owner,asset,delta,operationId,'game '+input.kind+': '+client.id);
-      const result={operation_id:operationId,request_id:input.request_id,kind:input.kind,amount:Math.abs(delta),balance:wallet(identity.owner)[asset],currency:asset==='stars'?'Stars':'LiDollCoin',asset};
+      const result={operation_id:operationId,request_id:input.request_id,kind:input.kind,amount:Math.abs(delta),balance:wallet(identity.owner)[asset],currency:asset==='diamonds'?'Diamonds':asset==='stars'?'Stars':'LiDollCoin',asset};
       db.prepare('INSERT INTO coin_game_operations(client,owner,id,kind,amount,created_at,fingerprint,result,asset) VALUES (?,?,?,?,?,?,?,?,?)').run(client.id,identity.owner,input.request_id,input.kind,Math.abs(delta),now(),fingerprint,JSON.stringify(result),asset);return result;
     });
   }

@@ -180,3 +180,10 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 Run node tests/observation-reward-browser.mjs with PUPPETEER_MODULE and CHROME_PATH configured. It verifies exact receipts for observations, wettings (Voluntary, Bedwetting and Used the potty) and dry diaper changes; offline recovery, guest pending copy, shared mute/confetti behavior, one sticker per record, and dismissal. Other recording browser workflows dismiss the shared modal before continuing.
+
+
+## Login bonuses and diamonds
+
+Login bonuses and diamonds are covered by tests/login-bonuses.test.mjs, tests/diamond-api.test.mjs, and tests/login-bonuses-browser.mjs. Existing performance/economy fixtures now include the independent day-one 10-coin attendance payout. See LOGIN_BONUSES_GUIDE.md for the complete test scope.
+
+With the MommyBot checkout beside this project (or MOMMYBOT_ROOT set), run `node tests/mommybot-diamonds-integration.mjs` to exercise its real WalletClient against an isolated tracker HTTP API: consent, balances, credit/retry, debit/refund and revocation. It sends no Discord messages and touches no live wallets.

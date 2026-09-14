@@ -27,6 +27,8 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
     CREATE INDEX IF NOT EXISTS economy_ledger_owner ON economy_ledger(owner,id);
     CREATE TABLE IF NOT EXISTS economy_requests(owner TEXT NOT NULL REFERENCES economy_wallets(owner),id TEXT NOT NULL,hash TEXT NOT NULL,result TEXT NOT NULL,PRIMARY KEY(owner,id));
   `);
+  if(!db.prepare('PRAGMA table_info(economy_wallets)').all().some(column=>column.name==='diamonds'))db.exec("ALTER TABLE economy_wallets ADD COLUMN diamonds INTEGER NOT NULL DEFAULT 0 CHECK(typeof(diamonds)='integer' AND diamonds BETWEEN 0 AND 2147483647)"); // Add a separate bounded balance without changing existing coins or stars.
+  db.exec('CREATE TABLE IF NOT EXISTS daily_bonus_rewards(owner TEXT NOT NULL REFERENCES economy_wallets(owner),source_id TEXT NOT NULL,asset TEXT NOT NULL,amount INTEGER NOT NULL,PRIMARY KEY(owner,source_id))');
   db.exec('BEGIN IMMEDIATE');
   try {
     db.prepare('INSERT OR IGNORE INTO economy_wallets(owner) VALUES (?)').run(BANK);
@@ -40,17 +42,17 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
 
   function wallet(owner) { // Participant-backed wallets cannot be selected by a browser-supplied account ID.
     db.prepare('INSERT OR IGNORE INTO economy_wallets(owner,participant_id) VALUES (?,?)').run(owner,owner===BANK?null:owner);
-    return db.prepare('SELECT coins,stars FROM economy_wallets WHERE owner=?').get(owner);
+    return db.prepare('SELECT coins,stars,diamonds FROM economy_wallets WHERE owner=?').get(owner);
   }
   function balance(owner,asset) { // Stickers and currencies both use bounded integer quantities.
-    if(asset==='coins'||asset==='stars') return wallet(owner)[asset];
+    if(['coins','stars','diamonds'].includes(asset)) return wallet(owner)[asset];
     return db.prepare('SELECT quantity FROM sticker_inventory WHERE owner=? AND sticker=?').get(owner,asset)?.quantity??0;
   }
   function adjust(owner,asset,delta,operation,reason) { // A ledger entry and its materialized balance always commit together.
     wallet(owner);
     const next=balance(owner,asset)+delta;
     if(!Number.isSafeInteger(next)||next<0||next>MAX) fail(409,'Insufficient balance or account balance limit reached.');
-    if(asset==='coins'||asset==='stars') db.prepare('UPDATE economy_wallets SET '+asset+'=? WHERE owner=?').run(next,owner);
+    if(['coins','stars','diamonds'].includes(asset)) db.prepare('UPDATE economy_wallets SET '+asset+'=? WHERE owner=?').run(next,owner);
     else db.prepare('INSERT INTO sticker_inventory VALUES (?,?,?) ON CONFLICT(owner,sticker) DO UPDATE SET quantity=excluded.quantity').run(owner,asset,next);
     db.prepare('INSERT INTO economy_ledger(operation,owner,asset,delta,reason,created_at) VALUES (?,?,?,?,?,?)').run(operation,owner,asset,delta,reason,new Date().toISOString());
   }
@@ -76,6 +78,11 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.prepare('UPDATE sticker_rewards SET sticker=? WHERE owner=? AND entry_id=?').run(sticker,owner,reward.entry_id);
       adjust(owner,sticker,1,'reward:'+reward.entry_id,'record reward');
     }
+  }
+  function awardDailyBonus(owner,source,asset,amount) { // The bridge's market transaction atomically pays each daily entitlement once.
+    if(!['coins','diamonds'].includes(asset))fail(400,'Invalid daily reward currency.');
+    integer(amount);wallet(owner);
+    if(db.prepare('INSERT OR IGNORE INTO daily_bonus_rewards VALUES (?,?,?,?)').run(owner,source,asset,amount).changes)adjust(owner,asset,amount,'login:'+source,'Daily check-in bonus');
   }
   function awardStars(owner,chart) { // A date/row cell earns once for its lifetime; clearing and restoring progress cannot earn it twice.
     wallet(owner);
@@ -138,6 +145,10 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
           adjust(BANK,'coins',-total,operation,'bank exchange');adjust(owner,'coins',total,operation,'bank exchange');
           trade(operation,input.sticker,owner,BANK,quantity,total);result.coins=total;
         }
+      } else if(input.action==='diamond-exchange') {
+        const quantity=integer(input.quantity,1,Math.floor(MAX/50)),coins=quantity*50; // Both legs and the retry receipt share the market write transaction.
+        adjust(owner,'diamonds',-quantity,operation,'Diamond exchange');adjust(owner,'coins',coins,operation,'Diamond exchange');
+        result={...result,diamonds:quantity,coins};
       } else if(input.action==='cancel'||input.action==='accept') {
         if(typeof input.listingId!=='string') fail(400,'Choose a listing.');
         const offer=listing(input.listingId);
@@ -177,5 +188,5 @@ export function createEconomy(db,catalog=stickerCatalog(),enabled=()=>true,dupli
       db.exec('COMMIT');return reward?{...reward,quantity:1}:null;
     } catch(error) {db.exec('ROLLBACK');throw error;}
   }
-  return {awardRecord,awardPerformanceBonus,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
+  return {awardRecord,awardPerformanceBonus,awardDailyBonus,awardStars,snapshot,act,recordReward,coins:createCoinApiStore(db,wallet,adjust,enabled)};
 }

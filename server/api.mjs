@@ -62,8 +62,9 @@ export function createApi(database, login) { // Resolves each app session to an 
         if (route === 'admin/import-preview' && request.method === 'POST') return send(response, 200, database.admin.previewImport(participant.id, await body(request, 24 * 1024 * 1024)));
         if (route === 'admin/import' && request.method === 'POST') return send(response, 200, database.admin.importData(participant.id, await body(request, 24 * 1024 * 1024)));
       }
-      if (route === 'record-reward' && request.method === 'GET') return send(response,200,{participant,reward:database.economy.recordReward(participant.id,new URL(request.url,login.origin).searchParams.get('id'))}); // Session ownership controls reward lookup; an arbitrary ID cannot award a sticker.
+      if (route === 'record-reward' && request.method === 'GET') {const id=new URL(request.url,login.origin).searchParams.get('id');return send(response,200,{participant,reward:database.economy.recordReward(participant.id,id),dailyBonus:database.economy.dailyBonusReceipt(participant.id,id)});} // Session ownership controls both receipts; an arbitrary ID cannot award a reward.
       if (route === 'economy' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.economy.snapshot(participant.id) });
+      if(route==='login-bonuses'&&request.method==='GET') {const query=new URL(request.url,login.origin).searchParams;return send(response,200,{participant,...database.economy.loginBonuses(participant.id,{from:query.get('from')??undefined,to:query.get('to')??undefined})});} // This calendar is private; external wallet tokens cannot read it.
       if (route === 'economy' && request.method === 'POST') return send(response, 200, database.economy.act(participant.id, await body(request, 4096)));
       if (route === 'growth-chart' && request.method === 'GET') return send(response, 200, { participant, csrf, ...database.growthChart(participant.id) });
       if (route === 'growth-chart' && request.method === 'POST') return send(response, 200, { participant, ...database.saveGrowthChart(participant.id, await body(request)) });

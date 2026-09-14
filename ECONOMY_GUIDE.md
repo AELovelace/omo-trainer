@@ -68,3 +68,8 @@ Scientific outbox entitlements freeze the first accepted amount. Market schema 8
 copies old roll receipts into performance_rewards without crediting again or
 rewriting old ledger rows. New market receipts contain only owner, hashed source,
 amount and timestamp. Existing records/admin imports only backfill stickers.
+
+
+## Login bonuses and diamonds
+
+Market schema 9 adds a separate diamond balance and unique daily-bonus receipts. New synced records earn daily attendance bonuses through the durable scientific outbox. Diamonds exchange one-way at 50 coins each using the existing atomic market action/receipt flow. See LOGIN_BONUSES_GUIDE.md.

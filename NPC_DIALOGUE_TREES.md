@@ -28,3 +28,8 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 Observation, wetting and diaper-change saves share the reward modal. Pending messages identify an Observation, Event or Diaper change saved on the device, while earned-sticker messages appear only after the server returns that record's receipt.
+
+
+## Login bonuses and diamonds
+
+The shared recording modal now announces a daily bonus only when the server returns the receipt attached to that exact save. Calendar and pending-reward copy are factual interface status, not NPC dialogue. See LOGIN_BONUSES_GUIDE.md.

@@ -218,3 +218,20 @@ App registration supports optional `starDailyLimit` (1?2,147,483,647), defaultin
 Deploy the new Little Log backend **before** the game. Stop old backend workers before upgrading: market schema 5 adds currency to existing operation rows and records star approval separately. Back up both databases; the science schema is unchanged. Older coin clients remain supported, including pending receipts. Do not run an old backend worker against this upgraded market database. Existing linked players use **Enable stars** once after deployment.
 
 Game helpers and asynchronous receipt handling are documented in the game repository's STAR_WALLET_GUIDE.md. No quests or shops award/spend stars automatically until their scripts call these helpers.
+
+
+## Diamonds (market schema 9)
+
+Diamonds are a separate whole-number balance. One diamond exchanges for 50 LiDollCoins on the tracker Stickers page; the external operations API does not silently convert currencies.
+
+Request explicit `diamonds:read diamonds:write` in the device or combined OIDC consent flow. MommyBot now requests `openid profile wallet:read wallet:write stars:read stars:write diamonds:read diamonds:write`. If the identity client's configured `scope` is allowlisted, add both diamond scopes there too. Existing tokens and remembered game-browser grants do not automatically gain new permissions.
+
+With `diamonds:read`, the wallet response adds `diamonds` (integer), `diamonds_enabled` (whether write permission is present), and `diamond_coin_value: 50`. Without read consent these fields are omitted. Existing coin/star response fields remain compatible.
+
+Use the existing operations endpoint with `asset: "diamonds"` and `kind: "credit"`, `"debit"` or `"refund"`. Credit/debit require a positive integer `amount`; refund requires `original_id`. Responses retain the existing receipt fields with `asset: "diamonds"`, `currency: "Diamonds"`, and a diamond `balance`. Retries must reuse the original `request_id` and body. Refunds require a diamond debit belonging to the same account and app and may be paid once. Old coin/star receipt fingerprints remain unchanged.
+
+Each LIDOLLCOIN_APPS registration may set `diamondDailyLimit`, a positive integer independent of coin/star limits. The default is `max(1, floor(dailyLimit / 50))`. Caps apply per account/app/UTC day to external credits; reconnecting does not reset them. Streak rewards use their own server policy and do not consume an external app's credit cap.
+
+Deploy the identity service with diamond consent scopes, then the tracker with market schema 9, then MommyBot. Back up both tracker databases and the bot state first. Renew a bot connection through /lidollid login to approve diamonds. Existing grants retain coin/star access until renewed. MommyBot shows diamond balances and supports administrator diamond gifts via /lidollid wallet gift and its private menu. No new Discord message is sent merely by updating the code.
+
+The authenticated daily calendar API and attendance policy are documented in [LOGIN_BONUSES_GUIDE.md](LOGIN_BONUSES_GUIDE.md). Wallet tokens never expose calendar or health statistics.

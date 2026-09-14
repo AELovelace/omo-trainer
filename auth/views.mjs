@@ -9,8 +9,8 @@ export function authPage({ uid, mode, clientName, csrf, error = '', username = '
   const description = register ? `Create one lidoll.dev account for ${escape(clientName)} and other lidoll.dev apps. Each app has its own data and permissions.`
     : login ? `Sign in to ${escape(clientName)} with your shared LiD0llID account.`
       : `${escape(clientName)} will receive your account ID and username. Your password stays with lidoll.dev accounts.`;
-  const wallet=String(scope).split(' ').filter(value=>['wallet:read','wallet:write','stars:read','stars:write'].includes(value));
-  const permissions=wallet.map(value=>({'wallet:read':'Read your LiDollCoin balance','wallet:write':'Earn and spend LiDollCoins','stars:read':'Read your stars balance','stars:write':'Earn and spend stars'}[value]));
+  const wallet=String(scope).split(' ').filter(value=>['wallet:read','wallet:write','stars:read','stars:write','diamonds:read','diamonds:write'].includes(value));
+  const permissions=wallet.map(value=>({'wallet:read':'Read your LiDollCoin balance','wallet:write':'Earn and spend LiDollCoins','stars:read':'Read your stars balance','stars:write':'Earn and spend stars','diamonds:read':'Read your diamonds balance','diamonds:write':'Earn and spend diamonds'}[value]));
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a0611">
 <title>${register ? 'Create account' : login ? 'Sign in' : 'Authorize access'} · lidoll.dev</title><style>${css}</style></head>

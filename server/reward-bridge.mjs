@@ -1,4 +1,5 @@
 import {performanceBonus} from './performance-bonus.mjs';
+import {createLoginBonuses} from './login-bonuses.mjs';
 import {DatabaseSync,backup} from 'node:sqlite';
 import {dirname,resolve} from 'node:path';
 import {mkdirSync} from 'node:fs';
@@ -13,16 +14,17 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
   science.exec("CREATE TABLE IF NOT EXISTS reward_outbox(owner TEXT NOT NULL REFERENCES participants(id),asset TEXT NOT NULL,source_id TEXT NOT NULL,delivered INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(owner,asset,source_id));");
   if(!science.prepare('PRAGMA table_info(reward_outbox)').all().some(column=>column.name==='amount'))science.exec('ALTER TABLE reward_outbox ADD COLUMN amount INTEGER NOT NULL DEFAULT 0'); // Keep the original award amount through edits and delayed delivery.
   science.exec('CREATE INDEX IF NOT EXISTS reward_pending ON reward_outbox(delivered,owner);');
+  const loginBonuses=createLoginBonuses(science,options.now); // The clock is injectable for midnight and retry regression tests.
   let market=null,store=null;
   function open() { // Lazy opening lets scientific recording continue even while the market file is unavailable.
     if(store)return store;
     if(marketPath!==':memory:')mkdirSync(dirname(marketPath),{recursive:true,mode:0o700});
     market=new DatabaseSync(marketPath);
     try {
-      if(market.prepare('PRAGMA user_version').get().user_version>8)throw Error('The market database requires a newer service version.');
+      if(market.prepare('PRAGMA user_version').get().user_version>9)throw Error('The market database requires a newer service version.');
       market.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=100;');
       store=createEconomy(market,options.stickerCatalog,id=>Boolean(science.prepare('SELECT p.id FROM participants p LEFT JOIN participant_access a ON a.participant_id=p.id WHERE p.id=? AND COALESCE(a.disabled,0)=0').get(id)),options.stickerDuplicates);
-      market.exec('PRAGMA user_version=8');
+      market.exec('PRAGMA user_version=9');
       return store;
     } catch(error) {market.close();market=null;store=null;throw error;}
   }
@@ -47,6 +49,7 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
         if(reward.asset==='sticker')economy.awardRecord(reward.owner,{id:source});
         else if(reward.asset==='coins')economy.awardPerformanceBonus(reward.owner,source,reward.amount);
         else if(reward.asset==='star')economy.awardStars(reward.owner,{stars:{[source]:true}});
+        else if(['login-coins','login-diamonds'].includes(reward.asset))economy.awardDailyBonus(reward.owner,source,reward.asset.slice(6),reward.amount); // Pass an opaque entitlement and currency, never attendance or health records.
         else throw Error('Unknown pending reward asset.');
       }
       market.exec('COMMIT');
@@ -71,7 +74,9 @@ export function createRewardBridge(science,filename,options={}) { // A durable o
     } catch(error) {science.exec('ROLLBACK');throw error;}
   }
   return {
-    awardRecord,awardStars,tryFlush,
+    awardRecord,awardStars,tryFlush,awardDailyCheckin:loginBonuses.award,
+    loginBonuses(owner,range) {tryFlush();return loginBonuses.view(owner,range);},
+    dailyBonusReceipt:loginBonuses.receipt,
     recordReward(owner,id) { // Resolve only an existing entitlement belonging to the signed-in participant.
       if(typeof id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw Object.assign(Error('Invalid observation ID.'),{status:400});
       if(!science.prepare("SELECT 1 FROM reward_outbox WHERE owner=? AND asset='sticker' AND source_id=?").get(owner,id))return null;

@@ -51,3 +51,8 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 Observation, wetting (including Bedwetting and Used the potty), and diaper-change saves now share the sticker modal. This changes presentation only: existing eligibility, one-sticker-per-record receipts, category bonuses and probability rules stay the same.
+
+
+## Login bonuses and diamonds
+
+Daily bonuses pay 10/20/30 coins on streak days 1/2/3, then streak minus 3 diamonds each day. A missed day resets the streak. Diamond exchange is fixed at 50 coins per diamond. These rewards are separate from classification performance bonuses and probability rules; see LOGIN_BONUSES_GUIDE.md.

@@ -1,4 +1,5 @@
 import './lib/notifications.js';
+import './lib/login-bonuses.js';
 import { createRewardCelebration } from './lib/reward-celebration.js';
 import { renderPrediction } from './lib/prediction-view.js';
 import { DESPERATION_LEVELS, DESPERATION_LABELS, STORAGE_KEY, emptyState, validateState, validateEntry, localDay, localInput,
@@ -149,13 +150,14 @@ async function refreshRecordReward() { // Show the receipt for this exact record
     const result=await apiRequest('record-reward?id='+encodeURIComponent(current.id));
     if(current!==recordReward||!dialog.open)return;
     if(result.participant.id!==current.owner||state.sync.participant?.id!==current.owner){dialog.close();return;}
-    if(!result.reward){status.textContent=`${current.label} saved. Your sticker is waiting for the collection to become available. Check again shortly.`;return;}
+    const daily=result.dailyBonus,bonusMessage=daily?` Daily check-in: ${daily.amount} ${daily.asset} ${daily.paid?'earned':'pending'} for day ${daily.streak} in a row!`:''; // Announce only the server receipt attached to this record.
+    if(!result.reward){status.textContent=`${current.label} saved. Your sticker is waiting for the collection to become available. Check again shortly.`+bonusMessage;return;}
     const sticker=result.reward,image=$('#observation-reward-image');
     image.alt=sticker.name;image.src=sticker.url;
     $('#observation-reward-name').textContent=sticker.name;
     $('#observation-reward-sticker').hidden=false;
     $('#observation-reward-title').textContent='You earned a sticker!';
-    status.textContent='Thank you for checking in! +1 sticker has been added to your collection.';
+    status.textContent='Thank you for checking in! +1 sticker has been added to your collection.'+bonusMessage;
     $('#observation-reward-retry').hidden=true;current.complete=true;
   } catch {if(current===recordReward&&dialog.open)status.textContent=`${current.label} saved. We could not load your sticker yet. Reconnect or sign in again, then check for your sticker.`;}
   finally {current.loading=false;if(current===recordReward)$('#observation-reward-retry').disabled=false;}
@@ -504,7 +506,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses'].includes(requested) ? requested : 'overview';
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -534,8 +536,9 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     window.dispatchEvent(new Event('little-log-chart-visible'));
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
+  if(page==='login-bonuses')requestAnimationFrame(()=>$('#login-bonuses-title').focus({preventScroll:true}));
   if(page==='games') requestAnimationFrame(()=>$('#games-title').focus({preventScroll:true})); // Announce Games without losing any unsaved tracker or chart inputs.
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.

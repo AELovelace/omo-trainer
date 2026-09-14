@@ -1,4 +1,4 @@
-export const walletScopes=['wallet:read','wallet:write','stars:read','stars:write'];
+export const walletScopes=['wallet:read','wallet:write','stars:read','stars:write','diamonds:read','diamonds:write']; // New diamond permissions require consent; existing tokens retain their original scopes.
 
 export async function walletIdentity(provider,store,issuer,secret) { // Only the issuer can establish which client and account approved these wallet permissions.
   if(typeof secret!=='string'||secret.length>4096)throw Error('Invalid access token');

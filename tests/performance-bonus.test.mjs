@@ -16,7 +16,7 @@ test('all performance bonuses use their intended whole-number schedule and freez
   ...['hold','pee'].flatMap(result=>['low','medium','high','crisis'].map((desperation,i)=>[{kind:'roll',result,rolledResult:result,source:'random',rolledAt:occurredAt,probability:50,desperation},(result==='pee'?[10,12,14,16]:[5,7,9,11])[i]])),
  ];
  try {
-  let expected=0;
+  let expected=10; // The first eligible save also earns the day-one login bonus.
   for(const [i,[input,amount]]of cases.entries()) {
    const entry={...input,occurredAt,id:'bonus-'+i},change={id:entry.id,entry,baseVersion:0,mutationId:randomUUID()};
    assert.equal(performanceBonus(entry),amount);
@@ -29,8 +29,8 @@ test('all performance bonuses use their intended whole-number schedule and freez
   db.sync(user.id,[{id:'bonus-9',entry:{...cases[9][0],id:'bonus-9',occurredAt},baseVersion:2,mutationId:randomUUID()}]);
   const snapshot=db.economy.snapshot(user.id);
   assert.equal(snapshot.wallet.coins,expected);
-  assert.equal(snapshot.history.filter(row=>row.asset==='coins').length,cases.length);
-  assert.ok(snapshot.history.every(row=>Number.isSafeInteger(row.delta)&&row.reason.startsWith('Performance bonus: ')));
+  assert.equal(snapshot.history.filter(row=>row.reason.startsWith('Performance bonus: ')).length,cases.length);
+  assert.ok(snapshot.history.filter(row=>row.reason!=='Daily check-in bonus').every(row=>Number.isSafeInteger(row.delta)&&row.reason.startsWith('Performance bonus: ')));
   assert.equal(performanceBonus({kind:'protocol'}),0);assert.equal(performanceBonus({result:'pee'}),0);
   assert.equal(performanceBonus({kind:'roll',result:'hold'}),5,'Old rolls with no desperation get no extra bonus');
   assert.equal(performanceBonus({kind:'diaper-change',wettingsCount:-1}),0);

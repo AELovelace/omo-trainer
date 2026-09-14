@@ -25,3 +25,8 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 The reward modal now appears for all three tracker record forms. It uses existing tracker sticker receipts; there are no new quest requirements or game_editor_gui.py fields.
+
+
+## Login bonuses and diamonds
+
+Login bonuses are tracker attendance rewards and do not add quests or game_editor_gui.py fields. External games can request explicit diamond wallet scopes; current game prices remain unchanged. See LOGIN_BONUSES_GUIDE.md and LIDOLLCOIN_API.md.

@@ -20,6 +20,7 @@ const games = createGamesRoute(base);
 const stickerAssets = stickerCatalog();
 const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
+  ['lib/login-bonuses.js', 'text/javascript; charset=utf-8'], ['lib/login-bonuses.css', 'text/css; charset=utf-8'],
   ['lib/games.js', 'text/javascript; charset=utf-8'],
   ...stickerAssets.map(item => [item.url, item.mime]),
   ['coins/browser.js','text/javascript; charset=utf-8'],

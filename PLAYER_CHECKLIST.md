@@ -88,3 +88,8 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 After saving an observation, a wetting or a diaper change, dismiss the reward modal to continue. Online synced saves show the earned sticker with the same sound and confetti preferences. Offline or signed-out saves show a pending message; reconnect and sync, then use the retry button to retrieve the sticker.
+
+
+## Login bonuses and diamonds
+
+Save and sync one observation, wetting or diaper change each day for a growing bonus. Visit Login bonuses in the menu for weekly/monthly calendars and daily statistics. Use Stickers & market to exchange diamonds for coins at 1:50. Offline saves qualify on their sync day; see LOGIN_BONUSES_GUIDE.md for streak rules.

@@ -122,3 +122,8 @@ Bedwetting and Used the potty are separate choices in Record a wetting and its e
 ## Shared recording reward modal
 
 All three new-record save handlers call showRecordReward(entry) after a successful local commit. The shared dialog keeps its existing observation-reward DOM IDs for compatibility; recordReward tracks the exact record ID and account while sync delivers the existing server entitlement. Editing records does not reopen the reward modal.
+
+
+## Login bonuses and diamonds
+
+Daily attendance is inserted only after a successful batch accepts a new observation, wetting or diaper change. Keep the scientific receipt and outbox atomic, market delivery idempotent, and diamond API permissions explicit. See LOGIN_BONUSES_GUIDE.md for boundaries and migration details.
