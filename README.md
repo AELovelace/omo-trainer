@@ -168,3 +168,44 @@ monthly grouping does not change the daily score graph. No stored records change
 `tests/admin-actions-browser.mjs` checks these charts, filter controls, fixed
 axis, missing-day gaps and mobile layout. Set `PUPPETEER_MODULE` and
 `CHROME_PATH` as for the other browser checks.
+
+### Custom XY chart builder
+
+Open **Admin > Analytics > Build your own chart**. Select a recorded period or
+any available numeric statistic for X, then check up to six Y statistics and
+choose their line colors. The 26 available statistics cover recorded activity,
+intake, classifications, positions, desperation levels, random outcomes/chance,
+wetting intervals, diaper summaries and current chart stars. The participant,
+date and day/week/month filters above also apply. Separate-participant mode
+uses distinct automatic colors and permits up to twelve lines.
+
+Every point pairs statistics from the same participant/cohort and period.
+Numeric X values are sorted numerically, not chronologically. Time axes preserve
+calendar gaps; unavailable measurements stay blank. Mean intervals attach each
+positive consecutive-event interval to its ending event's period, including
+overnight gaps and a previous event before the selected start date. Current
+chart stars describe the saved chart, not an immutable reward ledger.
+
+Use raw units for magnitudes or Normalize to compare shapes across units.
+Normalization maps each line's minimum/maximum to 0/100; constant lines use 50.
+The chart is descriptive: ordinal action scores and observed associations are
+not measures of training effectiveness.
+
+**Save PNG** downloads a 2x image, 2,200 pixels wide, including axes, legend,
+title and selection context. SVG stays editable. CSV/JSON contain all raw period
+rows, including sample counts; JSON also includes chart settings and cohort
+identities. X and Y column prefixes avoid duplicate headers. On very large
+selections, charts/images show the last 1,000 sorted points per line; the exact
+data preview shows 100 rows and downloads retain all rows.
+
+**Save setup** stores only the chosen chart title, axes, colors and display
+options in this browser (up to 30 named setups). Loading one recalculates from
+the current authorized data and filters. No participant data is stored with
+presets. Access revocation clears rendered charts and cancels pending image
+exports. No database migration is required; deploy the updated admin assets
+and static-file allowlist together.
+
+Run `node --test tests/chart-builder.test.mjs` for aggregation/export checks.
+With `PUPPETEER_MODULE` and `CHROME_PATH` set, run
+`node tests/chart-builder-browser.mjs` for actual PNG/SVG/CSV/JSON downloads,
+selection controls, preset persistence, mobile layout and access cleanup.

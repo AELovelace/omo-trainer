@@ -1,6 +1,7 @@
 import { renderPrediction, clearPrediction } from '../lib/prediction-view.js?admin=1'; // Bypass older PWA shell caches for the admin renderer.
 import { analyzeDataset } from '../lib/admin-analytics.js';
 import { datasetCsv } from '../lib/admin-format.js';
+import { createChartBuilder } from './chart-builder.js';
 
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); // Escape user-authored labels before creating HTML or SVG.
@@ -12,11 +13,13 @@ let predictionRequest=0,predictionUser='',predictionEntries=null,predictionBusy=
 let chartUserId='',chartWeek='',chartRequest=0,chartRefreshing=false;
 const noticeEditors=[createNoticeEditor('reminder','Reminder'),createNoticeEditor('margin-note','Margin note')];
 const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('little-log-chart-updates'):null; // Keep drilldown state only in memory alongside the authorized dataset.
+const chartBuilder=createChartBuilder($('#chart-builder'));
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
   resetPrediction();
+  chartBuilder.clear();
   for(const editor of noticeEditors)editor.clear();
   accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
   for(const selector of ['#potty-graphs','#potty-summary','#potty-users','#potty-detail-content','#graphs','#user-table','#chart-lines','#participant-snapshots','#record-table','#audit-table','#admin-summary','#import-preview']) $(selector).replaceChildren();
@@ -90,8 +93,9 @@ function plot(graph) { // Dependency-free SVG plots use explicit axes and toolti
 function renderAnalytics() { // Date and participant filters recompute charts locally without changing or uploading records.
   if(!dataset) return;
   const from=$('#date-from').value,to=$('#date-to').value;
-  if(from && to && from>to) { status('Analysis start must be on or before its end.'); return; }
+  if(from && to && from>to) { chartBuilder.clear(); status('Analysis start must be on or before its end.'); return; }
   analysis=analyzeDataset(cohort(),{from,to,interval:$('#interval').value,timeBinHours:Number($('#action-time-bin').value)});
+  chartBuilder.update(cohort(),{from,to,interval:$('#interval').value});
   const t=analysis.totals;
   $('#admin-summary').innerHTML=[['Participants',t.users],['Observations',t.observations],['Classified wettings',t.wettings],['Diaper changes',t.changes],['Random rolls',t.randomRolls],['Logged intake (mL)',t.liquids],['Chart stars',t.stars]].map(([label,n])=>'<article><strong>'+escape(fmt(n))+'</strong><span>'+label+'</span></article>').join('');
   const graphCard=graph=>{

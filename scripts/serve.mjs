@@ -30,6 +30,7 @@ const files = new Map([
   ['lib/training.js', 'text/javascript; charset=utf-8'], ['lib/diapers.js', 'text/javascript; charset=utf-8'],
   ...['index.html', 'style.css', 'embedded.css', 'app.js', 'merge.js', 'account.js', 'crt-init.js', 'pwa.js', 'icons/icon-192.png', 'icons/icon-512.png'].map(name => [`potty_chart/${name}`, name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.css') ? 'text/css; charset=utf-8' : name.endsWith('.png') ? 'image/png' : 'text/javascript; charset=utf-8']),
   ['admin/index.html', 'text/html; charset=utf-8'], ['admin/app.js', 'text/javascript; charset=utf-8'], ['admin/admin.css', 'text/css; charset=utf-8'],
+  ['admin/chart-builder.js','text/javascript; charset=utf-8'], ['lib/chart-builder-model.js','text/javascript; charset=utf-8'],
   ['lib/admin-format.js', 'text/javascript; charset=utf-8'], ['lib/admin-analytics.js', 'text/javascript; charset=utf-8'],
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
   ['icons/icon.svg', 'image/svg+xml'], ['icons/icon-192.png', 'image/png'],
