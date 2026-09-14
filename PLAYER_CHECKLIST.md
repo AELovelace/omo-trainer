@@ -1,5 +1,7 @@
 # Little Log user checklist
 
+Your device now stays signed in for 30 days, renewed while the app is used, with a fresh sign-in after at most six months. Keep using the same browser or installed app. **Sign out & clear device** still ends this device's session; use it on shared devices. After deployment, an already expired sign-in needs one final login to start the longer session.
+
 ## Administrator CrowPanel setup
 
 - Deploy the tracker, then open **Admin console → Statistics devices** and create an **Everyone and individual views (admin)** token.

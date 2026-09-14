@@ -125,6 +125,8 @@ try {
   assert.match(await alice.$eval('h1', element => element.textContent), /Authorize access/);
   await Promise.all([alice.waitForNavigation({ waitUntil: 'networkidle0' }), alice.click('button[type="submit"]')]);
   assert.match(alice.url(), /\/tracker\/#settings$/);
+  const appCookie=(await aliceContext.cookies()).find(value=>value.name==='little_log');
+  assert.ok(appCookie?.httpOnly&&appCookie.expires>Date.now()/1000+29*86400,'OIDC sign-in must issue a persistent 30-day HttpOnly app cookie');
   await alice.waitForFunction(() => document.querySelector('#connect-account').textContent === 'Connect & upload my entries');
   assert.equal((await saved(alice)).sync.participant, null, 'Registration must leave uploading local records as an explicit choice');
   const registeredStore = openAuthStore(authDirectory);

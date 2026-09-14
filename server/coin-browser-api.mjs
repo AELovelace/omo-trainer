@@ -9,7 +9,7 @@ export async function coinBrowserApi(database,login,request,response,route) { //
   const sessionCookie=(value,age)=>`${name}=${value}; Path=${path}; HttpOnly; SameSite=Lax; Max-Age=${age}${secure?'; Secure':''}`;
   const call=(method,...args)=>database.economy.coins(method,...args);
   const send=(status,body)=>{response.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store',Vary:'Cookie'});response.end(JSON.stringify(body));};
-  const redirect=(location,cookies=[])=>{response.writeHead(303,{Location:location,'Set-Cookie':cookies,'Cache-Control':'no-store'});response.end();};
+  const redirect=(location,cookies=[])=>{const existing=response.getHeader('Set-Cookie')??[];response.writeHead(303,{Location:location,'Set-Cookie':[...(Array.isArray(existing)?existing:[existing]),...cookies],'Cache-Control':'no-store'});response.end();}; // Preserve a renewed app cookie alongside a newly issued game-wallet cookie.
   try {
     const origin=request.headers.origin;
     if((request.headers['sec-fetch-site']==='cross-site'&&!(route==='connect'&&request.method==='GET'))||(origin&&origin!==login.origin))fail(403,'Open this page from LiDollQuest.');
@@ -17,7 +17,7 @@ export async function coinBrowserApi(database,login,request,response,route) { //
     if(route==='connect'&&request.method==='GET') {
       const embedded=new URL(request.url,login.origin).searchParams.get('view')==='embedded';
       const loginReturn=embedded?'game-wallet-embedded':'game-wallet'; // Two fixed destinations preserve the game's view through OIDC without accepting arbitrary URLs.
-      const session=login.session(request);
+      const session=login.session(request,response);
       if(!session)return redirect(base+'auth/login?returnTo='+loginReturn);
       call('app','lidollquest');
       const approved=call('browserApproved',session.participant.id);
@@ -36,7 +36,7 @@ export async function coinBrowserApi(database,login,request,response,route) { //
       if(!input||typeof input!=='object'||Array.isArray(input))fail(400,'Supply a request object.');
     }
     if(route==='connect'&&request.method==='POST') {
-      const session=login.session(request);
+      const session=login.session(request,response);
       if(!session)return redirect(base+'auth/login?returnTo='+(input.view==='embedded'?'game-wallet-embedded':'game-wallet'));
       if(input.csrf!==session.csrf)fail(403,'Refresh the sign-in page and try again.');
       const gameReturn=input.view==='embedded'?'/':'/game/'; // Return embedded players to the website that hosts their game frame.

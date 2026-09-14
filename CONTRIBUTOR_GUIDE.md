@@ -1,5 +1,9 @@
 # Contributor guide
 
+## Persistent device sign-in
+
+`server/sessions.mjs` owns the 30-day rolling / 180-day absolute app-session policy. Browser routes must pass their response to `login.session` so the HttpOnly cookie and SQLite expiry advance together; preserve that Set-Cookie header when also issuing wallet cookies. Never revive expired/revoked sessions, rotate credentials on ordinary polling, or trust localStorage account IDs as authentication. Live Little Log permissions remain authoritative. See [AUTH_GUIDE.md](AUTH_GUIDE.md) for deployment and the separate identity-service revocation boundary.
+
 ## Admin statistics devices
 
 The read-only statistics API and CrowPanel companion are documented in [STATISTICS_API.md](STATISTICS_API.md). Every token requires an active admin owner, even self-scoped tokens. Keep overview and drilldown calculations aligned through `aggregateAnalysis`; never expose raw entries or extend wallet/report credentials. The companion sketch is maintained in `F:\Langley\Documents\Arduino\lidoll-logger`.

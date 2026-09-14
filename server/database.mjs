@@ -1,8 +1,9 @@
 import {createNotifications} from './notifications.mjs';
 import {createAnalysisStore} from './ai-analysis.mjs';
 import {createStatistics} from './statistics.mjs';
+import {createSessions} from './sessions.mjs';
 import { DatabaseSync, backup } from 'node:sqlite';
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { validateEntry, MAX_ENTRIES } from '../lib/model.js';
@@ -120,22 +121,6 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
     return { id, label: name };
   }
 
-  function createSession(participantId) { // Issues a one-hour, server-held session; browser JavaScript never receives this credential.
-    if (admin.access(participantId).disabled) throw new ApiError(403, 'Little Log access is disabled. Contact an administrator.');
-    const token = randomBytes(32).toString('base64url'), csrf = randomBytes(32).toString('base64url');
-    db.prepare('DELETE FROM app_sessions WHERE expires < ?').run(Date.now());
-    db.prepare('INSERT INTO app_sessions VALUES (?, ?, ?, ?)').run(hash(token), participantId, csrf, Date.now() + 3600000);
-    return token;
-  }
-
-  function session(token) { // Resolves the HttpOnly cookie and enforces its server-side expiry for every API call.
-    if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-    const row = db.prepare(`SELECT p.id, p.label, s.csrf FROM app_sessions s JOIN participants p ON p.id=s.participant_id
-      WHERE s.token_hash = ? AND s.expires > ?`).get(hash(token), Date.now());
-    if (!row || admin.access(row.id).disabled) return null;
-    return { participant: { id: row.id, label: row.label }, csrf: row.csrf, role: admin.access(row.id).role };
-  }
-
   function saveLogin(token, payload) { // Keeps PKCE verifier, state, and nonce off the browser and expires unfinished logins after ten minutes.
     db.prepare('DELETE FROM login_attempts WHERE expires < ?').run(Date.now());
     db.prepare('INSERT INTO login_attempts VALUES (?, ?, ?)').run(hash(token), JSON.stringify(payload), Date.now() + 600000);
@@ -234,13 +219,14 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
   }
 
   const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
+  const sessions=createSessions(db,admin,options.sessions); // Persistent device sessions retain live access checks and server-side revocation.
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
   const notifications=createNotifications(db,records,options.notifications);
   const aiAnalysis=createAnalysisStore(db,admin,options.aiAnalysis); // Only admin API routes expose settings, jobs and saved reports.
   const statistics=createStatistics(db,admin,options.statistics); // Scoped device reads reuse the same saved-record aggregation as admin reports.
   return {
-    statistics, aiAnalysis, notifications, economy, admin, ensureParticipant, createSession, session, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
-    deleteSession: token => { if (token) db.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(hash(token)); },
+    statistics, aiAnalysis, notifications, economy, admin, ensureParticipant, createSession:sessions.create, session:sessions.read, sessionNow:sessions.now, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    deleteSession:sessions.remove,
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),
     backup: destination => backup(db, destination), // Uses SQLite's online backup API so WAL data is included consistently.

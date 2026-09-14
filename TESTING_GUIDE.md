@@ -1,5 +1,9 @@
 # Testing guide
 
+## Persistent device sessions
+
+`npm test` covers 30-day inactivity, daily renewal, the 180-day cap, legacy migration, database restart, exact cookie lifetimes, CSRF, identity isolation and revocation in `tests/sessions.test.mjs`. `node tests/sessions-browser.mjs` closes/reopens a real persistent Chrome profile and checks continued sign-in, HttpOnly protection and durable logout. `node tests/connected-browser.mjs` additionally verifies that the real OIDC callback issues a persistent cookie. Browser tests use synthetic accounts and isolated artifact directories.
+
 ## Admin statistics API and CrowPanel
 
 `npm test` includes `tests/statistics.test.mjs`: admin-only token creation/use, self/all scopes, demotion/disabling/revocation, digest-only persistence, HTTP/CSRF boundaries, bounded dates, participant pagination, overview versus individual counts, cumulative intake, chart stars and deleted records. `node tests/statistics-browser.mjs` verifies token setup, literal device labels, both views, revocation/hiding, mobile layout and authorization cleanup using synthetic data.

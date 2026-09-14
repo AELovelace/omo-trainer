@@ -36,7 +36,7 @@ export function createApi(database, login) { // Resolves each app session to an 
         const value=database.admin.reminder(route);
         return send(response,200,{text:value.enabled?value.text:'',enabled:value.enabled,version:value.version}); // Only the published notice is public; disabled drafts and editor metadata remain private.
       }
-      const session = login.session(request);
+      const session = login.session(request,route==='logout'?undefined:response); // Successful device use renews the cookie; logout only removes it.
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');

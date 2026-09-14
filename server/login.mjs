@@ -1,6 +1,7 @@
 import * as oidc from 'openid-client';
 import { randomBytes } from 'node:crypto';
 import { checkedUrl } from '../auth/config.mjs';
+import {SESSION_IDLE_SECONDS} from './sessions.mjs';
 
 export function cookie(request, name) { // Reads only the named cookie; session credentials never appear in URLs or JavaScript storage.
   return (request.headers.cookie ?? '').split(';').map(value => value.trim()).find(value => value.startsWith(`${name}=`))?.slice(name.length + 1);
@@ -27,7 +28,15 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
   const redirect = (response, location, cookies = []) => { response.writeHead(303, { Location: location, 'Set-Cookie': cookies, 'Cache-Control': 'no-store' }); response.end(); };
   return {
     origin,
-    session: request => database.session(cookie(request, sessionName)),
+    session(request,response) { // Refresh the persistent HttpOnly cookie to match the server expiry; credentials never enter browser storage.
+      const token=cookie(request,sessionName),session=database.session(token,{renew:Boolean(response)});
+      if(session&&response){
+        const remaining=Math.max(0,Math.floor((session.expiresAt-database.sessionNow())/1000));
+        const previous=response.getHeader('Set-Cookie')??[];
+        response.setHeader('Set-Cookie',[...(Array.isArray(previous)?previous:[previous]),setCookie(sessionName,token,remaining)]);
+      }
+      return session;
+    },
     logout(request, response) { // Ends this application's session without relying on inaccessible HttpOnly cookies in frontend code.
       database.deleteSession(cookie(request, sessionName));
       response.setHeader('Set-Cookie', setCookie(sessionName, '', 0));
@@ -57,7 +66,7 @@ export function createLogin(database, base) { // Acts as an OIDC relying party; 
           const profile = await oidc.fetchUserInfo(config, tokens.access_token, claims.sub);
           const account = database.ensureParticipant(claims.iss, claims.sub, profile.preferred_username);
           database.deleteSession(cookie(request, sessionName));
-          return redirect(response, attempt.returnTo === 'game-wallet-embedded' ? `${base}api/lidollcoin/browser/connect?view=embedded` : attempt.returnTo === 'game-wallet' ? `${base}api/lidollcoin/browser/connect` : attempt.returnTo === 'coins' ? `${base}coins/` : attempt.returnTo === 'growth-chart' ? `${base}#potty-chart` : attempt.returnTo === 'stickers' ? `${base}#stickers` : attempt.returnTo === 'admin' ? `${base}admin/` : `${base}#settings`, [setCookie(sessionName, database.createSession(account.id), 3600), setCookie(loginName, '', 0)]);
+          return redirect(response, attempt.returnTo === 'game-wallet-embedded' ? `${base}api/lidollcoin/browser/connect?view=embedded` : attempt.returnTo === 'game-wallet' ? `${base}api/lidollcoin/browser/connect` : attempt.returnTo === 'coins' ? `${base}coins/` : attempt.returnTo === 'growth-chart' ? `${base}#potty-chart` : attempt.returnTo === 'stickers' ? `${base}#stickers` : attempt.returnTo === 'admin' ? `${base}admin/` : `${base}#settings`, [setCookie(sessionName, database.createSession(account.id), SESSION_IDLE_SECONDS), setCookie(loginName, '', 0)]);
         }
         response.writeHead(404); response.end();
       } catch (error) {
