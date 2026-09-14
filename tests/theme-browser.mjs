@@ -53,11 +53,11 @@ try {
       await page.click('#menu-close');
       } else {
         assert.equal(await page.$eval('#menu-toggle',el=>getComputedStyle(el).display),'none');
-        assert.equal(await page.$$eval('#desktop-navigation [data-page]',els=>els.filter(el=>el.getClientRects().length).length),6,'Desktop destinations remain visible');
+        assert.equal(await page.$$eval('#desktop-navigation [data-page]',els=>els.filter(el=>el.getClientRects().length).length),7,'Desktop destinations remain visible');
         assert.equal(await page.$eval('#desktop-navigation',el=>el.getBoundingClientRect().right<=document.querySelector('main').getBoundingClientRect().left),true,'Sidebar sits beside the content');
       }
 
-      for(const route of ['settings','overview','history','potty-chart','stickers']) {
+      for(const route of ['settings','overview','history','potty-chart','stickers','games']) {
         await page.evaluate(route=>{location.hash='#'+route;},route);await page.waitForFunction(route=>!document.querySelector('#page-'+route).hidden,{},route);
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' '+route+' overflows '+width);
       }

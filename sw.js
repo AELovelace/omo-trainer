@@ -1,5 +1,5 @@
-const CACHE = `little-log-v56-navigation-order-${self.registration.scope}`; // Keeps caches separate when multiple app paths share an origin.
-const SHELL = ['./lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
+const CACHE = `little-log-v59-discord-link-${self.registration.scope}`; // Refresh the public header invite for installed PWAs.
+const SHELL = ['./lib/games.js', './lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 SHELL.push(...['embedded.css', 'app.js', 'merge.js', 'account.js'].map(name => `./potty_chart/${name}`)); // Keep the complete chart available inside the installed PWA.
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
@@ -29,8 +29,10 @@ self.addEventListener('fetch', event => { // Serves the versioned public app she
 
 self.addEventListener('push',event=>{ // Server payloads carry no records, account names or model details.
  let data;try{data=event.data?.json();}catch{return;}
- if(data?.title!=='Potty check-in')return;
- event.waitUntil(self.registration.showNotification('Potty check-in',{body:'Pee NOW! Time for a potty check-in.',icon:new URL('./icons/icon-192.png',self.registration.scope).href,badge:new URL('./icons/icon-192.png',self.registration.scope).href,tag:typeof data.tag==='string'?data.tag.slice(0,80):'potty-reminder'}));
+ const adminMessage=data?.kind==='admin-message';
+ if(adminMessage&&(typeof data.title!=='string'||!data.title.trim()||data.title.length>80||typeof data.body!=='string'||!data.body.trim()||data.body.length>500))return;
+ if(!adminMessage&&data?.title!=='Potty check-in')return;
+ event.waitUntil(self.registration.showNotification(adminMessage?data.title:'Potty check-in',{body:adminMessage?data.body:'Pee NOW! Time for a potty check-in.',icon:new URL('./icons/icon-192.png',self.registration.scope).href,badge:new URL('./icons/icon-192.png',self.registration.scope).href,tag:typeof data.tag==='string'?data.tag.slice(0,80):'potty-reminder'}));
 });
 self.addEventListener('notificationclick',event=>{
  event.notification.close();const target=new URL('./#overview',self.registration.scope).href;

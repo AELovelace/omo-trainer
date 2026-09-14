@@ -23,11 +23,14 @@ try {
  },keys.publicKey);
  await page.setViewport({width:390,height:900});await page.goto(origin+'/tracker/#settings',{waitUntil:'networkidle0'});await page.waitForFunction(()=>!document.querySelector('#notification-enable').disabled);
  assert.equal(await page.evaluate(()=>permissionRequests),0,'No notification permission prompt before opt-in');
- await page.click('#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Reminders enabled'));
+ await page.click('#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
+ assert.equal(await page.$eval('#notification-title',node=>node.textContent),'Receive notifications');
+ assert.equal(db.notifications.status(user.id).preferences.adminMessages,1);
  assert.equal(db.notifications.status(user.id).subscriptions,1);assert.equal(await page.evaluate(()=>permissionRequests),1);
+ await page.click('#notification-admin-messages');
  await page.select('#notification-quiet-start','23');await page.select('#notification-quiet-end','7');await page.click('#notification-save');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.includes('quiet hours saved'));
- assert.equal(db.notifications.status(user.id).preferences.quietStart,23);
- for(const width of [320,390,1024]){await page.setViewport({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
+ assert.equal(db.notifications.status(user.id).preferences.quietStart,23);assert.equal(db.notifications.status(user.id).preferences.adminMessages,0);
+ for(const width of [320,390,1024]){await page.setViewport({width,height:900});const fits=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth);if(!fits){console.log('Overflow at',width,await page.$$eval('body *',nodes=>nodes.filter(node=>node.getBoundingClientRect().right>innerWidth+1&&!node.closest('[hidden]')).map(node=>[node.tagName,node.id,node.className,node.getBoundingClientRect().right]).slice(-20)));await page.screenshot({path:resolve(directory,'overflow.png'),fullPage:true});}assert.equal(fits,true);}
  await page.click('#notification-disable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.includes('turned off'));
  assert.equal(db.notifications.status(user.id).subscriptions,0);assert.deepEqual(errors,[]);
  console.log('PASS: explicit permission, settings API, quiet hours, opt-out and mobile layout (push transport mocked).');

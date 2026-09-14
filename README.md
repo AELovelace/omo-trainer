@@ -247,9 +247,9 @@ that history. A guaranteed roll never writes 100% into the persistent base.
 Version 1 rolls retain their original temporary semantics. Base/actual probability,
 modifier and rule version remain in CSV/JSON exports and sync records.
 
-### Optional PWA potty reminders
+### Optional PWA notifications
 
-Settings offers opt-in Web Push with a message preview and quiet hours (22:00-08:00
+Settings > Receive notifications offers opt-in Web Push and quiet hours (22:00-08:00
 by default). The browser supplies its IANA timezone; recorded timestamp offsets
 remain absolute instants. A server minute timer saves one 1% lottery per account
 and local three-hour block. A winning block sends only within 15 minutes of the
@@ -267,3 +267,15 @@ tracker environment, then restart lidoll-tracker. Do not commit private keys.
 The server needs outbound HTTPS to browser push services. Users must explicitly
 enable notifications; this cannot be enabled for them by the server. iOS/iPadOS
 requires a supported Home Screen web app: https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/.
+
+### Admin push messages
+
+Admin console > Notifications sends a title (80 characters) and message (500 characters) to one selected member or everyone subscribed to **Messages from admins**. The audience is independent of analysis filters. A live preview shows the text before Send notification. Existing reminder-only subscriptions keep admin messages off until the member explicitly enables the new checkbox and saves settings. New subscribers can choose the checkbox when enabling notifications.
+
+The authenticated, CSRF-protected admin endpoints are GET/POST `api/admin/notifications` and POST `api/admin/notifications/cancel`. Queue requests contain `requestId`, `title`, `body`, and `participantId` (empty for all opted-in members); a repeated request ID with identical content returns the existing message. Changing its content returns 409. Messages and device delivery states persist in the scientific database, separate from the market. Queue creation and cancellation appear in the admin audit. Subscription endpoints and encryption keys are never returned to the admin panel.
+
+The minute scheduler sends only to the opted-in audience captured when queued, checks current access/preferences again, respects timezone-specific quiet hours, and expires pending deliveries after 24 hours. Disabling notifications or admin messages cancels pending deliveries; enabling again does not resurrect them. Administrators can cancel remaining queued devices. Revoking the sender's admin role or disabling a recipient prevents pending delivery.
+
+Recent notifications show counts per device: queued, accepted by the push service, failed/uncertain, and skipped/cancelled. Accepted does not confirm display or reading. Devices are claimed before sending; network errors or process crashes are not automatically retried, avoiding duplicate announcements. Failed/expired push subscriptions are cleaned up on 404/410. Transport TTL remains 60 seconds to avoid much-later delivery by an offline push service. Clicking opens Little Log Home; messages cannot set external destinations.
+
+Deploy the backend, admin assets and updated service worker together. Existing VAPID keys are reused. No live messages are sent by the tests; delivery is mocked while API authorization, queue persistence, cancellation and browser controls are exercised.

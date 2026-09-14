@@ -160,3 +160,8 @@ button for every registered app. It opens registration inside the current OAuth
 interaction, preserving the requesting client, callback, PKCE and requested
 permissions. No extra client registration or external-app update is needed.
 Deploy the auth view and restart `lidoll-auth` to publish the button.
+
+
+## Game sign-in
+
+The PWA Games page opens MommyBot, which performs its own LiD0llID sign-in through the existing `lidollbot` client and registered callback. It resolves the verified issuer/subject to an already linked Discord account. PWA cookies and tokens are never forwarded. Game sessions and logout are separate from Little Log; see [GAMES_GUIDE.md](GAMES_GUIDE.md).

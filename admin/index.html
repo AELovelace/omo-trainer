@@ -18,13 +18,23 @@
     <p id="admin-status" class="notice" role="status" aria-live="polite">Checking administrator access…</p>
     <section id="admin-gate" class="card" hidden><h2>Administrator sign-in</h2><p>An enabled Little Log administrator account is required.</p><a class="button primary" href="../auth/login?returnTo=admin">Sign in with LiD0llID</a></section>
     <div id="admin-workspace" hidden>
-      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#audit" data-tab="audit">Activity log</a></nav>
+      <nav class="admin-tabs" aria-label="Admin panels"><a href="#analytics" data-tab="analytics">Analytics</a><a href="#advanced-drilldown" data-tab="advanced-drilldown">Advanced Drilldown</a><a href="#potty-charts" data-tab="potty-charts">Potty charts</a><a href="#predictions" data-tab="predictions">Predictions</a><a href="#users" data-tab="users">User management</a><a href="#transfer" data-tab="transfer">Import & export</a><a href="#reminders" data-tab="reminders">Reminders</a><a href="#notifications" data-tab="notifications">Notifications</a><a href="#audit" data-tab="audit">Activity log</a></nav>
       <section class="card admin-filters" aria-label="Dataset selection">
         <div><label for="participant-filter">Participants</label><select id="participant-filter"><option value="">Everyone</option></select></div>
         <div><label for="date-from">Analysis from</label><input id="date-from" type="date"></div>
         <div><label for="date-to">Analysis through</label><input id="date-to" type="date"></div>
         <div><label for="interval">Group by</label><select id="interval"><option value="day">Day</option><option value="week">Week (Monday)</option><option value="month">Month</option></select></div>
         <button id="all-dates" class="button secondary">All dates</button>
+      </section>
+      <section data-panel="notifications" aria-labelledby="push-title" hidden>
+        <section id="push-composer" class="card"><h2 id="push-title">Send a notification</h2><p class="section-copy">Send a message to members who have enabled Messages from admins. This audience is separate from the analysis filters. Delivery starts within a minute, respects each member's quiet hours, and expires after 24 hours.</p>
+          <form id="push-form"><label for="push-recipient">Send to</label><select id="push-recipient"><option value="">Everyone subscribed</option></select><p id="push-audience" class="field-help"></p>
+            <label for="push-heading">Notification title</label><input id="push-heading" maxlength="80" required value="Little Log"><label for="push-body">Message</label><textarea id="push-body" rows="4" maxlength="500" required></textarea>
+            <p class="field-help">Notification preview</p><div class="push-preview"><strong id="push-preview-title">Little Log</strong><p id="push-preview-body">Your message appears here.</p></div>
+            <div class="admin-buttons"><button id="push-send" class="button primary" type="submit" disabled>Send notification</button><button id="push-reload" class="button secondary" type="button">Refresh delivery status</button></div>
+          </form><p id="push-status" class="field-help" role="status"></p>
+        </section>
+        <section class="card"><h2>Recent notifications</h2><p class="field-help">Counts are per device. Accepted means the push service accepted the message, not that the member saw it. Failed / uncertain messages are not automatically retried. Cancel only stops queued deliveries.</p><div id="push-history" class="table-scroll"></div></section>
       </section>
       <section data-panel="reminders" aria-labelledby="reminder-editor-title" hidden>
         <section class="card"><h2 id="reminder-editor-title">Admin reminder</h2><p class="section-copy">Publish a reminder in the scrolling header on Little Log's home page. Published text is visible to everyone, including signed-out visitors. Changes reach open pages within 30 seconds.</p>

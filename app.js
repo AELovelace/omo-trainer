@@ -11,6 +11,7 @@ import { trainingState, protocolDay, protocolFor, protocolRecord, cooldownRemain
 import './lib/reminder.js';
 import './lib/theme.js';
 import './lib/economy.js';
+import './lib/games.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
 import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.
@@ -503,7 +504,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games'].includes(requested) ? requested : 'overview';
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -533,7 +534,8 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     window.dispatchEvent(new Event('little-log-chart-visible'));
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  if(page==='games') requestAnimationFrame(()=>$('#games-title').focus({preventScroll:true})); // Announce Games without losing any unsaved tracker or chart inputs.
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.

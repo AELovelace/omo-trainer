@@ -107,3 +107,8 @@ The shared wallet API now supports explicitly authorized star credit/debit/refun
 `lib/diapers.js` derives the active diaper from the latest actual change and subsequent records, independent of calendar rollover. Suggested wetting totals span that wear period; daily statistics still count only changes saved on that date. The change form uses its exact event timestamp for backdated suggestions. No stored records or database schemas are rewritten.
 
 The first change after a date rollover starts the next diaper at #1, while the change record retains the completed diaper's prior number and final wetting count. Later changes on that recorded local date increment normally. No midnight event or database migration is introduced.
+
+
+## Games page
+
+[Games guide](GAMES_GUIDE.md) covers the three MommyBot web games. `lib/games.js` handles connectivity, `server/games.mjs` provides fixed redirects using `LIDOLLBOT_PUBLIC_ORIGIN`, and `#games` shares existing navigation and themes. Keep game databases, wallet grants and payment logic in MommyBot; never forward PWA credentials or cache game redirects/API responses.

@@ -6,6 +6,7 @@ import { openDatabase } from '../server/database.mjs';
 import { createApi } from '../server/api.mjs';
 import { createLogin } from '../server/login.mjs';
 import { stickerCatalog } from '../server/sticker-catalog.mjs';
+import { createGamesRoute } from '../server/games.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const host = process.env.HOST ?? '127.0.0.1';
@@ -15,9 +16,11 @@ if (!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(base)) throw new Error('BASE_PATH must sta
 const database = openDatabase();
 const login = createLogin(database, base);
 const api = createApi(database, login);
+const games = createGamesRoute(base);
 const stickerAssets = stickerCatalog();
 const stickerPaths = new Map(stickerAssets.map(item => [item.url, item.path]));
 const files = new Map([
+  ['lib/games.js', 'text/javascript; charset=utf-8'],
   ...stickerAssets.map(item => [item.url, item.mime]),
   ['coins/browser.js','text/javascript; charset=utf-8'],
   ['coins/index.html','text/html; charset=utf-8'], ['coins/app.js','text/javascript; charset=utf-8'], ['coins/style.css','text/css; charset=utf-8'],
@@ -32,6 +35,7 @@ const files = new Map([
   ['lib/training.js', 'text/javascript; charset=utf-8'], ['lib/diapers.js', 'text/javascript; charset=utf-8'],
   ...['index.html', 'style.css', 'embedded.css', 'app.js', 'merge.js', 'account.js', 'crt-init.js', 'pwa.js', 'icons/icon-192.png', 'icons/icon-512.png'].map(name => [`potty_chart/${name}`, name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.css') ? 'text/css; charset=utf-8' : name.endsWith('.png') ? 'image/png' : 'text/javascript; charset=utf-8']),
   ['admin/index.html', 'text/html; charset=utf-8'], ['admin/app.js', 'text/javascript; charset=utf-8'], ['admin/admin.css', 'text/css; charset=utf-8'],
+  ['admin/notifications.js','text/javascript; charset=utf-8'],
   ['admin/chart-builder.js','text/javascript; charset=utf-8'], ['lib/chart-builder-model.js','text/javascript; charset=utf-8'],
   ['lib/admin-format.js', 'text/javascript; charset=utf-8'], ['lib/admin-analytics.js', 'text/javascript; charset=utf-8'],
   ['sw.js', 'text/javascript; charset=utf-8'], ['manifest.webmanifest', 'application/manifest+json'],
@@ -45,6 +49,7 @@ export const server = http.createServer(async (request, response) => { // Serves
   response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'");
   response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   const pathname = new URL(request.url, 'http://localhost').pathname;
+  if (games(request, response, pathname)) return;
   if (pathname.startsWith(`${base}auth/`)) return login.route(request, response, pathname.slice(`${base}auth/`.length));
   if (pathname.startsWith(`${base}api/`)) return api(request, response, pathname.slice(`${base}api/`.length));
   if (!['GET', 'HEAD'].includes(request.method)) { response.writeHead(405, { Allow: 'GET, HEAD' }); return response.end(); }

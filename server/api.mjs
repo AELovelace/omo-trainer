@@ -46,6 +46,9 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
         const scope = new URL(request.url, login.origin).searchParams.get('participantId') || '';
+        if(route==='admin/notifications'&&request.method==='GET')return send(response,200,database.notifications.messages.overview(participant.id));
+        if(route==='admin/notifications'&&request.method==='POST')return send(response,200,database.notifications.messages.queue(participant.id,await body(request,8192)));
+        if(route==='admin/notifications/cancel'&&request.method==='POST')return send(response,200,database.notifications.messages.cancel(participant.id,await body(request,4096)));
         if (['admin/reminder','admin/margin-note'].includes(route)) {
           const key=route.slice('admin/'.length);
           if (request.method === 'GET') return send(response,200,database.admin.reminder(key));

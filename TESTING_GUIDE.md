@@ -165,3 +165,8 @@ The shared wallet API now supports explicitly authorized star credit/debit/refun
 `node tests/diapers-browser.mjs` starts an isolated local app and verifies mobile midnight rollover, an overnight wetting, reload persistence, changing the carried diaper, and backdated change suggestions. `npm test` includes day boundaries, old reset-number records and same-second change/wetting ordering. Current diaper numbers and their suggested totals carry across dates; only recorded changes today reset.
 
 The overnight regression also checks that the first morning change starts diaper #1, reload retains it, and a second change starts #2. Unit coverage includes skipped days and a first change after observation-only history.
+
+
+## Games navigation
+
+`npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all three cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` now expects seven destinations and checks the Games route. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.

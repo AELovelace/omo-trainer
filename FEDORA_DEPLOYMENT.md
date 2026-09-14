@@ -133,3 +133,8 @@ For a private GitHub repository, use --repo git@github.com:AELovelace/omo-traine
 ## Validation
 
 The repository tests cover activation order, failed backups, first-install failure, code rollback, rollback failure, configuration validation, source-specific firewall rules, and service isolation. Bash syntax and help paths are checked separately. These tests do not substitute for running dnf, systemd, firewalld, and SELinux on the actual Fedora server; the development workspace is Windows.
+
+
+## MommyBot Games
+
+Deploy the matching MommyBot version first, then update this tracker. The Games page defaults to `https://bot.lidoll.dev`; an alternative bot origin can be configured with `LIDOLLBOT_PUBLIC_ORIGIN` in `/etc/lidoll/tracker.env`. Keep `/tracker/games/` routed to the tracker Node service. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for bot proxy routes, the unchanged callback registration and the post-deployment check.

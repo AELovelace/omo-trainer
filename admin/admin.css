@@ -82,3 +82,7 @@
 #builder-status { font-size:13px; line-height:1.6; }
 @media(max-width:1000px){#builder-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }}
 @media(max-width:600px){.builder-controls,#builder-metrics { grid-template-columns:1fr; }.chart-builder .admin-buttons>* { flex:1 1 120px; }}
+
+.push-preview { padding:16px; border:1px solid #805069; border-radius:12px; margin-bottom:18px; }
+.push-preview p { white-space:pre-wrap; overflow-wrap:anywhere; }
+#push-composer input,#push-composer select,#push-composer textarea { max-width:100%; }
