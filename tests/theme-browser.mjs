@@ -45,6 +45,7 @@ try {
       await page.setViewport({width,height:900});
       await page.waitForFunction(mobile=>document.querySelector('#navigation-content').parentElement.id===(mobile?'main-navigation':'desktop-navigation'),{},width<=680);
       if(width<=680) {
+      await navigateMenu(page,'[data-page="settings"]'); // Use a scrollable page before testing the floating menu at each width.
       await page.evaluate(()=>scrollTo(0,0));
       const menuTop=await page.$eval('#menu-toggle',el=>el.getBoundingClientRect().top);
       await page.evaluate(()=>{scrollTo(0,600);return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
@@ -60,7 +61,7 @@ try {
       await page.click('#menu-close');
       } else {
         assert.equal(await page.$eval('#menu-toggle',el=>getComputedStyle(el).display),'none');
-        assert.equal(await page.$$eval('#desktop-navigation [data-page]',els=>els.filter(el=>el.getClientRects().length).length),8,'Desktop destinations remain visible');
+        assert.equal(await page.$$eval('#desktop-navigation [data-page]',els=>els.filter(el=>el.getClientRects().length).length),9,'Desktop destinations remain visible');
         assert.equal(await page.$eval('#desktop-navigation',el=>el.getBoundingClientRect().right<=document.querySelector('main').getBoundingClientRect().left),true,'Sidebar sits beside the content');
       }
 

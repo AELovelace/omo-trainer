@@ -218,3 +218,6 @@ The report API tests also verify nightly/explicit-share eligibility, hidden hist
 
 
 Community support: run node --test tests/community-support.test.mjs for default preferences, one-time existing-subscriber enrollment across both schema versions, persisted opt-outs after restart, daily record and roll triggers, recipient snapshots, duplicate prevention, quiet hours, opt-outs, disabled accounts, restart recovery, expired endpoints and named/anonymous push rendering, anonymous preference persistence, and privacy changes on pending events. The notifications browser fixture also verifies default-on, saving an opt-out, reload/new-device persistence and responsive layout. Push transport is mocked; production delivery requires configured Web Push and an actual subscribed device.
+
+
+Friends: tests/friends.test.mjs covers search privacy, recipient-only acceptance, per-record ownership/version checks, revocation, restart persistence, pagination, friends-only audiences and authenticated HTTP behavior. tests/friends-browser.mjs uses two browser accounts for request/accept/share/read/revoke, safe display-name rendering, both themes at five widths and private cache cleanup. Notification browser tests cover friends-only preference persistence. The theme suite now checks nine menu destinations.

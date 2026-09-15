@@ -25,6 +25,7 @@ const files = new Map([
   ['admin/ai-analysis.js','text/javascript; charset=utf-8'],
   ['admin/statistics.js','text/javascript; charset=utf-8'],
   ['lib/login-bonuses.js', 'text/javascript; charset=utf-8'], ['lib/login-bonuses.css', 'text/css; charset=utf-8'],
+  ['lib/friends.js','text/javascript; charset=utf-8'],
   ['lib/games.js', 'text/javascript; charset=utf-8'],
   ...stickerAssets.map(item => [item.url, item.mime]),
   ['coins/browser.js','text/javascript; charset=utf-8'],

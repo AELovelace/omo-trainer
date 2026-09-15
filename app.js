@@ -13,6 +13,7 @@ import './lib/reminder.js';
 import './lib/theme.js';
 import './lib/economy.js';
 import './lib/games.js';
+import {openFriendShare} from './lib/friends.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
 import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.
@@ -491,7 +492,7 @@ function renderHistory() { // Limits initial table size while keeping filters an
     const probability = isRoll(entry) ? entry.probability + '%' : '&mdash;';
     const provenance = entry.kind === 'diaper-change' ? 'Completed diaper' : entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled'+(entry.desperationMode?' &middot; Desperation mode':'') : 'Manual (legacy)';
     const edit = entry.kind === 'roll' ? '' : `<button class="text-button" data-edit="${entry.id}" aria-label="Edit record ${dateLabel(entry.occurredAt)}">Edit</button>`;
-    return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.desperation ? ' &middot; Desperation: ' + DESPERATION_LABELS[entry.desperation] : ''}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
+    return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.desperation ? ' &middot; Desperation: ' + DESPERATION_LABELS[entry.desperation] : ''}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-share-record="${entry.id}">Share with friend</button><button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
   }).join('');
 }
 
@@ -508,7 +509,7 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
 
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses'].includes(requested) ? requested : 'overview';
+  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends'].includes(requested) ? requested : 'overview';
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -539,8 +540,9 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
   if(page==='login-bonuses')requestAnimationFrame(()=>$('#login-bonuses-title').focus({preventScroll:true}));
+  if(page==='friends')requestAnimationFrame(()=>$('#friends-title').focus({preventScroll:true}));
   if(page==='games') requestAnimationFrame(()=>$('#games-title').focus({preventScroll:true})); // Announce Games without losing any unsaved tracker or chart inputs.
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'friends' ? 'Friends' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.
@@ -706,6 +708,7 @@ $('#clear-filters').addEventListener('click', () => { // Clears every history fi
 });
 $('#load-more').addEventListener('click', () => { historyLimit += 100; renderHistory(); });
 $('#history-body').addEventListener('click', event => { // Delegates actions so history can rerender without attaching duplicate listeners.
+  const share=event.target.closest('[data-share-record]');if(share){void openFriendShare(share.dataset.shareRecord);return;}
   const edit = event.target.closest('[data-edit]'), remove = event.target.closest('[data-delete]');
   if (edit) {
     editedEntry = state.entries.find(entry => entry.id === edit.dataset.edit);

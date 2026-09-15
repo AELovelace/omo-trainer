@@ -40,6 +40,16 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if(route.startsWith('friends')&&request.method==='GET') {
+        const query=new URL(request.url,login.origin).searchParams;
+        if(route==='friends')return send(response,200,{participant,csrf,friends:database.friends.list(participant.id)});
+        if(route==='friends/search')return send(response,200,{participant,members:database.friends.search(participant.id,query.get('q'))});
+        if(route==='friends/record')return send(response,200,{participant,record:database.friends.record(participant.id,query.get('id'))});
+        if(route==='friends/shared')return send(response,200,{participant,...database.friends.shared(participant.id,{direction:query.get('direction')??'incoming',offset:Number(query.get('offset')??0)})});
+      }
+      if(route==='friends'&&request.method==='POST')return send(response,200,database.friends.act(participant.id,await body(request,4096)));
+      if(route==='friends/share'&&request.method==='POST')return send(response,200,database.friends.share(participant.id,await body(request,4096)));
+      if(route==='friends/unshare'&&request.method==='POST')return send(response,200,database.friends.unshare(participant.id,(await body(request,4096))?.id));
       if(route==='notifications'&&request.method==='GET')return send(response,200,{...database.notifications.status(participant.id),csrf,participant});
       if(route==='notifications'&&request.method==='POST')return send(response,200,database.notifications.save(participant.id,await body(request,8192)));
       if(route==='notifications/disable'&&request.method==='POST')return send(response,200,database.notifications.remove(participant.id,await body(request,4096)));
