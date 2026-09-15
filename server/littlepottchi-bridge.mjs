@@ -7,7 +7,11 @@ export function createLittlepottchiBridge(db, options = {}) {
   if (!base && !token) return {tick: async () => {}, status: () => ({configured:false,lastError:null})};
   let url;
   try { url = new URL(base); } catch { throw Error('Set LITTLEPOTTCHI_API_URL to the pet integration API.'); }
-  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1','localhost','[::1]'].includes(url.hostname))) ||
+  const octets = url.hostname.split('.').map(Number);
+  const privateIp = octets.length === 4 && octets.every(n => Number.isInteger(n) && n >= 0 && n <= 255) &&
+    (octets[0] === 10 || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) || (octets[0] === 192 && octets[1] === 168));
+  const localHttp = url.protocol === 'http:' && (privateIp || ['127.0.0.1','localhost','[::1]'].includes(url.hostname)); // Direct, configured LAN backends avoid hairpin NAT without changing browser URLs or the identity issuer.
+  if ((url.protocol !== 'https:' && !localHttp) ||
       url.username || url.password || url.search || url.hash || !url.pathname.endsWith('/littlepottchi/integration/v1/') ||
       token.length < 32 || token.length > 512 || /\s/.test(token)) throw Error('Invalid Littlepottchi bridge URL or credential.');
   db.exec(`CREATE TABLE IF NOT EXISTS littlepottchi_push_deliveries(event TEXT NOT NULL,endpoint TEXT NOT NULL,created INTEGER NOT NULL,
@@ -43,7 +47,7 @@ export function createLittlepottchiBridge(db, options = {}) {
 
   function recipient(event, now) {
     if (!event || !/^[\w-]{36}$/.test(event.id) || !Number.isSafeInteger(event.expires) || event.expires <= now ||
-        !['wet','mess','leak','feed','water','play','rest','complete'].includes(event.kind) ||
+        !['wet','mess','leak','cleanup','feed','water','play','rest','complete'].includes(event.kind) ||
         typeof event.recipient?.issuer !== 'string' || typeof event.recipient?.subject !== 'string') return null;
     return db.prepare(`SELECT p.id,n.time_zone,n.quiet_start,n.quiet_end FROM participants p
       JOIN notification_preferences n ON n.owner=p.id WHERE p.issuer=? AND p.subject=?

@@ -54,6 +54,12 @@ test('messy diaper events use the existing identity-bound push path', async t =>
   assert.equal(f.sent[0].sub.endpoint,'push-owner'); assert.equal(f.events.length,0);
 });
 
+test('cleanup reminders reach only the pet owner through the same push path', async t => {
+  const f = fixture(t); f.events.push(f.event('cleanup')); await f.bridge().tick(f.now);
+  assert.equal(f.sent.length,1); assert.equal(f.sent[0].payload.need,'cleanup');
+  assert.equal(f.sent[0].sub.endpoint,'push-owner'); assert.equal(f.events.length,0);
+});
+
 test('quiet hours defer, expired/disabled recipients skip, and the other issuer receives nothing', async t => {
   const f = fixture(t), bridge = f.bridge(); f.events.push(f.event());
   f.db.exec("UPDATE notification_preferences SET quiet_start=13,quiet_end=16 WHERE owner='owner'");
@@ -91,4 +97,23 @@ test('bridge is opt-in configuration, rejects unsafe URLs, and imports analysis 
     'https://bot.example/littlepottchi/integration/v1/?token=bad']) assert.throws(() => createLittlepottchiBridge(f.db,{...f.options,baseUrl}));
   f.options.configured = false; await f.bridge().tick(f.now);
   assert.equal(f.calls.length,1); assert.ok(f.calls[0].url.endsWith('/analysis')); assert.equal(f.sent.length,0);
+});
+
+test('LAN bridge sends analysis, event polling and acknowledgement to the IP without redirecting credentials', async t => {
+  const f = fixture(t); f.options.baseUrl = 'http://10.1.1.23:4190/littlepottchi/integration/v1/';
+  f.events.push(f.event('cleanup'));
+  const bridge = f.bridge(); await bridge.tick(f.now);
+  assert.equal(bridge.status().lastError, null); assert.equal(f.sent.length, 1); assert.equal(f.events.length, 0);
+  assert.equal(f.calls.length, 3);
+  for (const call of f.calls) {
+    assert.equal(new URL(call.url).origin, 'http://10.1.1.23:4190');
+    assert.equal(call.options.headers.Authorization, `Bearer ${f.options.token}`);
+    assert.equal(call.options.redirect, 'error');
+  }
+  for (const host of ['192.168.1.20', '172.16.0.1', '172.31.255.254', '127.0.0.1']) {
+    assert.ok(createLittlepottchiBridge(f.db, {...f.options, baseUrl:`http://${host}:4190/littlepottchi/integration/v1/`}).status().configured);
+  }
+  for (const host of ['8.8.8.8', '172.15.0.1', '172.32.0.1', '192.169.1.1', '10.evil.example']) {
+    assert.throws(() => createLittlepottchiBridge(f.db, {...f.options, baseUrl:`http://${host}:4190/littlepottchi/integration/v1/`}));
+  }
 });

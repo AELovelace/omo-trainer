@@ -1,11 +1,28 @@
 # Littlepottchi care and Little Log bridge
 
 Littlepottchi keeps wetness, needs, outfits and timers in `data/clothes-gacha.db`.
-It shares Diaper Atelier ownership and the existing LiD0llID account. Care never
-charges the wallet or consumes a collected design. Replacing a diaper, including
+It shares Diaper Atelier ownership and the existing LiD0llID account. Food, water,
+activities and dressing are free; baby wipes are purchased care supplies. Replacing a diaper, including
 the same design, supplies a fresh one; Cloud Tapes is also a free starter supply.
 
 ## Simulation
+
+- **Remove diaper** deliberately switches to diaper-free care and its bare camera.
+  Accident clocks keep running. Diaper-free wettings/messes and leaks set a saved
+  cleanup requirement. Both **Fresh change** and equipping a diaper are blocked
+  until the doll is wiped. Contained accidents can be changed without a wipe.
+  One wipe clears all accumulated body wettings/messes, without resetting either
+  clock or emptying the currently worn diaper. Removing clothing or toggling messy
+  mode never clears body cleanup. A later accident can require another wipe.
+- **Buttcams:** frame 1 is clean; subsequent numbered frames represent messy
+  accidents, capped at the last supplied frame. Wettings keep the clean frame.
+  Turning messy mode off forces clean camera art even if an earlier mess remains.
+  All 58 designs have a camera: 43 direct family mappings and 15 labeled generic
+  fallbacks, following lidollquest's LargeDiaper1 fallback. The Slime sequence has
+  only a clean frame. Bare body variants are anatomy alternatives, not mess stages.
+  Camera PNGs are served only by authenticated `/littlepottchi/api/buttcam`; the
+  server chooses the current frame and ignores client frame parameters. They are
+  excluded from the public artwork allowlist. `buttcam` metadata is in pet snapshots.
 
 - Each wetting adds **1 wetness**. At `wetness + (mess × 2) >= diaper.bulk`, the doll leaks until
   a fresh diaper is equipped or selected with **Fresh change**. Only diapers and
@@ -48,6 +65,30 @@ the same design, supplies a fresh one; Cloud Tapes is also a free starter supply
 
 ## Server configuration
 
+`BABYWIPES_PRICE=1` sets the whole-coin price per wipe (1–10,000, default 1).
+Changing it affects new purchases only. Supplies remain available if only clothing
+rolls are paused; the Atelier enable setting controls new supply purchases.
+
+### Baby wipe purchase and use
+
+Buy one wipe from `/diapers/#supplies`. Authenticated POST `/diapers/api/supplies`
+accepts `{"action":"buy","request":"<stable UUID>","amount":1}` with the shared
+session cookie, same-origin header and CSRF token. POST `{"action":"retry"}`
+resumes a pending wipe payment. After response uncertainty, reuse the original
+purchase UUID; browser storage preserves it across reloads. A definitive rejection
+returns `retryable:false`. No wallet token reaches the browser.
+
+Payments use the clothing journal and its shared wallet lock; `/lidollid wallet
+retry` can recover them. Delivery increments `care_supplies.wipes` atomically with
+the paid job's completion. Wipes cannot be rolled, sold, banked or equipped.
+Pet snapshots expose `supplies` and body cleanup fields `needsWipe`, `bodyWetness`,
+`bodyMess`. POST `{"action":"wipe"}` to `/littlepottchi/api/doll` consumes exactly
+one delivered wipe and clears all body cleanup in the same SQLite transaction.
+A clean doll cannot waste a wipe. `{"action":"equip","slot":"diaper","design":null}`
+removes the diaper; `player.diaperFree` remembers that choice across restarts.
+
+### Little Log connection
+
 Set the **same new random secret** (32–512 non-whitespace characters) on both hosts:
 
 ```dotenv
@@ -60,7 +101,24 @@ On Little Log also set:
 LITTLEPOTTCHI_API_URL=https://bot.lidoll.dev/littlepottchi/integration/v1/
 ```
 
-The URL requires HTTPS, except loopback HTTP for local tests. Existing report-read
+For the home LAN, set this on **Little Log** to bypass hairpin NAT:
+
+```dotenv
+LITTLEPOTTCHI_API_URL=http://10.1.1.23:4190/littlepottchi/integration/v1/
+```
+
+This address is only for server-to-server analysis uploads, event polling and
+acknowledgements. Game links, notification links, `LIDOLLID_PUBLIC_ORIGIN`, the
+LiD0llID issuer and browser sign-in callbacks keep their working public URLs.
+MommyBot's existing `LIDOLLID_HOST=10.1.1.23` and `LIDOLLID_PORT=4190` already
+provide the correct listener; keep those settings and the working reverse proxy.
+Allow the Little Log server to reach that port through the host firewall.
+Use the direct listener; a proxy that redirects to the public hostname would
+reintroduce hairpin NAT and is rejected by the bridge.
+
+The URL accepts HTTPS, or HTTP on a configured private IPv4 address (10/8,
+172.16/12, 192.168/16) or loopback. Use plain HTTP only on the trusted LAN.
+The bridge never follows redirects with its bearer credential. Existing report-read
 credentials are not accepted and their permissions do not change. No credentials
 are sent to the browser. With these variables unset, the bridge is disabled.
 Restart both services after configuring their environment; do not put secrets in Git.
@@ -103,7 +161,7 @@ Returns `{ "accepted": true }`, optionally `unchanged:true`; a stale report retu
 
 Returns `{events, nextAfter, more}`. Limit: 1–100. Each event has a stable UUID
 `id`, integer `sequence`, `recipient:{issuer,subject}`, `kind`, fixed `title/body`,
-and millisecond `created/expires`. Kinds: `wet`, `mess`, `leak`, `feed`, `water`, `play`,
+and millisecond `created/expires`. Kinds: `wet`, `mess`, `leak`, `cleanup`, `feed`, `water`, `play`,
 `rest`, `complete`. Events expire after 24 hours. Follow `nextAfter` while `more`
 is true, even if a page has no events; begin a later polling pass at zero to revisit
 unacknowledged events deferred by quiet hours. Do not treat a cursor as a receipt.
@@ -111,7 +169,7 @@ unacknowledged events deferred by quiet hours. Do not treat a cursor as a receip
 The feed checks current need, opt-in and the original verified identity binding.
 Wet reminders coalesce within a diaper change; each leak or due-care episode is
 reported once. Old offline wettings do not produce a notification storm.
-Messy reminders also coalesce per diaper. A leak takes priority over mess, and
+Messy reminders also coalesce per diaper. Cleanup takes priority over a leak; a leak takes priority over mess, and
 mess takes priority over wetness. A fresh change invalidates all three old needs.
 
 The existing authenticated browser action endpoint `/littlepottchi/api/doll`
