@@ -31,6 +31,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
  if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(column=>column.name==='community_support'))db.exec('ALTER TABLE notification_preferences ADD COLUMN community_support INTEGER NOT NULL DEFAULT 0');
  if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(column=>column.name==='community_anonymous'))db.exec('ALTER TABLE notification_preferences ADD COLUMN community_anonymous INTEGER NOT NULL DEFAULT 0'); // Display names are the default; anonymous sharing is an explicit account preference.
  if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(c=>c.name==='community_friends_only'))db.exec('ALTER TABLE notification_preferences ADD COLUMN community_friends_only INTEGER NOT NULL DEFAULT 0'); // Friends-only is optional and never enables sharing by itself.
+ for(const name of ['social_likes','social_comments','friend_posts'])if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(c=>c.name===name))db.exec('ALTER TABLE notification_preferences ADD COLUMN '+name+' INTEGER NOT NULL DEFAULT 1'); // One-time column defaults enroll existing subscribers; later saves preserve opt-outs.
  db.exec('CREATE TABLE IF NOT EXISTS notification_migrations(name TEXT PRIMARY KEY)');
  db.exec('BEGIN IMMEDIATE');try {
   if(db.prepare("INSERT OR IGNORE INTO notification_migrations VALUES ('community-support-existing-subscribers-v1')").run().changes) {
@@ -43,11 +44,11 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
  const vapidDetails={subject:process.env.PUSH_VAPID_SUBJECT,publicKey,privateKey:process.env.PUSH_VAPID_PRIVATE_KEY};
  const configured=Boolean(options.send||(publicKey&&vapidDetails.privateKey&&vapidDetails.subject));
  const send=options.send??((sub,payload)=>webpush.sendNotification(sub,JSON.stringify(payload),{vapidDetails,TTL:60,urgency:'normal',timeout:5000}));
- const messages=createNotificationMessages(db,{configured,send,localBlock});
- const community=createCommunitySupport(db,{configured,send,localBlock,areFriends:options.areFriends});
+ const messages=createNotificationMessages(db,{configured,send,localBlock,activity:options.activity});
+ const community=createCommunitySupport(db,{configured,send,localBlock,areFriends:options.areFriends,activity:options.activity});
  const random=options.random??(()=>randomInt(100));let running=false;
  function status(owner) {
-  const pref=db.prepare('SELECT time_zone AS timeZone,quiet_start AS quietStart,quiet_end AS quietEnd,admin_messages AS adminMessages,community_support AS communitySupport,community_anonymous AS communityAnonymous,community_friends_only AS communityFriendsOnly FROM notification_preferences WHERE owner=?').get(owner);
+  const pref=db.prepare('SELECT time_zone AS timeZone,quiet_start AS quietStart,quiet_end AS quietEnd,admin_messages AS adminMessages,community_support AS communitySupport,community_anonymous AS communityAnonymous,community_friends_only AS communityFriendsOnly,social_likes AS socialLikes,social_comments AS socialComments,friend_posts AS friendPosts FROM notification_preferences WHERE owner=?').get(owner);
   return {configured,publicKey:configured?publicKey:'',preferences:pref??null,subscriptions:db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE owner=?').get(owner).n};
  }
  function save(owner,input) { // Authenticated opt-in registers only this user's endpoint and local-time preferences.
@@ -57,18 +58,20 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
   const {quietStart,quietEnd}=input;for(const value of [quietStart,quietEnd])if(!Number.isInteger(value)||value<0||value>23)fail('Quiet hours must be whole hours from 0 to 23.');
   const adminMessages=input.adminMessages??Boolean(db.prepare('SELECT admin_messages FROM notification_preferences WHERE owner=?').get(owner)?.admin_messages);
   if(typeof adminMessages!=='boolean')fail('Choose whether to receive messages from admins.');
-  const savedPreferences=db.prepare('SELECT community_support,community_anonymous,community_friends_only FROM notification_preferences WHERE owner=?').get(owner);
+  const savedPreferences=db.prepare('SELECT community_support,community_anonymous,community_friends_only,social_likes,social_comments,friend_posts FROM notification_preferences WHERE owner=?').get(owner);
   const communitySupport=input.communitySupport===undefined?(savedPreferences?Boolean(savedPreferences.community_support):true):input.communitySupport;
   if(typeof communitySupport!=='boolean')fail('Choose whether to participate in community support.');
   const communityAnonymous=input.communityAnonymous===undefined?Boolean(savedPreferences?.community_anonymous):input.communityAnonymous;
   if(typeof communityAnonymous!=='boolean')fail('Choose whether to share community check-ins anonymously.');
   const communityFriendsOnly=input.communityFriendsOnly===undefined?Boolean(savedPreferences?.community_friends_only):input.communityFriendsOnly;
   if(typeof communityFriendsOnly!=='boolean')fail('Choose whether community support is friends-only.');
+  const socialValues=[['socialLikes','social_likes'],['socialComments','social_comments'],['friendPosts','friend_posts']].map(([field,column])=>{const value=input[field]===undefined?(savedPreferences?Boolean(savedPreferences[column]):true):input[field];if(typeof value!=='boolean')fail('Choose valid social notification preferences.');return Number(value);});
   const previous=db.prepare('SELECT owner FROM push_subscriptions WHERE endpoint=?').get(sub.endpoint);
   if(previous&&previous.owner!==owner)throw Object.assign(Error('This browser is subscribed to another account. Turn off its notifications before switching accounts.'),{status:409});
   db.exec('BEGIN IMMEDIATE');try {
    if(!previous&&db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE owner=?').get(owner).n>=10)fail('At most 10 devices can receive notifications.');
    db.prepare('INSERT INTO notification_preferences(owner,time_zone,quiet_start,quiet_end,admin_messages,community_support,community_anonymous,community_friends_only) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(owner) DO UPDATE SET time_zone=excluded.time_zone,quiet_start=excluded.quiet_start,quiet_end=excluded.quiet_end,admin_messages=excluded.admin_messages,community_support=excluded.community_support,community_anonymous=excluded.community_anonymous,community_friends_only=excluded.community_friends_only').run(owner,timeZone,quietStart,quietEnd,Number(adminMessages),Number(communitySupport),Number(communityAnonymous),Number(communityFriendsOnly));
+   db.prepare('UPDATE notification_preferences SET social_likes=?,social_comments=?,friend_posts=? WHERE owner=?').run(...socialValues,owner);options.activity?.cancel(owner);
    if(communityFriendsOnly)community.restrict(owner);
    if(communityAnonymous)community.anonymize(owner);
    if(!communitySupport)community.cancel(owner);
@@ -80,7 +83,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
   if(input.all===true){db.prepare('DELETE FROM push_subscriptions WHERE owner=?').run(owner);db.prepare('UPDATE notification_blocks SET sent=1 WHERE owner=?').run(owner);}
   else if(typeof input.endpoint==='string')db.prepare('DELETE FROM push_subscriptions WHERE owner=? AND endpoint=?').run(owner,input.endpoint);
   else fail('Choose a device to disable.');
-  db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued' AND NOT EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_deliveries.owner AND s.endpoint=notification_deliveries.endpoint)").run(owner);community.remove(owner);return status(owner);
+  db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued' AND NOT EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_deliveries.owner AND s.endpoint=notification_deliveries.endpoint)").run(owner);community.remove(owner);options.activity?.cancel(owner);return status(owner);
  }
  async function tick(now=Date.now()) { // Persist one 1% draw per user/block, surviving restarts; stale windows never produce catch-up notifications.
   if(!configured||running)return;running=true;const started=Date.now();
@@ -95,6 +98,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
     const due=nextReminderTime(records(pref.owner).flatMap(r=>r.entry?[r.entry]:[]),now);
     if(due===null||now<due-15*MINUTE||now>due+15*MINUTE)continue;
     if(!db.prepare('UPDATE notification_blocks SET sent=1 WHERE owner=? AND block=? AND sent=0').run(pref.owner,key).changes)continue;
+    options.activity?.record(pref.owner,{source:'reminder:'+key,kind:'reminder',title:'Potty check-in',body:'Time for a potty check-in.',created:now});
     const payload={title:'Potty check-in',body:'Pee NOW! Time for a potty check-in.',tag:'potty-'+key};
     for(const row of db.prepare('SELECT endpoint,payload FROM push_subscriptions WHERE owner=?').all(pref.owner)) {
      if(!db.prepare('SELECT 1 FROM push_subscriptions WHERE owner=? AND endpoint=?').get(pref.owner,row.endpoint)||db.prepare('SELECT 1 FROM participant_access WHERE participant_id=? AND disabled=1').get(pref.owner))continue;
@@ -103,6 +107,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
    }
    await messages.tick(now+Date.now()-started);
    await community.tick(now+Date.now()-started);
+   await options.activity?.tick(now+Date.now()-started,{send,localBlock});
    db.prepare('DELETE FROM notification_blocks WHERE created_at<?').run(now-90*86400000);
   }finally{running=false;}
  }

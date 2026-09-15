@@ -1,6 +1,6 @@
 # Friends and shared records
 
-Open **Friends** from the menu. Search by display name (2–80 characters), then
+Open **Social** from the menu, then **Friends & search** at the top. Search by display name (2–80 characters), then
 choose **Add friend**. Search shows up to 20 matching enabled members. The other
 person accepts or declines the request. You can cancel a sent request or remove
 an accepted friend. Each account can have up to 200 friends and pending requests
@@ -26,6 +26,13 @@ recipient's tracker or saved for offline use. Revocation stops future reads;
 it cannot undo something a recipient has already read or copied.
 
 ## Friends-only Community support
+
+The **Message** button opens a private conversation with an accepted friend.
+Removing a friendship also deletes its conversation for both people. The
+**Updates** page supports friend-visible status posts and a separate Public
+audience for all signed-in members. Unlike individual record grants, earlier
+friend posts become visible when a friendship is accepted or renewed. See
+[SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for audiences, pictures and messages.
 
 Settings > Receive notifications > **Friends only** limits both outgoing and
 incoming community check-ins to accepted friends. It defaults off, works across

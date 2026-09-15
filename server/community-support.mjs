@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 
-export function createCommunitySupport(db,{configured,send,localBlock,areFriends=()=>false}) {
+export function createCommunitySupport(db,{configured,send,localBlock,areFriends=()=>false,activity}) {
  db.exec(`CREATE TABLE IF NOT EXISTS community_checkins(id TEXT PRIMARY KEY,owner TEXT NOT NULL REFERENCES participants(id),day TEXT NOT NULL,created INTEGER NOT NULL,expires INTEGER NOT NULL,UNIQUE(owner,day));
  CREATE TABLE IF NOT EXISTS community_deliveries(event_id TEXT NOT NULL REFERENCES community_checkins(id),owner TEXT NOT NULL REFERENCES participants(id),endpoint TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'queued',PRIMARY KEY(event_id,endpoint));
  CREATE INDEX IF NOT EXISTS community_delivery_state ON community_deliveries(state);`);
@@ -64,6 +64,7 @@ export function createCommunitySupport(db,{configured,send,localBlock,areFriends
    const event=db.prepare('SELECT anonymous FROM community_checkins WHERE id=?').get(row.event_id);
    const displayName=event.anonymous||sender.community_anonymous?'':String(sender.label).replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,80); // Only the sender controls anonymity; names come from the saved account, never record input.
    const body=(displayName||'Someone in the Little Log community')+' checked in today. A little reminder to record your day, too.';
+   activity?.record(row.owner,{source:'community:'+row.event_id,kind:'community-checkin',title:'Community check-in',body,created:instant});
    try {
     await send(JSON.parse(sub.payload),{kind:'community-checkin',title:'Community check-in',body,...(displayName?{displayName}:{}),tag:'community-'+row.event_id});
     db.prepare("UPDATE community_deliveries SET state='accepted' WHERE event_id=? AND endpoint=?").run(row.event_id,row.endpoint);

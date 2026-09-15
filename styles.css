@@ -1731,6 +1731,41 @@ html.navigation-open,html.navigation-open body { overflow:hidden; }
 .friend-record-details dt { color:var(--muted); }.friend-record-details dd { margin:0; }
 #friend-share-dialog { width:min(620px,calc(100vw - 32px));max-height:85dvh;overflow-y:auto; }
 #friend-search-form .button { margin-top:16px; }
+.status-gallery { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0; }
+.status-gallery img { display:block;width:100%;height:auto;max-height:540px;object-fit:contain;border-radius:12px; }
+.status-card { padding:22px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere; }
+.status-picture-preview { min-width:0; }.status-picture-preview label { display:block; }
+.social-body { white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65; }
+#status-text,#message-text { display:block;width:100%;min-width:0;min-height:110px;resize:vertical;margin-bottom:16px;padding:12px;border:1px solid var(--border);background:var(--page);color:var(--ink);font:inherit;line-height:1.5; }
+#status-text:focus-visible,#message-text:focus-visible { outline:2px solid var(--gold);outline-offset:4px; }
+.conversation-list { display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px; }
+.conversation-button { max-width:100%;white-space:normal;overflow-wrap:anywhere; }
+.message-list { max-height:55vh;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:12px 0; }
+.message-bubble { max-width:90%;padding:16px;border:1px solid var(--border);border-radius:16px;align-self:flex-start;overflow-wrap:anywhere; }
+.message-own { align-self:flex-end;background:var(--panel-deep); }
+.message-bubble .button { display:block;margin-top:10px; }
+#status-form .button,#message-form .button { margin-top:12px; }
+@media(max-width:480px) { .status-gallery { grid-template-columns:1fr; } }
 @media(max-width:700px) { .friends-grid { grid-template-columns:1fr; } }
 @media(max-width:1100px) { .games-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:700px) { .games-grid { grid-template-columns:1fr; } .game-art { min-height:120px; } }
+
+.notification-option input[type="checkbox"] { width:20px;height:20px;min-height:0;margin:0;padding:0;flex:0 0 20px; }
+.social-comments { margin-top:16px; }.social-comments summary { cursor:pointer;padding:12px 0; }.social-comment { padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere; }
+.social-comments textarea { width:100%;min-height:90px;resize:vertical;padding:12px;background:var(--page);color:var(--ink);border:1px solid var(--border);font:inherit; }
+.social-comments form { margin-top:16px; }.social-actions { display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px; }
+.activity-unread { border-left:4px solid var(--pink);padding-left:16px; }.activity-card { padding-top:20px;padding-bottom:20px;border-bottom:1px solid var(--border);overflow-wrap:anywhere; }
+.social-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px; }
+.social-heading h2 { font-size:20px;margin:0; }
+#page-social .page-heading { flex-wrap:wrap; }
+#page-social .page-heading > div { min-width:0;flex:1 1 260px; }
+#page-social h1 { overflow-wrap:anywhere; }
+.social-navigation { position:fixed;bottom:0;z-index:9;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);background:var(--panel-deep);border-top:1px solid var(--border);box-shadow:0 -4px 18px #0002; }
+.social-navigation a { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:78px;padding:10px 4px;color:var(--muted);font-size:14px;line-height:1.3;text-align:center; }
+.social-navigation a[aria-current="page"] { color:var(--pink);background:var(--panel);box-shadow:inset 0 3px var(--pink);font-weight:700; }
+.social-navigation a:focus-visible { outline-offset:-5px; }
+.social-navigation .icon { width:22px;height:22px; }
+.social-active main { padding-bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
+html.social-active { scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
+.social-active .mobile-actions { display:none; }
+.social-active .admin-shortcut { bottom:calc(90px + env(safe-area-inset-bottom,0px)); }

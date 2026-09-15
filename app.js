@@ -14,6 +14,7 @@ import './lib/theme.js';
 import './lib/economy.js';
 import './lib/games.js';
 import {openFriendShare} from './lib/friends.js';
+import './lib/social.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
 import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.
@@ -507,9 +508,16 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
   seedDiaperChange();
 }
 
+function positionSocialNavigation(){const bounds=$('#main-content').getBoundingClientRect();$('#social-navigation').style.left=Math.max(0,bounds.left)+'px';$('#social-navigation').style.right=Math.max(0,innerWidth-bounds.right)+'px';} // Align the fixed social bar with the main content on desktop and the full screen on phones.
+window.addEventListener('resize',()=>requestAnimationFrame(positionSocialNavigation));
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
-  const requested = location.hash.slice(1);
-  const page = ['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends'].includes(requested) ? requested : 'overview';
+  const requested = location.hash.slice(1).split('?')[0];
+  const page = requested==='social'?'feed':['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends', 'feed', 'messages', 'activity'].includes(requested) ? requested : 'overview';
+  const social=['feed','messages','activity','friends'].includes(page);
+  $('#page-social').hidden=!social;document.documentElement.classList.toggle('social-active',social);
+  document.querySelectorAll('[data-social-page]').forEach(link=>{if(link.dataset.socialPage===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+  if(page==='friends')$('#social-friends').setAttribute('aria-current','page');else $('#social-friends').removeAttribute('aria-current');
+  positionSocialNavigation();
   const action = ['observation', 'wetting', 'change', 'roll', 'analysis'].includes(requested) ? requested : 'observation';
   document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
     panel.dataset.active = String(panel.dataset.mobilePanel === action); // CSS switches mobile panels without clearing their forms or hiding desktop cards.
@@ -529,7 +537,7 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
 
   document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `page-${page}`; });
   document.querySelectorAll('[data-page]').forEach(link => {
-    const selected = link.dataset.page === page;
+    const selected = link.dataset.page === (social?'social':page);
     link.classList.toggle('active', selected);
     if (selected) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -540,9 +548,10 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
   if(page==='login-bonuses')requestAnimationFrame(()=>$('#login-bonuses-title').focus({preventScroll:true}));
+  if(page==='feed'||page==='messages'||page==='activity')requestAnimationFrame(()=>$('#'+page+'-title').focus({preventScroll:true}));
   if(page==='friends')requestAnimationFrame(()=>$('#friends-title').focus({preventScroll:true}));
   if(page==='games') requestAnimationFrame(()=>$('#games-title').focus({preventScroll:true})); // Announce Games without losing any unsaved tracker or chart inputs.
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'friends' ? 'Friends' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'activity' ? 'Notifications ? Social' : page === 'feed' ? 'Feed ? Social' : page === 'messages' ? 'Messaging ? Social' : page === 'friends' ? 'Friends ? Social' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.

@@ -37,7 +37,7 @@ try {
  }
  await open(a);await a.select('#friend-shared-direction','outgoing');await a.waitForSelector('#friend-shared-list button');await click(a,'#friend-shared-list button');await a.waitForFunction(()=>document.querySelector('#friend-shared-list').textContent.includes('No shared records'));
  await open(b);assert.match(await b.$eval('#friend-shared-list',n=>n.textContent),/No shared records/);
- await navigateMenu(b,'[data-page="settings"]');await navigateMenu(b,'[data-page="friends"]');await b.waitForFunction(()=>document.querySelector('#friends-list').textContent.includes('Alice'));
+ await navigateMenu(b,'[data-page="settings"]');await navigateMenu(b,'[data-page="social"]');await b.click('#social-friends');await b.waitForFunction(()=>document.querySelector('#friends-list').textContent.includes('Alice'));
  await b.evaluate(()=>navigator.serviceWorker.ready);await b.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await b.setOfflineMode(true);await b.evaluate(()=>dispatchEvent(new Event('offline')));assert.equal(await b.$eval('#friends-list',n=>n.textContent),'');
  assert.equal(await b.evaluate(async()=>{for(const name of await caches.keys()){const cache=await caches.open(name);for(const req of await cache.keys())if(new URL(req.url).pathname.includes('/api/friends'))return true;}return false;}),false);

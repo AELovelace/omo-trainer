@@ -155,3 +155,32 @@ Community support uses server/community-support.mjs and the daily check-in recei
 
 
 Friends: server/friends.mjs owns relationship and per-record grants; lib/friends.js renders names and records using text nodes. Never grant timeline access from a friend request or community notification. Keep accepted-friend and enabled-account checks on every shared read, revoke grants on deletion/removal, and retain CSRF and preview-version checks. Friends-only queues must check both members at creation and delivery and permanently cancel ineligible pending deliveries. See FRIENDS_GUIDE.md.
+
+
+## Status updates and friend messages
+
+See [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md). Keep live audience checks on every picture
+read, accepted-friend checks on conversations, and retry receipts across
+friendship deletion. Re-encode submitted pictures with the pinned sharp
+dependency before storage. Never cache social API responses in the PWA. Deploy
+the updated Nginx upload location alongside the backend and frontend changes.
+
+
+Social reactions and activity: likes/comments/post notices commit with their
+source content. server/activity.mjs stores account history separately from
+device delivery. Preserve default-on social preference columns only at their
+initial migration; never reset saved opt-outs. Check live audiences at read and
+delivery time, and keep withdrawn notification receipts to prevent replay.
+Admin social moderation requires a current role, CSRF and a reason; only
+reported private messages are reviewable. See SOCIAL_GUIDE.md for endpoints.
+
+Activity filters community-checkin entries by the recipient's current saved
+community_support preference. Apply that filter before pagination and unread
+counts, and to read updates; do not permanently withdraw history solely because
+this display preference is off. Other stored push types remain visible.
+
+Social navigation lives in the #page-social wrapper, with one main-menu link
+and #social-navigation bottom links. Existing page IDs and feed/message/activity/
+friends hashes remain compatible. app.js maps #social to Feed and aligns the
+bottom bar to main content on resize; lib/social.js recognizes the alias when
+loading data. Keep the recording bar hidden only while Social is active.

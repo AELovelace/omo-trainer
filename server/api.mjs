@@ -40,6 +40,26 @@ export function createApi(database, login) { // Resolves each app session to an 
       if (!session) throw new ApiError(401, 'Sign in with your shared account to sync.');
       const { participant, csrf } = session;
       if (request.method === 'POST' && (origin !== login.origin || request.headers['x-csrf-token'] !== csrf)) throw new ApiError(403, 'Refresh your session before saving.');
+      if(route.startsWith('social/')&&request.method==='GET') {
+        const query=new URL(request.url,login.origin).searchParams;
+        if(route==='social/activity')return send(response,200,{participant,csrf,...database.activity.list(participant.id,{before:query.get('before')})});
+        if(route==='social/post')return send(response,200,{participant,csrf,items:[database.social.post(participant.id,query.get('id'))],nextBefore:null});
+        if(route==='social/comments')return send(response,200,{participant,...database.social.commentList(participant.id,query.get('postId'),{before:query.get('before')})});
+        if(route==='social/feed')return send(response,200,{participant,csrf,...database.social.feed(participant.id,{audience:query.get('audience')??'friends',before:query.get('before')})});
+        if(route==='social/conversations')return send(response,200,{participant,csrf,conversations:database.social.conversations(participant.id)});
+        if(route==='social/messages')return send(response,200,{participant,...database.social.messages(participant.id,query.get('participantId'),{before:query.get('before')})});
+        if(route==='social/picture') {const picture=database.social.photo(participant.id,query.get('id'));response.writeHead(200,{'Content-Type':'image/jpeg','Content-Length':picture.length,'Cache-Control':'no-store',Vary:'Cookie','X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin'});response.end(picture);return;}
+      }
+      if(request.method==='POST'&&['social/like','social/comments','social/comments/delete','social/report','social/activity/read'].includes(route)) {
+        const input=await body(request,16384);
+        const result=route==='social/like'?database.social.like(participant.id,input):route==='social/comments'?database.social.comment(participant.id,input):route==='social/comments/delete'?database.social.deleteComment(participant.id,input?.id):route==='social/report'?database.social.report(participant.id,input):database.activity.read(participant.id,input);
+        return send(response,200,result);
+      }
+      if(route==='social/posts'&&request.method==='POST')return send(response,200,await database.social.publish(participant.id,await body(request,12*1024*1024)));
+      if(route==='social/posts/delete'&&request.method==='POST')return send(response,200,database.social.deletePost(participant.id,(await body(request,4096))?.id));
+      if(route==='social/messages'&&request.method==='POST')return send(response,200,database.social.sendMessage(participant.id,await body(request,24000)));
+      if(route==='social/messages/read'&&request.method==='POST')return send(response,200,database.social.readMessages(participant.id,await body(request,4096)));
+      if(route==='social/messages/delete'&&request.method==='POST')return send(response,200,database.social.deleteMessage(participant.id,(await body(request,4096))?.id));
       if(route.startsWith('friends')&&request.method==='GET') {
         const query=new URL(request.url,login.origin).searchParams;
         if(route==='friends')return send(response,200,{participant,csrf,friends:database.friends.list(participant.id)});
@@ -59,6 +79,9 @@ export function createApi(database, login) { // Resolves each app session to an 
       if(route==='coin-revoke'&&request.method==='POST')return send(response,200,database.economy.coins('revoke',participant.id,(await body(request,4096)).id));
       if (route.startsWith('admin/')) {
         database.admin.requireAdmin(participant.id); // Authorization precedes parsing or reading anyone else's records.
+        if(route==='admin/social'&&request.method==='GET'){const q=new URL(request.url,login.origin).searchParams;return send(response,200,database.social.moderation(participant.id,{view:q.get('view')??'reports',before:q.get('before'),postId:q.get('postId')}));}
+        if(route==='admin/social'&&request.method==='POST')return send(response,200,database.social.moderate(participant.id,await body(request,16384)));
+        if(route==='admin/social/picture'&&request.method==='GET'){const picture=database.social.moderationPhoto(participant.id,new URL(request.url,login.origin).searchParams.get('id'));response.writeHead(200,{'Content-Type':'image/jpeg','Content-Length':picture.length,'Cache-Control':'no-store',Vary:'Cookie','X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin'});response.end(picture);return;}
         if(route==='admin/statistics/tokens'&&request.method==='GET')return send(response,200,{tokens:database.statistics.list(participant.id)});
         if(route==='admin/statistics/tokens'&&request.method==='POST')return send(response,201,database.statistics.create(participant.id,await body(request,4096)));
         if(route==='admin/statistics/tokens/revoke'&&request.method==='POST')return send(response,200,database.statistics.revoke(participant.id,await body(request,4096)));

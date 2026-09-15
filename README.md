@@ -299,3 +299,23 @@ The SQLite queue is committed with the daily check-in and processed by the exist
 ### Friends
 
 The Friends menu offers display-name search, accepted friend requests and shared records. In History, use Share with friend to preview and share one synced record. Friends can read its current saved version; stop sharing from Friends, delete the record or remove the friendship to revoke access. Notifications include an optional Friends only mode for both directions of Community support, independent of anonymous sharing. See [FRIENDS_GUIDE.md](FRIENDS_GUIDE.md) for use, API and deployment details.
+
+### Updates and messages
+
+Post status updates with up to four pictures from **Social > Feed**, choosing Friends
+(default) or Public per post. Public posts are visible to all signed-in members.
+**Social > Messaging** provides private conversations between accepted friends, with unread
+counts and message history. See [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for access
+rules, API details and the required Nginx upload-limit configuration.
+
+
+Updates now includes likes, comments and reporting. Activity stores notification
+history with unread counts and post links. Social push preferences for likes,
+comments and friends' posts default on for notification subscribers, with
+independent opt-outs in Settings. Admin console > Social moderation supports
+reported-content review, removal and social access restrictions. See
+[SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for migration, privacy and deployment details.
+
+Social now groups Feed, Messaging and Notifications behind one main-menu tab.
+Use its bottom bar to switch sections, and Friends & search at the top to manage
+friends and shared records.

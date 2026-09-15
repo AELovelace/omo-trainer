@@ -1,0 +1,203 @@
+# Status updates, pictures, activity and moderation
+
+Open **Social** in the main menu. Its bottom bar switches between **Feed**,
+**Messaging**, and **Notifications** on phones and desktop. Use **Friends &
+search** at the top for friend requests and shared records. The recording action
+bar gives way to this social bar while browsing Social.
+
+Open **Feed** to post text, up to four pictures, or both. Each post has a
+**Friends** or **Public** audience. Friends is the default. Public means all
+signed-in, enabled Little Log members; signed-out visitors cannot read the feed
+or its pictures. Use Show updates to switch between Friends & me and Public.
+Friends & me includes your posts and current friends' posts, including public
+ones. Older updates loads another 20 posts. You can delete your own posts.
+
+Friend posts are visible to current accepted friends. Removing a friendship
+stops future reads of those posts and pictures; accepting a new or renewed
+friendship grants access to that person's earlier friend posts too. Public posts
+remain visible to members after a friendship ends. Deletion or disabled accounts
+hide posts and pictures on subsequent reads. Access changes cannot undo copies
+someone has already saved.
+
+Statuses allow 2,000 characters. Choose still JPEG, PNG or WebP pictures and
+optionally describe each picture for accessibility. The browser resizes pictures
+before upload. The server independently decodes and re-encodes them as JPEGs up
+to 1,600 pixels on each side, removing original metadata and filenames. Each
+uploaded picture is limited to 2 MiB; each account can store 100 MiB of pictures.
+Delete old picture posts to free space. New posts are limited to ten per minute.
+
+Open **Messaging**, or select **Message** beside an accepted friend, to start a
+private text conversation. Messages allow 4,000 characters, with a limit of 60
+per minute. The page shows unread counts and checks for new messages every ten
+seconds while visible. Older messages loads earlier history in pages of 50.
+You can remove your own messages, leaving a Message removed placeholder.
+Removing a friend deletes the conversation for both accounts; becoming friends
+again starts a fresh conversation. Messages are stored on the server and are
+not end-to-end encrypted.
+
+Posting and messaging require a connection. Social data is fetched live and is
+not stored in the offline shell or local storage. Signing out clears the social
+views and drafts. Status posts and messages do not earn recording rewards or
+send Community support notifications.
+
+## Likes, comments and reports
+
+Use **Like** or **Unlike** on an accessible post. Each member has at most one
+like per post. Open **Comments** to read or write comments, up to 2,000
+characters each. Comments show 30 per page; new comments are limited to 20 per
+minute per member. Both the comment author and the post owner can delete a
+comment. Likes and comments follow the post's Friends/Public audience, and
+removing the post removes its pictures, likes and comments too.
+
+Choose **Report post**, **Report comment** or **Report message** and provide a
+reason to ask administrators to review content. Reports are visible only to
+administrators, with the reporter's identity. A repeated report from the same
+member on the same item does not duplicate the queue; reporting is limited to
+20 new reports per hour. Reporting a private message exposes that message to
+administrators, not the rest of the conversation.
+
+## Activity and social push notifications
+
+**Notifications** (the activity feed) stores likes and comments on your posts and new posts by your
+accepted friends, whether or not you have push enabled. Self-likes/comments do
+not notify you. New admin announcements and community check-in notices are also
+saved when their first delivery is attempted, and selected potty reminders are
+saved when due. History starts with this deployment; old notifications are not
+backfilled. Stored anonymous check-ins remain anonymous. Community-support
+notices appear only while the recipient's saved Community support setting is
+enabled. Turning it off hides those notices and excludes them from unread
+counts and mark-as-read actions; other push history stays visible. Turning it
+on again shows previously stored notices with their read state preserved.
+Community notices are not recorded while the setting is off.
+
+View unread counts, mark individual notifications or all loaded-through
+notifications as read, and open the relevant post. Older activity loads another
+30 items. Activity is stored on the server and survives device changes. It is
+not downloaded for offline use. Removed content and revoked audiences disappear
+from activity on subsequent reads; restoring a friendship does not restore its
+withdrawn notifications. Read status is separate from push delivery status.
+
+Settings > Receive notifications has three independent account-wide options:
+**Likes on my posts**, **Comments on my posts**, and **New posts from friends**.
+They default on for first-time notification enables and are enabled once for
+existing notification subscribers by the database column migration. Later
+opt-outs survive restarts, re-enabling and adding devices. Uncheck and save to
+stop that type of push; stored activity continues. These settings control
+receiving pushes, independently of the Community support sharing settings.
+
+Social events snapshot the recipient's subscribed devices when the event is
+saved, within the content transaction. Push payloads contain the actor's display
+name and the action, not post text, comment text or images. Names may appear on
+lock screens. Clicking a social push opens Activity. The minute worker rechecks
+live account, content, audience, subscription and preference access before
+sending. Quiet hours delay pushes for up to 24 hours. Device removal, opting out,
+content removal or loss of access cancels pending deliveries permanently.
+Retries of posts/comments and repeated like toggles cannot generate duplicate
+pushes. Transport attempts are claimed before sending and are not automatically
+retried after an uncertain failure. Expired pushes still leave readable activity
+when the underlying content remains accessible. Delivery to a push service does
+not confirm that a device displayed the notification.
+
+## Admin social moderation
+
+Open **Admin console > Social moderation**. **Open reports** shows reports and
+their current content; **All posts** lets admins browse Friends and Public posts,
+review protected pictures and open their comments. **Paused social accounts**
+lists current restrictions. Enter a reason before each decision. Admins can
+remove posts, comments and reported messages, dismiss reports, pause social
+access, or restore access. Pausing prevents new posts, likes, comments and
+messages while allowing reading and reporting. User management still controls
+full account disablement. Removed content cannot be restored by a retry.
+
+Every moderation read, protected image request and mutation checks the admin's
+current role. Private messages are reviewable/removable only after a participant
+reports that message. Decisions and reasons appear in the existing admin
+Activity log, without copying private message bodies into audit records.
+
+## Implementation and API
+
+`server/social.mjs` owns social tables in `little-log.sqlite` and verifies live
+participant and friendship access. `lib/social.js` renders text safely, prepares
+pictures and keeps retry request IDs stable. Every endpoint requires a current
+enabled session and same-origin access. POSTs also require the session's CSRF
+token. Responses, including picture bytes, use `Cache-Control: no-store`.
+
+| Endpoint under `api/social/` | Method | Input / result |
+| --- | --- | --- |
+| `feed` | GET | `audience=friends/public`, optional `before`; `items`, `nextBefore`, participant and CSRF |
+| `posts` | POST | `requestId`, `body`, `audience`, `pictures: [{data: base64, alt}]`; post ID |
+| `posts/delete` | POST | Owner-only post `id`; deletes pictures and clears text |
+| `picture` | GET | Picture `id`; JPEG bytes after live audience check |
+| `conversations` | GET | Accepted friends, latest message and unread counts; participant and CSRF |
+| `messages` | GET | `participantId`, optional `before`; chronological `items`, `nextBefore` |
+| `messages` | POST | `requestId`, `participantId`, `body`; message ID |
+| `messages/read` | POST | `participantId`, loaded message `seq`; monotonic read marker |
+| `messages/delete` | POST | Sender-owned message `id`; clears message text |
+| `post` | GET | Post `id`; one post with current audience checks |
+| `like` | POST | `postId`, boolean `liked`; current counts and viewer like state |
+| `comments` | GET | `postId`, optional `before`; chronological `items`, `nextBefore` |
+| `comments` | POST | `requestId`, `postId`, `body`; retry-safe comment ID |
+| `comments/delete` | POST | Comment `id`; author or post owner only |
+| `report` | POST | `kind: post/comment/message`, `id`, `reason` |
+| `activity` | GET | Optional `before`; `items`, `unread`, `latest`, `nextBefore`, participant and CSRF |
+| `activity/read` | POST | Notification `id` or last loaded `through` sequence |
+
+Admin-only `GET api/admin/social` accepts `view=reports/posts/restrictions`,
+optional `before`, or `postId` to inspect a post and its comments. Protected
+moderation pictures use `GET api/admin/social/picture?id=...`. Admin POST
+`api/admin/social` requires a reason and an action: `remove` with `kind` and
+`id`, `dismiss` with `reportId`, or `restrict/restore` with `participantId`.
+Existing notification preferences add booleans `socialLikes`, `socialComments`
+and `friendPosts`; omitted fields preserve previously saved choices.
+
+Stable sequence cursors prevent new writes from shifting older pages. Request
+receipts prevent retries from duplicating content or resurrecting deleted posts
+and conversations. Picture decoding finishes before acquiring the SQLite write
+lock; access and duplicate checks run again inside the publishing transaction.
+
+## Deployment and checks
+
+Deploy the backend, HTML, styles, `lib/social.js`, service worker and updated npm
+lockfile together. Install the pinned `sharp` dependency with `npm ci`. Tables
+are created automatically at startup; include `little-log.sqlite` in private
+backups because it now contains social text and pictures. The Fedora updater
+installs dependencies and runs the unit tests, including actual picture decoding,
+before activating the candidate release.
+
+**Update the Nginx proxy configuration for picture uploads.** Both supplied
+Nginx templates now include an exact `/tracker/api/social/posts` location with
+`client_max_body_size 12m`; other API routes keep their smaller limit. Apply
+that block on the proxy host, adapting the existing upstream if necessary, run
+`sudo nginx -t`, then `sudo systemctl reload nginx`. Updating only the tracker
+service does not update a separate proxy host. Any additional upstream proxy
+must also accept this endpoint's bounded upload size.
+
+Run `npm test` for audience isolation, protected pictures, malformed uploads,
+metadata removal, pagination, deletion, retry behavior, conversation permissions,
+unread markers, persistence and HTTP session/CSRF checks. With `PUPPETEER_MODULE`
+and `CHROME_PATH` set, run `node tests/social-browser.mjs` for real uploads,
+Friends/Public feeds, messaging and replies, responsive layouts and cache cleanup.
+Also run `node tests/friends-browser.mjs` and `node tests/theme-browser.mjs` for
+existing friend workflows and the nine menu destinations. Fixtures use local
+disposable accounts and do not post to the production community.
+
+Deploy `server/activity.mjs`, the updated social/notification modules and
+`admin/social.js` together with the updated app and service worker. No new
+environment variables are required; social pushes reuse the configured VAPID
+keys and scheduler. The preference column migration runs once per column and
+must never reset existing values on startup. Back up `little-log.sqlite` for
+activity, reports, moderation decisions, comments and likes.
+
+`tests/social-activity.test.mjs` verifies reactions, reports, live moderator
+roles, private-message boundaries, protected moderation pictures, durable
+activity/read state, migration defaults, opt-out cancellation, quiet hours,
+revocation, failed transport and service worker routing. Run
+`node tests/social-activity-browser.mjs` for actual likes/comments, reporting,
+activity links, admin decisions and access revocation. The notification browser
+test also checks all three default-on settings and persistent opt-outs. Push
+transport is mocked; verify real device delivery after deployment.
+
+The main menu has one Social destination (`#social`, which opens Feed). Existing
+`#feed`, `#feed?post=...`, `#messages`, `#activity` and `#friends` links continue
+to open the matching section within Social. Browser Back/Forward and push/post
+links keep working. Admin moderation stays in the admin console.

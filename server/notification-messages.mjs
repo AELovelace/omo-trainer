@@ -1,6 +1,6 @@
 ﻿import {createHash,randomUUID} from 'node:crypto';
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
-export function createNotificationMessages(db,{configured,send,localBlock}) { // Queue admin announcements in SQLite so quiet hours and process restarts do not lose pending messages.
+export function createNotificationMessages(db,{configured,send,localBlock,activity}) { // Queue admin announcements in SQLite so quiet hours and process restarts do not lose pending messages.
  db.exec(`CREATE TABLE IF NOT EXISTS notification_messages(id TEXT PRIMARY KEY,actor TEXT NOT NULL REFERENCES participants(id),request_id TEXT NOT NULL,request_hash TEXT NOT NULL,title TEXT NOT NULL,body TEXT NOT NULL,participant_id TEXT,created INTEGER NOT NULL,expires INTEGER NOT NULL,UNIQUE(actor,request_id));
  CREATE TABLE IF NOT EXISTS notification_deliveries(message_id TEXT NOT NULL REFERENCES notification_messages(id),owner TEXT NOT NULL REFERENCES participants(id),endpoint TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'queued',PRIMARY KEY(message_id,endpoint));
  CREATE INDEX IF NOT EXISTS notification_delivery_state ON notification_deliveries(state);`);
@@ -68,6 +68,7 @@ export function createNotificationMessages(db,{configured,send,localBlock}) { //
    if(attempts>=100)break; // Bounds one scheduler pass while preserving the remaining recipients in the queue.
    if(!db.prepare("UPDATE notification_deliveries SET state='attempted' WHERE message_id=? AND endpoint=? AND state='queued'").run(row.message_id,row.endpoint).changes)continue;
    attempts++;
+   activity?.record(row.owner,{source:'admin:'+row.message_id,kind:'admin-message',title:row.title,body:row.body,created:deliveryTime});
    try {
     await send(JSON.parse(sub.payload),{kind:'admin-message',title:row.title,body:row.body,tag:'admin-'+row.message_id});
     db.prepare("UPDATE notification_deliveries SET state='accepted' WHERE message_id=? AND endpoint=?").run(row.message_id,row.endpoint);

@@ -101,3 +101,7 @@
   #ai-history td { border:0; padding:8px 0; white-space:normal; }
   #ai-history td::before { content:attr(data-label); display:block; font-weight:bold; margin-bottom:5px; }
 }
+
+.moderation-card { padding:20px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere; }.moderation-card .moderation-card { padding:16px;border:1px solid var(--border);margin:12px 0; }
+#moderation-reason { width:100%;min-height:100px;font:inherit;resize:vertical;padding:12px;background:var(--page);color:var(--ink);border:1px solid var(--border); }.moderation-card .status-gallery img { max-height:320px; }
+#moderation-reason:focus-visible { outline:2px solid var(--gold);outline-offset:4px; }

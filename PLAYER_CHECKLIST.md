@@ -123,3 +123,30 @@ Use **Run and share with MommyBot** to request an on-demand report for the bot's
 - **Community support** in notification settings shares your display name with your daily check-in and receives other members' check-ins. Select **Share anonymously** and save to hide your name. It starts checked when first enabling notifications, and existing notification subscribers are enrolled once when this update is deployed. Uncheck and save to stop both directions on all devices; quiet hours still apply.
 
 - Open Friends to search for members and accept requests. In History, preview a synced record with Share with friend before granting access. Manage Shared by me to stop sharing. Enable Friends only in notification settings to exchange community check-ins only with accepted friends.
+
+
+- Open **Social > Feed** to post text and up to four pictures. Choose Friends or Public
+  before posting; Public reaches all signed-in members. Switch the feed selector
+  to browse public posts. Delete your own posts from their cards.
+- Open **Social > Messaging**, select an accepted friend and send a private text message.
+  Unread counts clear after opening the latest messages. Removing a friend
+  deletes your conversation for both people. See [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md).
+
+
+- Like posts and open Comments to join the conversation. Use Report on a post,
+  comment or received message to ask administrators to review it.
+- Open Activity for stored notifications, unread counts and links to posts.
+  Mark individual items or all current notifications as read.
+- In notification settings, uncheck Likes on my posts, Comments on my posts or
+  New posts from friends to opt out of those pushes, then save. Activity remains
+  available. These three choices start on for existing notification subscribers.
+- Administrators: use Social moderation to review reports and posts, enter a
+  reason, and remove content or pause/restore social access.
+
+- Activity includes saved push notifications. Community-support notices appear
+  only while Community support is enabled in Settings; other push history remains
+  visible when that option is off.
+
+Social now groups Feed, Messaging and Notifications behind one main-menu tab.
+Use its bottom bar to switch sections, and Friends & search at the top to manage
+friends and shared records.

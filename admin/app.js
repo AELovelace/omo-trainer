@@ -1,3 +1,4 @@
+import {createSocialModeration} from './social.js';
 import { renderPrediction, clearPrediction } from '../lib/prediction-view.js?admin=1'; // Bypass older PWA shell caches for the admin renderer.
 import { analyzeDataset } from '../lib/admin-analytics.js';
 import { datasetCsv } from '../lib/admin-format.js';
@@ -19,6 +20,7 @@ const chartUpdates=typeof BroadcastChannel==='function'?new BroadcastChannel('li
 const notificationComposer=createNotificationComposer({request,authorized:()=>Boolean(actor)});
 const analysisPanel=createAnalysisPanel({request,authorized:()=>Boolean(actor),download});
 const statisticsPanel=createStatisticsPanel({request,authorized:()=>Boolean(actor)});
+const socialModeration=createSocialModeration({request,authorized:()=>Boolean(actor)});
 const chartBuilder=createChartBuilder($('#chart-builder'));
 const selectedId=()=>$('#participant-filter').value;
 const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
@@ -28,6 +30,7 @@ function clearPrivateView() { // Drop all in-memory cohort data and rendered rec
   notificationComposer.clear();
   analysisPanel.clear();
   statisticsPanel.clear();
+  socialModeration.clear();
   chartBuilder.clear();
   for(const editor of noticeEditors)editor.clear();
   accessEpoch++; chartRequest++; $('#potty-detail').removeAttribute('aria-busy'); chartUserId=''; chartWeek=''; $('#potty-detail').hidden=true; $('#potty-detail-title').textContent='Participant chart'; csrf=''; actor=null; users=[]; dataset=null; analysis=null; preview=null;
@@ -217,10 +220,11 @@ async function renderAudit() {
   $('#audit-table').innerHTML=table(['When','Actor','Action','Target','Details'],result.audit.map(row=>[row.created_at,users.find(user=>user.id===row.actor_id)?.label??row.actor_id,row.action,row.target_id,row.details_json]));
 }
 function navigate() {
-  const route=['analytics','advanced-drilldown','potty-charts','predictions','users','transfer','reminders','notifications','ai-analysis','statistics','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
+  const route=['analytics','advanced-drilldown','potty-charts','predictions','users','transfer','reminders','notifications','ai-analysis','statistics','moderation','audit'].includes(location.hash.slice(1))?location.hash.slice(1):'analytics';
   document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==route);
   document.querySelectorAll('[data-tab]').forEach(link=>{ if(link.dataset.tab===route) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
-  $('.admin-filters').hidden=['reminders','notifications','ai-analysis','statistics'].includes(route);
+  $('.admin-filters').hidden=['reminders','notifications','ai-analysis','statistics','moderation'].includes(route);
+  if(route==='moderation'&&actor)void socialModeration.load();
   if(route==='statistics'&&actor)void statisticsPanel.load();
   if(route==='ai-analysis'&&actor)void analysisPanel.load();
   if(route==='notifications'&&actor)void notificationComposer.load();

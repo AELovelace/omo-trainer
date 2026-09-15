@@ -1,3 +1,5 @@
+import {createActivity} from './activity.mjs';
+import {createSocial} from './social.mjs';
 import {createFriends} from './friends.mjs';
 import {createNotifications} from './notifications.mjs';
 import {createAnalysisStore} from './ai-analysis.mjs';
@@ -225,12 +227,14 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
   const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
   const sessions=createSessions(db,admin,options.sessions); // Persistent device sessions retain live access checks and server-side revocation.
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
-  const friends=createFriends(db,recordFromRow,{onRemove:(a,b)=>notifications.community.restrictPair(a,b)});
-  const notifications=createNotifications(db,records,{...options.notifications,areFriends:friends.accepted});
+  const friends=createFriends(db,recordFromRow,{onRemove:(a,b)=>{notifications.community.restrictPair(a,b);activity.prune(a);activity.prune(b);}});
+  const activity=createActivity(db,{now:options.now,canSee:row=>social.activityVisible(row)});
+  const social=createSocial(db,friends,{now:options.now,activity});
+  const notifications=createNotifications(db,records,{...options.notifications,areFriends:friends.accepted,activity});
   const aiAnalysis=createAnalysisStore(db,admin,options.aiAnalysis); // Only admin API routes expose settings, jobs and saved reports.
   const statistics=createStatistics(db,admin,options.statistics); // Scoped device reads reuse the same saved-record aggregation as admin reports.
   return {
-    friends, statistics, aiAnalysis, notifications, economy, admin, ensureParticipant, createSession:sessions.create, session:sessions.read, sessionNow:sessions.now, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
+    activity, social, friends, statistics, aiAnalysis, notifications, economy, admin, ensureParticipant, createSession:sessions.create, session:sessions.read, sessionNow:sessions.now, saveLogin, takeLogin, records, sync, exportRows, growthChart, saveGrowthChart, migrateIssuer,
     deleteSession:sessions.remove,
     exportCharts: () => db.prepare('SELECT participant_id, payload_json, version, updated_at FROM growth_charts ORDER BY participant_id').all().map(row => ({ participantId: row.participant_id, chart: JSON.parse(row.payload_json), version: row.version, updatedAt: row.updated_at })), // Private administrator export, separate from observation CSV.
     list: () => db.prepare('SELECT id, label, created_at FROM participants ORDER BY created_at').all(),

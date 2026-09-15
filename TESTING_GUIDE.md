@@ -183,7 +183,7 @@ The overnight regression also checks that the first morning change starts diaper
 
 ## Games navigation
 
-`npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all four cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` now expects seven destinations and checks the Games route. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.
+`npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all four cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` checks all nine menu destinations, including Games. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.
 
 
 ## Additional event choices
@@ -220,4 +220,43 @@ The report API tests also verify nightly/explicit-share eligibility, hidden hist
 Community support: run node --test tests/community-support.test.mjs for default preferences, one-time existing-subscriber enrollment across both schema versions, persisted opt-outs after restart, daily record and roll triggers, recipient snapshots, duplicate prevention, quiet hours, opt-outs, disabled accounts, restart recovery, expired endpoints and named/anonymous push rendering, anonymous preference persistence, and privacy changes on pending events. The notifications browser fixture also verifies default-on, saving an opt-out, reload/new-device persistence and responsive layout. Push transport is mocked; production delivery requires configured Web Push and an actual subscribed device.
 
 
-Friends: tests/friends.test.mjs covers search privacy, recipient-only acceptance, per-record ownership/version checks, revocation, restart persistence, pagination, friends-only audiences and authenticated HTTP behavior. tests/friends-browser.mjs uses two browser accounts for request/accept/share/read/revoke, safe display-name rendering, both themes at five widths and private cache cleanup. Notification browser tests cover friends-only preference persistence. The theme suite now checks nine menu destinations.
+Friends: tests/friends.test.mjs covers search privacy, recipient-only acceptance, per-record ownership/version checks, revocation, restart persistence, pagination, friends-only audiences and authenticated HTTP behavior. tests/friends-browser.mjs uses two browser accounts for request/accept/share/read/revoke, safe display-name rendering, both themes at five widths and private cache cleanup. Notification browser tests cover friends-only preference persistence. The theme suite now checks nine menu destinations, including Social, including Updates and Messages.
+
+
+## Status updates, public feed and messages
+
+`npm test` includes `tests/social.test.mjs` for Friends/Public isolation,
+authenticated picture reads, decoding and metadata removal, input limits,
+pagination, retry safety, deletion, private conversations, unread markers,
+restart persistence and session/CSRF enforcement. Run
+`node tests/social-browser.mjs` with `PUPPETEER_MODULE` and `CHROME_PATH` for
+three-account photo uploads, feed visibility, messaging/replies, unread counts,
+safe text rendering, both themes, mobile widths and private cache cleanup.
+The existing friends and theme browser suites cover the new Message action and
+menu routes. See [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for deployment checks,
+including the separate Nginx picture upload limit.
+
+
+## Reactions, moderation and stored activity
+
+`tests/social-activity.test.mjs` covers audience checks, retry safety, comment
+ownership/pagination, report permissions, moderator actions/audit, reported
+private messages, protected admin pictures, migration defaults, stored history,
+read state, quiet hours, opt-outs, disabled accounts, revoked audiences, expired
+endpoints and push click routing. Run `node tests/social-activity-browser.mjs`
+for real likes/comments, report submission, activity links/read state, admin
+removal/restriction/restoration/dismissal, reported messages and role revocation.
+`tests/notifications-browser.mjs` verifies all three default-on social settings
+and opt-outs across reloads/devices. Push tests use mocked transport; production
+Web Push delivery still requires a subscribed device.
+
+Activity preference filtering: social-activity.test.mjs also verifies that turning
+Community support off hides its stored notices before pagination, unread counts
+and mark-as-read operations. Other push history remains visible. Re-enabling
+restores earlier community notices and their read state; no notices are added
+while opted out or without saved Community support enrollment.
+
+Social navigation: the theme browser suite checks the single Social menu entry,
+its bottom bar across both themes and six widths, and hidden recording actions
+inside Social. Social/activity and friends browser suites enter through Social,
+use its bottom links, and exercise preserved post/message/friend routes.
