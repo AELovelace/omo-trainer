@@ -292,6 +292,10 @@ continues to provide account access controls for these accounts.
 keyboard navigation, first/last boundaries, preserved image descriptions,
 position after resizing, reduced motion and both themes at five widths. It
 also verifies single-photo posts, feed/detail rendering and sign-out cleanup.
+Fullscreen coverage includes opening the tapped image, native touch swipes,
+portrait/landscape rotation, full-viewport bounds in both themes, captions,
+keyboard opening/navigation, Close/Escape, restored focus/thumbnail position,
+single-image boundaries and removal of the modal on sign-out.
 Use PUPPETEER_MODULE and CHROME_PATH as for the social browser suite.
 
 Member profiles: `tests/profile.test.mjs` checks audience-filtered pagination,

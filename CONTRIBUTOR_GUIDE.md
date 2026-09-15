@@ -230,6 +230,14 @@ scrolling and CSS scroll snap. Keep composer previews editable as a grid.
 Gallery buttons and keyboard navigation follow the current scroll position,
 respect reduced motion and retain the existing authenticated image URLs.
 
+Posted images are accessible `.post-photo-open` buttons. `lib/post-gallery.js`
+opens a native `#photo-viewer` modal using the same gallery renderer, selected
+photo and authenticated picture URLs. Keep its full-viewport styles independent
+of theme dialog decoration. Closing restores the opener, selected thumbnail and
+ancestor scroll positions, including after rotation. `clearPostGalleries` closes
+any viewer owned by that container and disconnects its observers; never retain
+private gallery content across sign-out, page changes or offline cleanup.
+
 Social profiles use `#profile` for the current member and `#profile?id=ID` for
 another member. `GET api/social/member` accepts id/before and returns only
 minimal member identity, self/friend flags and a page of currently readable

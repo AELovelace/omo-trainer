@@ -289,6 +289,12 @@ Posts with multiple photos use a swipeable gallery. Swipe left or right, or use
 Previous photo / Next photo; the counter shows your position. Focus the gallery
 to use the arrow keys, Home or End. Photos fit inside the viewer without cropping.
 
+Tap any posted photo, including single-photo posts, to open it fullscreen.
+Swipe through the post's photos or use Previous/Next; descriptions appear below.
+Close or Escape returns to the same photo and feed position. The viewer also
+works on profiles and closes whenever the underlying private feed is cleared,
+including sign-out or disconnect.
+
 Open **Profile** in the Social bottom bar to see your own picture and posts.
 Use **Edit profile picture** to open the upload controls in Settings. Clicking
 a name or avatar in posts, comments, friends/search, shared records or messages

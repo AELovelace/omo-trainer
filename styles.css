@@ -1789,6 +1789,20 @@ html.social-active { scroll-padding-bottom:calc(100px + env(safe-area-inset-bott
 .post-gallery-controls { display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px; }
 .post-gallery-controls button { min-height:44px;white-space:normal; }
 .post-gallery-counter { flex-shrink:0;font-variant-numeric:tabular-nums;color:var(--muted); }
+.post-photo-open { display:block;width:100%;height:100%;padding:0;border:0;background:transparent;color:inherit;cursor:zoom-in; }
+html.photo-viewing { overflow:hidden; }
+#photo-viewer { position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);border:0;border-radius:0;background:#080808;color:#fff;box-shadow:none;overflow:hidden; }
+#photo-viewer[open] { display:flex;flex-direction:column; }
+#photo-viewer::backdrop { background:#080808; }
+.photo-viewer-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;flex-shrink:0; }
+#photo-viewer .button { min-height:44px;padding:8px 12px;font:14px/1.3 'Segoe UI',sans-serif;border:1px solid #777;border-radius:6px;background:#222;color:#fff;box-shadow:none; }
+#photo-viewer .post-gallery { display:flex;flex:1;flex-direction:column;min-height:0;margin:0;border:0;border-radius:0; }
+#photo-viewer .post-gallery-track { flex:1;min-height:0;height:auto;background:#080808; }
+#photo-viewer .post-gallery-slide img { width:100%;height:100%;max-height:none;object-fit:contain; }
+#photo-viewer .post-gallery-controls { flex-shrink:0;padding:8px 12px; }
+#photo-viewer .post-gallery-counter { color:#fff; }
+.photo-viewer-caption { flex-shrink:0;max-height:15dvh;overflow:auto;margin:0;padding:0 12px 10px;font:13px/1.4 'Segoe UI',sans-serif;overflow-wrap:anywhere;text-align:center; }
+.photo-viewer-caption:empty { display:none; }
 @media(max-width:480px) { .post-gallery-controls { gap:6px;padding:8px; }.post-gallery-controls button { padding:8px;font-size:12px; } }
 
 .social-identity { color:inherit;text-decoration:none; }
