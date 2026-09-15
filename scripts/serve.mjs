@@ -28,6 +28,7 @@ const files = new Map([
   ['lib/avatar.js','text/javascript; charset=utf-8'],
   ['lib/picture-upload.js','text/javascript; charset=utf-8'],
   ['lib/profile.js','text/javascript; charset=utf-8'],
+  ['lib/record-sharing.js','text/javascript; charset=utf-8'],
   ['lib/post-gallery.js','text/javascript; charset=utf-8'],
   ['lib/social.js','text/javascript; charset=utf-8'],
   ['lib/friends.js','text/javascript; charset=utf-8'],

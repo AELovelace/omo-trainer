@@ -312,3 +312,10 @@ new-message resurfacing, friendship removal and disabled accounts.
 On a real phone, also check the installed app with the software keyboard open,
 browser bars expanded/collapsed, portrait/landscape rotation and safe-area
 insets. Emulated viewport resizing does not reproduce every mobile keyboard.
+
+Timeline record sharing: `tests/record-sharing.test.mjs` covers default opt-out,
+eligible types, audiences, retry/conflict/rollback behavior, source corrections
+and deletions, moderation, imports, cross-device versions, persistence and API
+authorization. Run `node tests/record-sharing-browser.mjs` with PUPPETEER_MODULE
+and CHROME_PATH to verify Settings controls, saved opt-in, real sync requests,
+feed posts, stale-device conflicts, both mobile themes and private-data cleanup.

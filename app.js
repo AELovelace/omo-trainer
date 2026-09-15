@@ -16,6 +16,7 @@ import './lib/games.js';
 import {openFriendShare} from './lib/friends.js';
 import './lib/social.js';
 import './lib/profile.js';
+import './lib/record-sharing.js';
 import './potty_chart/merge.js';
 import './potty_chart/account.js';
 import './potty_chart/app.js'; // Mount the chart in the same document so navigation retains both chart and observation drafts.

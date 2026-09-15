@@ -59,6 +59,28 @@ not stored in the offline shell or local storage. Signing out clears the social
 views and drafts. Status posts and messages do not earn recording rewards or
 send Community support notifications.
 
+## Automatically posting bathroom records
+
+In **Settings → Records on your timeline**, opt into **Automatically post my
+bathroom records** and choose **Private (friends only)** or **Public (all
+members)**, then save. This is off for everyone until they opt in. It works
+independently of push notifications and Community support, across devices.
+
+New wettings (including accidents, bedwetting and used-the-potty records) and
+diaper changes create short timeline posts when first synced. Posts contain the
+classification and recorded time; diaper changes also include the final wetting
+count. Liquids, rolls, position and diaper numbers are not posted. Already-synced
+records are not backfilled; offline and backdated records first synced while
+enabled do post. Administrator imports never create new posts.
+
+Private posts are visible to you and accepted friends. Public posts are visible
+to all signed-in members. Changing the audience or switching sharing off affects
+future posts only. Correcting a shared record updates its post; deleting the
+record removes the post and associated activity. You can also delete a post
+without deleting the record. Edits and retries cannot restore a deleted post.
+Posts support the same likes, comments, reports and moderation as manual updates,
+and friends receive their usual new-post notification according to their settings.
+
 ## Likes, comments and reports
 
 Use **Like** or **Unlike** on an accessible post. Each member has at most one

@@ -20,7 +20,9 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  CREATE TABLE IF NOT EXISTS social_reports(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,reporter TEXT NOT NULL REFERENCES participants(id),kind TEXT NOT NULL,target TEXT NOT NULL,reason TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL DEFAULT 'open',resolution TEXT,UNIQUE(reporter,kind,target));
  CREATE TABLE IF NOT EXISTS social_restrictions(owner TEXT PRIMARY KEY REFERENCES participants(id),reason TEXT NOT NULL,actor TEXT NOT NULL,created INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS social_profiles(seq INTEGER PRIMARY KEY AUTOINCREMENT,owner TEXT NOT NULL UNIQUE REFERENCES participants(id),version TEXT NOT NULL,request_hash TEXT NOT NULL,data BLOB,updated INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS friend_message_archives(friendship_id TEXT NOT NULL REFERENCES friendships(id) ON DELETE CASCADE,owner TEXT NOT NULL REFERENCES participants(id),through_seq INTEGER NOT NULL,PRIMARY KEY(friendship_id,owner));`);
+ CREATE TABLE IF NOT EXISTS friend_message_archives(friendship_id TEXT NOT NULL REFERENCES friendships(id) ON DELETE CASCADE,owner TEXT NOT NULL REFERENCES participants(id),through_seq INTEGER NOT NULL,PRIMARY KEY(friendship_id,owner));
+ CREATE TABLE IF NOT EXISTS social_record_preferences(owner TEXT PRIMARY KEY REFERENCES participants(id),enabled INTEGER NOT NULL DEFAULT 0,audience TEXT NOT NULL CHECK(audience IN ('friends','public')),version INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS social_record_posts(owner TEXT NOT NULL,entry_id TEXT NOT NULL,post_id TEXT NOT NULL UNIQUE REFERENCES social_posts(id),PRIMARY KEY(owner,entry_id),FOREIGN KEY(owner,entry_id) REFERENCES entries(participant_id,id));`);
  const active=owner=>Boolean(db.prepare('SELECT 1 FROM participants p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=p.id AND a.disabled=1)').get(owner));
  const requireUser=owner=>{if(!active(owner))fail(403,'This account is not available.');};
  const requireContributor=owner=>{requireUser(owner);if(db.prepare('SELECT 1 FROM social_restrictions WHERE owner=?').get(owner))fail(403,'Social posting and messaging are paused for this account. Contact an administrator.');};
@@ -58,6 +60,26 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   return transaction(()=>{requireContributor(owner);if(check())return {...profile(owner),repeated:true};db.prepare('INSERT INTO social_profiles(owner,version,request_hash,data,updated) VALUES (?,?,?,?,?) ON CONFLICT(owner) DO UPDATE SET version=excluded.version,request_hash=excluded.request_hash,data=excluded.data,updated=excluded.updated').run(owner,requestId,fingerprint,image?.data??null,now());return {...profile(owner),repeated:false};});
  } // Compare the loaded version after decoding; retries, other devices and moderation cannot overwrite a newer picture.
  function existingPost(owner,requestId,fingerprint){const row=db.prepare('SELECT id,request_hash,deleted FROM social_posts WHERE owner=? AND request_id=?').get(owner,requestId);if(row&&row.request_hash!==fingerprint)fail(409,'This request already belongs to a different post.');return row?{id:row.id,deleted:Boolean(row.deleted),repeated:true}:null;}
+ function recordPreferences(owner){requireUser(owner);const row=db.prepare('SELECT enabled,audience,version FROM social_record_preferences WHERE owner=?').get(owner);return {enabled:Boolean(row?.enabled),audience:row?.audience??'friends',version:row?.version??0};} // Existing and new accounts start opted out, independently of push preferences.
+ function saveRecordPreferences(owner,input){
+  requireUser(owner);if(!input||typeof input.enabled!=='boolean'||!['friends','public'].includes(input.audience)||!Number.isSafeInteger(input.version)||input.version<0)fail(400,'Choose whether to post records and who can see them.');
+  return transaction(()=>{const current=recordPreferences(owner);if(current.version!==input.version)fail(409,'These settings changed on another device. Refresh before saving.');db.prepare('INSERT INTO social_record_preferences VALUES (?,?,?,?) ON CONFLICT(owner) DO UPDATE SET enabled=excluded.enabled,audience=excluded.audience,version=excluded.version').run(owner,Number(input.enabled),input.audience,current.version+1);return recordPreferences(owner);});
+ } // Version checks prevent a stale device from silently re-enabling sharing or broadening the audience.
+ function recordSummary(entry){
+  if(!['wetting','diaper-change'].includes(entry?.kind))return null;
+  const labels={forced:'Forced wetting','semi-forced':'Semi-forced wetting',voluntary:'Voluntary wetting','semi-involuntary':'Semi-involuntary accident',involuntary:'Involuntary accident',bedwetting:'Bedwetting','used-the-potty':'Used the potty'};
+  const summary=entry.kind==='diaper-change'?`Diaper change · ${entry.wettingsCount} wetting${entry.wettingsCount===1?'':'s'}`:labels[entry.category];
+  return summary+'\nRecorded: '+entry.occurredAt.replace('T',' ');
+ } // Share only event classification, recorded time and a change's final count, never the full private record.
+ function syncRecordPost(owner,entryId,entry,isNew=false){
+  const linked=db.prepare('SELECT post_id FROM social_record_posts WHERE owner=? AND entry_id=?').get(owner,entryId),body=recordSummary(entry);
+  if(linked){if(!body)removePost(linked.post_id);else db.prepare('UPDATE social_posts SET body=? WHERE id=? AND deleted IS NULL').run(body,linked.post_id);return;}
+  if(!isNew||!body||!active(owner)||db.prepare('SELECT 1 FROM social_restrictions WHERE owner=?').get(owner))return;
+  const pref=recordPreferences(owner);if(!pref.enabled)return;
+  const id=randomUUID(),instant=now();db.prepare('INSERT INTO social_posts(id,owner,request_id,request_hash,body,audience,created) VALUES (?,?,?,?,?,?,?)').run(id,owner,randomUUID(),hash({entryId}),body,pref.audience,instant);
+  db.prepare('INSERT INTO social_record_posts VALUES (?,?,?)').run(owner,entryId,id);
+  for(const friend of friends.list(owner).filter(f=>f.state==='accepted'))activity?.record(friend.participantId,{source:'post:'+id,kind:'friend-post',actor:owner,postId:id,created:instant},true);
+ } // Runs inside the record transaction: retries/edits never duplicate posts, and deletion never resurrects one.
  async function publish(owner,input) {
   requireContributor(owner);if(!input||typeof input!=='object'||Array.isArray(input))fail(400,'Write a status update.');
   const requestId=key(input.requestId),body=text(input.body??'',2000,true),audience=input.audience??'friends',images=input.pictures??[];
@@ -196,5 +218,5 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
    db.prepare('INSERT INTO admin_audit VALUES (?,?,?,?,?,?)').run(randomUUID(),owner,'social-'+action,targetId,JSON.stringify({reason,kind:input.kind??null}),new Date(now()).toISOString());return {saved:true};
   });
  } // Require a reason and live admin role for every action; audit records contain decisions, not private content copies.
- return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,archiveMessages,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo,memberProfile};
+ return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,archiveMessages,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo,memberProfile,recordPreferences,saveRecordPreferences,syncRecordPost};
 }

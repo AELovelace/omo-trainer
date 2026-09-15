@@ -45,6 +45,7 @@ export function createApi(database, login) { // Resolves each app session to an 
         const query=new URL(request.url,login.origin).searchParams;
         if(route==='social/session')return send(response,200,{participant,csrf}); // The Post tab needs identity and CSRF without loading a feed or private tracking records.
         if(route==='social/profile')return send(response,200,{participant,csrf,...database.social.profile(participant.id)});
+        if(route==='social/record-settings')return send(response,200,{participant,csrf,...database.social.recordPreferences(participant.id)});
         if(route==='social/member')return send(response,200,{participant,csrf,...database.social.memberProfile(participant.id,query.get('id')??participant.id,{before:query.get('before')})});
         if(route==='social/avatar'){const bytes=database.social.avatar(participant.id,query.get('owner'),query.get('version'));response.writeHead(200,{'Content-Type':'image/jpeg','Content-Length':bytes.length,'Cache-Control':'no-store',Vary:'Cookie','X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin'});response.end(bytes);return;}
         if(route==='social/activity')return send(response,200,{participant,csrf,...database.activity.list(participant.id,{before:query.get('before')})});
@@ -61,6 +62,7 @@ export function createApi(database, login) { // Resolves each app session to an 
         return send(response,200,result);
       }
       if(route==='social/posts'&&request.method==='POST')return send(response,200,await database.social.publish(participant.id,await body(request,12*1024*1024)));
+      if(route==='social/record-settings'&&request.method==='POST')return send(response,200,{participant,csrf,...database.social.saveRecordPreferences(participant.id,await body(request,4096))});
       if(route==='social/profile'&&request.method==='POST'){const result=await database.social.saveProfile(participant.id,await body(request,3*1024*1024));return send(response,200,{participant:{...session.participant,...database.social.avatarInfo(participant.id)},csrf,...result});}
       if(route==='social/posts/delete'&&request.method==='POST')return send(response,200,database.social.deletePost(participant.id,(await body(request,4096))?.id));
       if(route==='social/messages'&&request.method==='POST')return send(response,200,database.social.sendMessage(participant.id,await body(request,24000)));

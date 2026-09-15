@@ -3,7 +3,7 @@ import { ApiError } from './database.mjs';
 import { MAX_ENTRIES } from '../lib/model.js';
 import { parseAdminImport } from './admin-transfer.mjs';
 
-export function createAdminStore(db, records, growthChart) { // App roles are bound to immutable participant identities, separate from public profile labels.
+export function createAdminStore(db, records, growthChart,{onRecordWrite=()=>{}}={}) { // App roles are bound to immutable participant identities, separate from public profile labels.
   db.exec(`
     CREATE TABLE IF NOT EXISTS participant_access (
       participant_id TEXT PRIMARY KEY REFERENCES participants(id), role TEXT NOT NULL DEFAULT 'participant',
@@ -158,6 +158,7 @@ export function createAdminStore(db, records, growthChart) { // App roles are bo
           source=excluded.source,edited=excluded.edited,version=excluded.version,updated_at=excluded.updated_at,deleted_at=NULL,payload_json=excluded.payload_json`)
           .run(write.participantId,e.id,e.occurredAt,e.liquidsMl??null,e.position??null,e.diaperNumber??null,e.wettingsCount??null,e.probability??null,
             e.result??null,e.source??null,e.edited===undefined?null:Number(e.edited),write.version,now,now,JSON.stringify(e));
+        if(write.type!=='chart')onRecordWrite(write.participantId,e); // Keep already-shared summaries accurate without making new timeline posts from imports.
       }
       audit(actor,'import',input.participantId||null,result.summary);
       db.exec('COMMIT'); return result.summary;

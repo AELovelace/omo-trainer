@@ -195,6 +195,7 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
           entry ? JSON.stringify(entry) : null,
         );
         if(!entry)friends.revokeRecord(participantId,change.id); // Deleting a source record also revokes friend access before the sync commits.
+        social.syncRecordPost(participantId,change.id,entry,!row); // Opted-in timeline summaries commit with the accepted record, including corrections and deletions.
         if (!row && entry) economy.awardRecord(participantId, entry); // Award only after the server accepts a new record.
         if(!row&&['observation','wetting','diaper-change','roll'].includes(entry?.kind))checkinRecord??=entry.id;
         db.prepare('INSERT INTO mutations (participant_id, id, request_hash, created_at) VALUES (?, ?, ?, ?)').run(participantId, change.mutationId, fingerprint, now);
@@ -224,7 +225,7 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 
-  const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
+  const admin = createAdminStore(db, records, growthChart,{onRecordWrite:(owner,entry)=>social.syncRecordPost(owner,entry.id,entry)}); // Imported corrections update existing summaries without publishing historical records.
   const sessions=createSessions(db,admin,options.sessions); // Persistent device sessions retain live access checks and server-side revocation.
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
   const friends=createFriends(db,recordFromRow,{avatarInfo:id=>social.avatarInfo(id),onRemove:(a,b)=>{notifications.community.restrictPair(a,b);activity.prune(a);activity.prune(b);}});

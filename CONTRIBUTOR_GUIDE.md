@@ -252,3 +252,17 @@ the authenticated session's owner plus CSRF protection. `friend_message_archives
 stores each viewer's latest archived sequence; newer messages resurface the
 thread. Deleting the friendship cascades archive state. Keep server permissions,
 read markers and offline cleanup independent of the layout.
+
+`lib/record-sharing.js` manages account-wide, default-off timeline posting through
+`GET/POST api/social/record-settings`. Writes require session, CSRF and the loaded
+integer version; stale devices must refresh before changing consent or audience.
+This preference is independent of notification subscriptions.
+
+`social.syncRecordPost` runs synchronously inside the accepted record transaction.
+Only new wettings and diaper changes can create posts. The `(owner,entry_id)` link
+in `social_record_posts` is retained after post deletion to prevent resurrection.
+Corrections retain the original audience; deletion or conversion to a nonshared
+record kind withdraws the post and activity. Admin imports call the same hook
+only to correct existing posts. Never call asynchronous `publish()` from the sync
+transaction or expose raw record payloads through Social. Posting restrictions
+suppress new automatic posts while allowing the underlying tracker save.
