@@ -36,5 +36,5 @@ try{
  await a.bringToFront();await click(a,'#profile-refresh');await a.waitForFunction(()=>!document.querySelector('#profile-file').disabled&&!document.querySelector('#profile-preview img'));await uploaded(a);
  await a.evaluate(()=>navigator.serviceWorker.ready);assert.equal(await a.evaluate(async()=>{for(const key of await caches.keys()){const cache=await caches.open(key);if((await cache.keys()).some(r=>new URL(r.url).pathname.includes('/api/social/')))return true;}return false;}),false);
  await a.evaluate(()=>dispatchEvent(new Event('little-log-signout')));assert.equal(await a.$eval('#profile-preview',n=>n.childElementCount),0);assert.equal(await a.$eval('#profile-file',n=>n.disabled),true);assert.deepEqual(errors,[]);
- console.log('PASS: upload/replace/remove/reload, avatars in feed/comments/friends/search/messages, five social tabs, both themes and phone layouts, admin removal, sign-out and private cache behavior. Screenshots: '+directory);
+ console.log('PASS: upload/replace/remove/reload, avatars in feed/comments/friends/search/messages, six social tabs, both themes and phone layouts, admin removal, sign-out and private cache behavior. Screenshots: '+directory);
 }finally{await browser?.close();db.close();server.closeAllConnections();await new Promise(r=>server.close(r));}

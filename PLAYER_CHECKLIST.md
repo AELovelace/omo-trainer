@@ -147,7 +147,7 @@ Use **Run and share with MommyBot** to request an on-demand report for the bot's
   only while Community support is enabled in Settings; other push history remains
   visible when that option is off.
 
-Social groups Post, Feed, Friends & search, Messaging and Notifications behind
+Social groups Post, Feed, Friends & search, Messaging, Notifications and Profile behind
 one main-menu tab. Use Friends & search in the bottom bar to manage friends
 and shared records.
 
@@ -171,3 +171,11 @@ Login bonuses uses a star. History, Settings and About retain their icons.
 
 Use **Notifications** in the top bar to open your Social notification history.
 **Join Discord** is in the side menu, below About, and opens in a new tab.
+
+- Swipe through multi-photo posts, or use Previous photo / Next photo. The
+  counter tracks your position; keyboard users can focus the gallery and use
+  arrow keys, Home or End.
+
+- Open Social > Profile to see your picture and posts, or click another person's
+  name to visit their profile. Profiles only show posts shared with you.
+- Use Edit profile picture on your own profile to open its Settings controls.

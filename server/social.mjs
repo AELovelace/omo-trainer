@@ -82,6 +82,12 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
    ORDER BY p.seq DESC LIMIT 21`).all(cursor(before),...(audience==='friends'?[owner,owner,owner]:[]));
   return {items:rows.slice(0,20).map(post=>serializePost(owner,post)),nextBefore:rows.length>20?rows[19].seq:null};
  } // Use a stable sequence cursor so new posts do not duplicate or skip older pages.
+ function memberProfile(owner,participantId=owner,{before}={}) {
+  requireUser(owner);key(participantId);if(!active(participantId))fail(404,'Profile not found.');
+  const member=db.prepare('SELECT id,label FROM participants WHERE id=?').get(participantId),isSelf=owner===participantId,isFriend=friends.accepted(owner,participantId);
+  const rows=db.prepare("SELECT p.seq,p.id,p.owner,p.body,p.audience,p.created,u.label FROM social_posts p JOIN participants u ON u.id=p.owner WHERE p.owner=? AND p.deleted IS NULL AND p.seq<? AND (?=1 OR p.audience='public') ORDER BY p.seq DESC LIMIT 21").all(participantId,cursor(before),Number(isSelf||isFriend));
+  return {member:{...member,...avatarInfo(participantId),isSelf,isFriend},items:rows.slice(0,20).map(post=>serializePost(owner,post)),nextBefore:rows.length>20?rows[19].seq:null};
+ } // Profiles reveal only identity and posts the current viewer can read; they never expose tracking records or account credentials.
  function photo(owner,id){requireUser(owner);const row=db.prepare('SELECT * FROM social_pictures WHERE id=?').get(key(id));if(!row)fail(404,'Picture not found.');postAccess(owner,row.post_id);return row.data;}
  function removePost(id){db.prepare('DELETE FROM social_pictures WHERE post_id=?').run(id);db.prepare("UPDATE social_posts SET body='',deleted=COALESCE(deleted,?) WHERE id=?").run(now(),id);db.prepare("UPDATE social_comments SET body='',deleted=COALESCE(deleted,?) WHERE post_id=?").run(now(),id);db.prepare('DELETE FROM social_likes WHERE post_id=?').run(id);withdrawPost(id);}
  function deletePost(owner,id){requireUser(owner);return transaction(()=>{const row=db.prepare('SELECT id FROM social_posts WHERE id=? AND owner=?').get(key(id),owner);if(!row)fail(404,'Post not found.');removePost(id);return {removed:true};});} // Retain retry receipts after deletion so a lost response cannot resurrect content.
@@ -187,5 +193,5 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
    db.prepare('INSERT INTO admin_audit VALUES (?,?,?,?,?,?)').run(randomUUID(),owner,'social-'+action,targetId,JSON.stringify({reason,kind:input.kind??null}),new Date(now()).toISOString());return {saved:true};
   });
  } // Require a reason and live admin role for every action; audit records contain decisions, not private content copies.
- return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo};
+ return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo,memberProfile};
 }

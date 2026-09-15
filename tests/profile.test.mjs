@@ -11,6 +11,23 @@ const upload=(requestId,version=null)=>({requestId,version,picture:{data:photo.t
 function fixture(path=':memory:'){const db=openDatabase(path),a=db.ensureParticipant('test','alice','Alice'),b=db.ensureParticipant('test','bob','Bob'),c=db.ensureParticipant('test','cara','Cara');return {db,a,b,c};}
 function connect(db,a,b){const friendship=db.friends.act(a.id,{action:'request',participantId:b.id});db.friends.act(b.id,{action:'accept',id:friendship.id});}
 
+test('member profiles show only current readable posts and never expose tracker data or account details',async()=>{
+ const {db,a,b,c}=fixture();try{
+  connect(db,a,b);const privatePost=await db.social.publish(a.id,{requestId:'private',body:'Friends only'}),publicPost=await db.social.publish(a.id,{requestId:'public',body:'Everyone',audience:'public'});await db.social.publish(b.id,{requestId:'other',body:'Someone else',audience:'public'});
+  const own=db.social.memberProfile(a.id);assert.equal(own.member.isSelf,true);assert.equal(own.items.length,2);assert.deepEqual(Object.keys(own.member).sort(),['id','isFriend','isSelf','label']);
+  assert.equal(db.social.memberProfile(b.id,a.id).items.length,2);assert.deepEqual(db.social.memberProfile(c.id,a.id).items.map(row=>row.id),[publicPost.id]);assert.equal(db.social.memberProfile(c.id).items.length,0);
+  db.friends.act(b.id,{action:'remove',id:db.friends.list(b.id)[0].id});assert.deepEqual(db.social.memberProfile(b.id,a.id).items.map(row=>row.id),[publicPost.id]);
+  db.social.deletePost(a.id,publicPost.id);assert.equal(db.social.memberProfile(c.id,a.id).items.length,0);
+  db.admin.bootstrap(c.id);const access=db.admin.users(c.id).find(u=>u.id===a.id);db.admin.updateUser(c.id,{action:'update',id:a.id,role:'participant',disabled:true,version:access.version});assert.throws(()=>db.social.memberProfile(b.id,a.id),e=>e.status===404);assert.throws(()=>db.social.memberProfile(b.id,'missing'),e=>e.status===404);assert.throws(()=>db.social.memberProfile(a.id,b.id),e=>e.status===403);
+ }finally{db.close();}
+});
+test('member profile pagination filters the author and audience before selecting a page',async()=>{
+ let time=Date.now();const db=openDatabase(':memory:',{now:()=>time}),a=db.ensureParticipant('test','pages','Pages'),b=db.ensureParticipant('test','viewer','Viewer');try{
+  for(let i=0;i<25;i++){time+=61000;await db.social.publish(a.id,{requestId:'public'+i,body:'Visible '+i,audience:'public'});await db.social.publish(a.id,{requestId:'private'+i,body:'Private '+i});}
+  const first=db.social.memberProfile(b.id,a.id);assert.equal(first.items.length,20);assert.ok(first.items.every(p=>p.audience==='public'));const second=db.social.memberProfile(b.id,a.id,{before:first.nextBefore});assert.equal(second.items.length,5);assert.equal(second.nextBefore,null);assert.ok(second.items.every(p=>!first.items.some(q=>q.id===p.id)));assert.throws(()=>db.social.memberProfile(b.id,a.id,{before:'invalid'}),e=>e.status===400);
+ }finally{db.close();}
+});
+
 test('profile pictures are sanitized square JPEGs and appear in member identities',async()=>{
  const {db,a,b,c}=fixture();try{
   assert.deepEqual(db.social.profile(a.id),{version:null,avatarVersion:null});connect(db,a,b);await db.social.saveProfile(a.id,upload('one'));
@@ -51,6 +68,7 @@ test('profile HTTP routes require login, CSRF and live roles; uploads can only c
  const get=(user,path)=>fetch(login.origin+'/'+path,{headers:user?{Cookie:tokens.get(user.id)}:{}}),post=(user,path,input,headers={})=>fetch(login.origin+'/'+path,{method:'POST',headers:{Cookie:tokens.get(user.id),Origin:login.origin,'Content-Type':'application/json','X-CSRF-Token':db.session(tokens.get(user.id)).csrf,...headers},body:JSON.stringify(input)});
  try{
   assert.equal((await get(null,'social/profile')).status,401);assert.equal((await post(a,'social/profile',upload('bad'),{'X-CSRF-Token':'wrong'})).status,403);
+  assert.equal((await get(null,'social/member?id='+a.id)).status,401);const member=await get(b,'social/member?id='+a.id);assert.equal(member.headers.get('cache-control'),'no-store');assert.equal((await member.json()).member.id,a.id);assert.equal((await (await get(b,'social/member')).json()).member.id,b.id);
   const saved=await post(a,'social/profile',{...upload('first'),owner:b.id,participantId:b.id});assert.equal(saved.status,200);const result=await saved.json();assert.equal(result.csrf,db.session(tokens.get(a.id)).csrf);assert.equal(result.participant.avatarVersion,'first');assert.equal(db.social.profile(b.id).avatarVersion,null);
   const path='social/avatar?owner='+a.id+'&version=first';assert.equal((await get(null,path)).status,401);const image=await get(b,path);assert.equal(image.status,200);assert.equal(image.headers.get('cache-control'),'no-store');assert.equal(image.headers.get('content-type'),'image/jpeg');assert.equal(image.headers.get('x-content-type-options'),'nosniff');assert.equal(image.headers.get('cross-origin-resource-policy'),'same-origin');
   assert.equal((await get(b,'admin/social?view=profiles')).status,403);assert.equal((await get(b,'admin/'+path)).status,403);assert.equal((await get(c,'admin/'+path)).status,200);

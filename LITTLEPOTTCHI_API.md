@@ -1,0 +1,146 @@
+# Littlepottchi care and Little Log bridge
+
+Littlepottchi keeps wetness, needs, outfits and timers in `data/clothes-gacha.db`.
+It shares Diaper Atelier ownership and the existing LiD0llID account. Care never
+charges the wallet or consumes a collected design. Replacing a diaper, including
+the same design, supplies a fresh one; Cloud Tapes is also a free starter supply.
+
+## Simulation
+
+- Each wetting adds **1 wetness**. At `wetness + (mess × 2) >= diaper.bulk`, the doll leaks until
+  a fresh diaper is equipped or selected with **Fresh change**. Only diapers and
+  training pants may fill this slot; ordinary underwear is unavailable. Removing clothing, changing appearance, selling an item or
+  refreshing does not clean the doll. Replacements preserve the next wetting time.
+- **Messy mode** is optional and off for new and migrated saves. While enabled,
+  a saved 12-hour game timer causes messy accidents; each uses two bulk units.
+  Little Log's saved analysis currently has no bowel-event counts, so this timer
+  is explicitly authored game timing and does not use the community wetting mean.
+  The doll displays wet and messy counts separately, with one combined capacity
+  meter. A messy diaper reduces comfort and needs a fresh change even before it leaks.
+  Disabling the mode pauses its remaining time without clearing mess or leaks;
+  enabling resumes it. Repeated settings requests do not restart the timer.
+  Fresh replacements clear both counts while preserving both accident clocks and
+  lifetime totals. Offline accidents catch up once, without a notification storm.
+  Tune `messyRules` in `src/dressup/care.js` (interval and bulk per accident).
+- Bulk is an integer from 1–100, independently editable from the diaper's visual
+  stance in `python/game_editor_gui.py`. The initial values are authored for this
+  game, using lidollquest's bulk concept: Small 2, Medium 3, Large 4, Huge 5,
+  Giant 6, Moosive 8, Waddle 10, Training/Covers 1, other designs 3.
+  They are game wetting units, not measured fluid volumes or exact imported RPG stats.
+- The rhythm is **sum of recorded wettings / sum of active participant-days** in
+  the latest completed community AI report's saved input. Potty use is included;
+  random roll results are excluded. This is a derived count rate, not measured
+  within-day intervals. The interval is `24 hours / rate`, limited to 30 minutes
+  through 24 hours for playability. A recorded zero rate pauses wettings. Until a
+  usable report arrives, the UI explicitly labels its four-hour default rhythm.
+  Reports with no active participant-days leave the previous usable rhythm in place.
+- New reports affect future timing. Replays are idempotent; older completed
+  reports cannot replace a newer profile. No names or individual records reach
+  the pet client. The community source includes disabled accounts because that
+  is the scope of Little Log's saved analysis.
+- Food is due every 4 hours, water every 2, play every 3, rest every 8. Play takes
+  2 minutes and rest takes 5. One activity runs at a time; completion rewards are
+  applied once, including offline completion. Food/water have 30-second cooldowns.
+  Pantry artwork comes from `Figures/Items/Collectibles`; water uses a text control.
+- Needs decay without killing the doll or deleting collectibles. The server
+  advances 100 saved dolls every 30 seconds, cycling through all accounts. Reads
+  and actions catch up immediately. Browser care snapshots refresh every 15 seconds.
+
+## Server configuration
+
+Set the **same new random secret** (32–512 non-whitespace characters) on both hosts:
+
+```dotenv
+LITTLEPOTTCHI_BRIDGE_TOKEN=<new dedicated random secret>
+```
+
+On Little Log also set:
+
+```dotenv
+LITTLEPOTTCHI_API_URL=https://bot.lidoll.dev/littlepottchi/integration/v1/
+```
+
+The URL requires HTTPS, except loopback HTTP for local tests. Existing report-read
+credentials are not accepted and their permissions do not change. No credentials
+are sent to the browser. With these variables unset, the bridge is disabled.
+Restart both services after configuring their environment; do not put secrets in Git.
+
+Little Log's existing notification tick calls `createLittlepottchiBridge` once per
+minute. It uploads only the latest completed job's saved `input.days` counts,
+then polls pet events. Analysis synchronization also works without push keys.
+Push delivery additionally needs Little Log's existing VAPID configuration and
+an active browser subscription. `database.notifications.littlepottchi.status()`
+reports configuration and a generic last synchronization error without secrets.
+
+Players opt in using **Receive pet reminders through Little Log** in Littlepottchi
+and enable push in Little Log using the same LiD0llID account. Disabling the pet
+checkbox cancels queued reminders. Quiet hours, disabled accounts and removal of
+Little Log subscriptions are respected. Notification clicks open Little Log's
+Games page, which links to Littlepottchi and Clothes Emporium.
+
+## API v1
+
+All paths below are relative to `/littlepottchi/integration/v1/` and require
+`Authorization: Bearer <LITTLEPOTTCHI_BRIDGE_TOKEN>`. POST bodies require
+`Content-Type: application/json`. Browser cookies and CSRF tokens do not authorize
+these endpoints. Responses are never cached. Maximum request size: 256 KiB.
+
+### POST `analysis`
+
+```json
+{"reportId":"report-example","finished":1789473600000,"days":[
+  {"date":"2026-09-14","wettings":18,"activeParticipants":3}
+]}
+```
+
+`finished` is the completed report's Unix timestamp in milliseconds. Use the exact
+saved report counts, not live records or AI prose. The server accepts 1–3,660 unique
+dated rows, nonnegative integer counts, and a positive total participant-day count.
+Returns `{ "accepted": true }`, optionally `unchanged:true`; a stale report returns
+`{ "accepted": false, "stale": true }`. An altered replay is rejected.
+
+### GET `events?after=0&limit=50`
+
+Returns `{events, nextAfter, more}`. Limit: 1–100. Each event has a stable UUID
+`id`, integer `sequence`, `recipient:{issuer,subject}`, `kind`, fixed `title/body`,
+and millisecond `created/expires`. Kinds: `wet`, `mess`, `leak`, `feed`, `water`, `play`,
+`rest`, `complete`. Events expire after 24 hours. Follow `nextAfter` while `more`
+is true, even if a page has no events; begin a later polling pass at zero to revisit
+unacknowledged events deferred by quiet hours. Do not treat a cursor as a receipt.
+
+The feed checks current need, opt-in and the original verified identity binding.
+Wet reminders coalesce within a diaper change; each leak or due-care episode is
+reported once. Old offline wettings do not produce a notification storm.
+Messy reminders also coalesce per diaper. A leak takes priority over mess, and
+mess takes priority over wetness. A fresh change invalidates all three old needs.
+
+The existing authenticated browser action endpoint `/littlepottchi/api/doll`
+accepts `{"action":"messy-mode","enabled":true}` (or false) with its usual
+session, same-origin and CSRF checks. Pet snapshots expose `messyRules`, `usedBulk`
+and `player.care.{messyMode,mess,messings,nextMessAt,messRemaining}`; `mess` counts
+accidents in the current diaper, while `messings` is the lifetime total.
+
+### POST `events/ack`
+
+```json
+{"ids":["d5b2c7fe-30cd-4491-a499-e2f1222c09bd"]}
+```
+
+Accepts at most 100 event IDs; repeated receipts are safe. Returns `{ok:true}`.
+Little Log journals each endpoint before attempting a push and acknowledges only
+after processing it. An uncertain push is not retried, preventing duplicate pushes
+at the cost of possible missed delivery. Lost API acknowledgements are safe to retry.
+At most 10 push attempts occur per tick. No subscribers means the event is skipped.
+
+## Source installation and verification
+
+`integrations/little-log/littlepottchi-bridge.mjs` is the maintained bridge source.
+The corresponding installed module belongs in Little Log's `server/` directory.
+`python/stage_little_log_bridge.py` stages the sibling changes under ignored
+`data/little-log-pet-patch/`; `ps/install-little-log-pet-bridge.ps1` verifies every
+original SHA-256 before copying. These are one-time integration helpers and do not
+deploy or restart services. Later changes should be made against the current files.
+
+Tests use memory databases, synthetic AI snapshots, fake wallet balances and fake
+push transports. Run `npm test` here and `npm test` in Little Log. Browser checks:
+`node scripts/check-dressup-browser.mjs` with the documented local Chrome settings.

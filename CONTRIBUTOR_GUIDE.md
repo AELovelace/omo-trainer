@@ -207,7 +207,7 @@ Admins review the profiles view and remove-profile action with a reason and
 reviewed version; the audit log records removal. Restrictions also block avatar
 writes. Keep avatar modules in the static allowlist and service-worker shell,
 while keeping every image API outside the cache. The Social bottom bar now
-contains Post, Feed, Friends & search, Messaging and Notifications.
+contains Post, Feed, Friends & search, Messaging, Notifications and Profile.
 
 `lib/picture-upload.js` handles both post photos and avatars. Accept originals
 up to 100 MiB, decode locally, resize, and measure the encoded JPEG against its
@@ -224,3 +224,16 @@ wallet balances, social content and chart setup do not add a participant.
 User management still lists accounts for role/access administration; its data
 and prediction shortcuts are disabled for accounts without records. Full
 backup exports retain all accounts and chart definitions.
+
+`lib/post-gallery.js` renders posted photo galleries using native horizontal
+scrolling and CSS scroll snap. Keep composer previews editable as a grid.
+Gallery buttons and keyboard navigation follow the current scroll position,
+respect reduced motion and retain the existing authenticated image URLs.
+
+Social profiles use `#profile` for the current member and `#profile?id=ID` for
+another member. `GET api/social/member` accepts id/before and returns only
+minimal member identity, self/friend flags and a page of currently readable
+posts. Keep owner/audience filtering before pagination and recheck enabled
+accounts and accepted friendship on every request. `createIdentity` renders
+profile anchors using text nodes. Feed and profile share post cards and gallery
+cleanup; conversation names and Message buttons are separate controls.

@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {mkdir,mkdtemp} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createServer} from 'node:net';
+import sharp from 'sharp';
+import {openDatabase} from '../server/database.mjs';
+const puppeteer=(await import(pathToFileURL(process.env.PUPPETEER_MODULE).href)).default;
+await mkdir('artifacts',{recursive:true});const directory=await mkdtemp(resolve('artifacts/gallery-browser-'));
+const probe=createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));const origin='http://127.0.0.1:'+port;
+Object.assign(process.env,{NODE_ENV:'test',HOST:'127.0.0.1',PORT:String(port),BASE_PATH:'/tracker/',PUBLIC_ORIGIN:origin,OIDC_ISSUER:'http://127.0.0.1:4174',DATA_DIR:directory});
+const {server}=await import('../scripts/serve.mjs');if(!server.listening)await new Promise(r=>server.once('listening',r));
+const db=openDatabase(resolve(directory,'little-log.sqlite')),user=db.ensureParticipant('test','gallery','Gallery member'),pictures=[];
+for(const [width,height,color,alt] of [[1000,600,'#de88ad','Pink landscape'],[600,1000,'#8ebeda','Blue portrait'],[800,800,'#c5b8e8','Purple square']])pictures.push({data:(await sharp({create:{width,height,channels:3,background:color}}).jpeg().toBuffer()).toString('base64'),alt});
+const post=await db.social.publish(user.id,{requestId:'gallery',body:'Three photos',audience:'public',pictures}),single=await db.social.publish(user.id,{requestId:'single',body:'One photo',pictures:[pictures[0]]});let browser;const errors=[];
+async function counter(page,text){try{await page.waitForFunction(text=>document.querySelector('.post-gallery-counter')?.textContent===text,{timeout:10000},text);await page.waitForFunction(()=>{const track=document.querySelector('.post-gallery-track');return Math.abs(track.scrollLeft/track.clientWidth-Math.round(track.scrollLeft/track.clientWidth))<0.005;},{timeout:10000});}catch(error){console.log('Gallery position:',text,await page.$eval('.post-gallery-track',n=>({left:n.scrollLeft,width:n.clientWidth,scrollWidth:n.scrollWidth,slides:[...n.children].map(s=>({width:s.getBoundingClientRect().width,left:s.offsetLeft})),counter:n.parentElement.textContent})));await page.screenshot({path:resolve(directory,'failed-gallery.png')});throw error;}}
+try{
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH,headless:true});const context=await browser.createBrowserContext();await context.setCookie({name:'little_log',value:db.createSession(user.id),url:origin+'/tracker/',path:'/tracker/',httpOnly:true});const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.setViewport({width:390,height:900,isMobile:true,hasTouch:true});
+ await page.goto(origin+'/tracker/#feed?post='+post.id,{waitUntil:'networkidle0'});await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.post-gallery-track');await counter(page,'1 / 3');await page.$eval('.post-gallery-track',n=>n.scrollIntoView({block:'center',behavior:'instant'}));
+ assert.equal(await page.$eval('.post-gallery-controls button',n=>n.disabled),true);assert.deepEqual(await page.$$eval('.post-gallery-slide img',nodes=>nodes.map(n=>n.alt)),pictures.map(p=>p.alt));
+ const cdp=await page.createCDPSession(),bounds=await page.$eval('.post-gallery-track',n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});const y=bounds.y+bounds.height/2;
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:bounds.x+bounds.width*0.85,y}]});for(let i=1;i<=8;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:bounds.x+bounds.width*(0.85-i*0.075),y}]});await new Promise(r=>setTimeout(r,25));}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await counter(page,'2 / 3');
+ await page.click('.post-gallery-controls button:last-child');await counter(page,'3 / 3');assert.equal(await page.$eval('.post-gallery-controls button:last-child',n=>n.disabled),true);
+ await page.focus('.post-gallery-track');await page.keyboard.press('Home');await counter(page,'1 / 3');await page.keyboard.press('ArrowRight');await counter(page,'2 / 3');await page.keyboard.press('End');await counter(page,'3 / 3');await page.click('.post-gallery-controls button:first-child');await counter(page,'2 / 3');
+ for(const theme of ['little-tracker','caregiver-tracker']){await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);for(const width of [320,390,680,1024,1440]){await page.setViewport({width,height:900,isMobile:true,hasTouch:true});await counter(page,'2 / 3');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' overflow '+width);assert.equal(await page.$eval('.post-gallery-track',n=>n.scrollWidth>n.clientWidth),true);}
+  await page.setViewport({width:390,height:900,isMobile:true,hasTouch:true});await counter(page,'2 / 3');await page.$eval('.post-gallery',n=>n.scrollIntoView({block:'center',behavior:'instant'}));await page.screenshot({path:resolve(directory,theme+'-gallery.png')});}
+ await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);await page.focus('.post-gallery-track');await page.keyboard.press('Home');await counter(page,'1 / 3');
+ await page.evaluate(()=>location.hash='#feed');await page.waitForSelector('.post-single-picture');assert.equal(await page.$$eval('.post-single-picture .post-gallery-controls',nodes=>nodes.length),0);assert.equal(await page.$$eval('.post-gallery',nodes=>nodes.length),1);assert.equal(await page.$$eval('#status-feed .post-photo',nodes=>nodes.length),4);
+ await page.evaluate(()=>dispatchEvent(new Event('little-log-signout')));assert.equal(await page.$$eval('.post-gallery',nodes=>nodes.length),0);assert.deepEqual(errors,[]);
+ console.log('PASS: real touch swipe, previous/next and keyboard controls, boundaries, photo descriptions, resize position, reduced motion, single/multi-photo feed, both themes and private-view cleanup. Screenshots: '+directory);
+}finally{await browser?.close();db.close();server.closeAllConnections();await new Promise(r=>server.close(r));}

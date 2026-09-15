@@ -1,7 +1,7 @@
 # Status updates, pictures, activity and moderation
 
 Open **Social** in the main menu. Its bottom bar switches between **Post**, **Feed**,
-**Friends & search**, **Messaging**, and **Notifications** on phones and desktop.
+**Friends & search**, **Messaging**, **Notifications**, and **Profile** on phones and desktop.
 Friends & search manages friend requests and shared records. The recording action
 bar gives way to this social bar while browsing Social.
 
@@ -238,3 +238,17 @@ support. If HEIC cannot be opened, export the photo as JPEG or PNG.
 
 The top-bar **Notifications** shortcut opens the same stored activity as
 Social > Notifications. **Join Discord** is in the side menu below About.
+
+Posts with multiple photos use a swipeable gallery. Swipe left or right, or use
+Previous photo / Next photo; the counter shows your position. Focus the gallery
+to use the arrow keys, Home or End. Photos fit inside the viewer without cropping.
+
+Open **Profile** in the Social bottom bar to see your own picture and posts.
+Use **Edit profile picture** to open the upload controls in Settings. Clicking
+a name or avatar in posts, comments, friends/search, shared records or messages
+opens that member's profile. Conversation rows have a separate Message button.
+
+Profiles show only posts you can already read: your own posts, friends-only posts
+from accepted friends, and public posts. Profiles do not reveal tracking records,
+account credentials or someone's private friend list. Disabled or missing
+accounts are unavailable. Use Older posts / Newest posts to navigate history.

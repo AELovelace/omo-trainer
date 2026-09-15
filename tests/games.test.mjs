@@ -5,7 +5,7 @@ import {createGamesRoute} from '../server/games.mjs';
 
 test('Games redirects fixed names to the configured HTTPS bot, never forwarding credentials or return URLs',()=>{
   const route=createGamesRoute('/tracker/',{LIDOLLBOT_PUBLIC_ORIGIN:'https://bot.example',NODE_ENV:'production'});
-  for(const game of ['diapers','hangman','touhou','balldrop'])for(const method of ['GET','HEAD']){
+  for(const game of ['diapers','hangman','touhou','balldrop','clothes','littlepottchi'])for(const method of ['GET','HEAD']){
     const headers={},res={setHeader:(key,value)=>headers[key]=value,writeHead:(status,values)=>{res.status=status;Object.assign(headers,values);},end:()=>{}};
     assert.equal(route({method,url:`/tracker/games/${game}?token=secret&returnTo=https://evil.example`,headers:{cookie:'secret'}},res,`/tracker/games/${game}`),true);
     assert.equal(res.status,303);assert.equal(headers.Location,`https://bot.example/${game}/login`);assert.equal(headers['Cache-Control'],'no-store');assert.equal(headers['Set-Cookie'],undefined);
@@ -19,9 +19,9 @@ test('Games origin rejects insecure production, embedded credentials and arbitra
   for(const value of ['http://bot.example','https://bot.example/evil','https://user:pass@bot.example','https://bot.example?token=a','https://bot.example/#x','http://127.0.0.1:4000'])assert.throws(()=>createGamesRoute('/',{LIDOLLBOT_PUBLIC_ORIGIN:value,NODE_ENV:'production'}));
   assert.doesNotThrow(()=>createGamesRoute('/',{LIDOLLBOT_PUBLIC_ORIGIN:'http://127.0.0.1:4000',NODE_ENV:'test'}));
 });
-test('Games shell offers all four separate tabs with link instructions and a cached offline module',()=>{
+test('Games shell offers all six separate tabs with link instructions and a cached offline module',()=>{
   const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8'),html=read('index.html');
-  for(const game of ['diapers','hangman','touhou','balldrop'])assert.match(html,new RegExp(`href="./games/${game}" target="_blank" rel="noopener noreferrer"`));
+  for(const game of ['diapers','hangman','touhou','balldrop','clothes','littlepottchi'])assert.match(html,new RegExp(`href="./games/${game}" target="_blank" rel="noopener noreferrer"`));
   assert.match(html,/No Discord account or membership is needed/);assert.doesNotMatch(html,/<iframe/i);assert.match(read('sw.js'),/\.\/lib\/games.js/);
   assert.match(read('scripts/serve.mjs'),/createGamesRoute/);assert.match(read('app.js'),/import '\.\/lib\/games.js'/);
 });

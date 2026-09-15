@@ -66,15 +66,15 @@ try {
         assert.equal(await page.$eval('#desktop-navigation',el=>el.getBoundingClientRect().right<=document.querySelector('main').getBoundingClientRect().left),true,'Sidebar sits beside the content');
       }
 
-      for(const route of ['settings','overview','history','potty-chart','stickers','games','login-bonuses','social','post','friends','feed','messages','activity','about']) {
+      for(const route of ['settings','overview','history','potty-chart','stickers','games','login-bonuses','social','post','friends','feed','messages','activity','profile','about']) {
         await page.evaluate(route=>{location.hash='#'+route;},route);await page.waitForFunction(route=>!document.querySelector('#page-'+route).hidden,{},route);
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,theme+' '+route+' overflows '+width);
         assert.equal(await page.$eval('#status-form',n=>n.getClientRects().length>0),route==='post','The composer is only visible in Post');
-        const social=['social','post','friends','feed','messages','activity'].includes(route);
+        const social=['social','post','friends','feed','messages','activity','profile'].includes(route);
         assert.equal(await page.$eval('#page-social',n=>!n.hidden),social);
         if(social){
           assert.equal(await page.$eval('[data-page="social"]',n=>n.getAttribute('aria-current')),'page');
-          assert.deepEqual(await page.$$eval('#social-navigation a',nodes=>nodes.map(n=>n.textContent.trim())),['Post','Feed','Friends & search','Messaging','Notifications']);
+          assert.deepEqual(await page.$$eval('#social-navigation a',nodes=>nodes.map(n=>n.textContent.trim())),['Post','Feed','Friends & search','Messaging','Notifications','Profile']);
           assert.equal(await page.$eval('#social-navigation',n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&Math.abs(r.bottom-innerHeight)<2;}),true,'Social bar fits the viewport');
           assert.equal(await page.$eval('.mobile-actions',n=>getComputedStyle(n).display),'none');
         }

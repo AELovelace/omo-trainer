@@ -1,4 +1,5 @@
 ﻿import webpush from 'web-push';
+import {createLittlepottchiBridge} from './littlepottchi-bridge.mjs';
 import {createCommunitySupport} from './community-support.mjs';
 import {createNotificationMessages} from './notification-messages.mjs';
 import {randomInt} from 'node:crypto';
@@ -44,6 +45,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
  const vapidDetails={subject:process.env.PUSH_VAPID_SUBJECT,publicKey,privateKey:process.env.PUSH_VAPID_PRIVATE_KEY};
  const configured=Boolean(options.send||(publicKey&&vapidDetails.privateKey&&vapidDetails.subject));
  const send=options.send??((sub,payload)=>webpush.sendNotification(sub,JSON.stringify(payload),{vapidDetails,TTL:60,urgency:'normal',timeout:5000}));
+ const littlepottchi=createLittlepottchiBridge(db,{configured,send,localBlock,...options.littlepottchi});
  const messages=createNotificationMessages(db,{configured,send,localBlock,activity:options.activity});
  const community=createCommunitySupport(db,{configured,send,localBlock,areFriends:options.areFriends,activity:options.activity});
  const random=options.random??(()=>randomInt(100));let running=false;
@@ -86,6 +88,8 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
   db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued' AND NOT EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_deliveries.owner AND s.endpoint=notification_deliveries.endpoint)").run(owner);community.remove(owner);options.activity?.cancel(owner);return status(owner);
  }
  async function tick(now=Date.now()) { // Persist one 1% draw per user/block, surviving restarts; stale windows never produce catch-up notifications.
+  if(running)return;
+  await littlepottchi.tick(now); // Synchronize saved AI counts even when push delivery is not configured.
   if(!configured||running)return;running=true;const started=Date.now();
   try {
    const users=db.prepare('SELECT p.* FROM notification_preferences p WHERE EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=p.owner) AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=p.owner AND a.disabled=1)').all();
@@ -111,5 +115,5 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
    db.prepare('DELETE FROM notification_blocks WHERE created_at<?').run(now-90*86400000);
   }finally{running=false;}
  }
- return {status,save,remove,tick,messages,community};
+ return {status,save,remove,tick,messages,community,littlepottchi};
 }

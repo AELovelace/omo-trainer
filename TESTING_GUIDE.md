@@ -261,7 +261,7 @@ its bottom bar across both themes and six widths, and hidden recording actions
 inside Social. Social/activity and friends browser suites enter through Social,
 use its bottom links, and exercise preserved post/message/friend routes.
 
-Post/Feed separation: theme checks cover all five bottom tabs and confirm that
+Post/Feed separation: theme checks cover all six bottom tabs and confirm that
 the composer is visible only on Post. The social browser flow switches tabs with
 a prepared photo/text draft, publishes from Post and opens View your post in
 Feed. Social API tests check the private, minimal composer session response.
@@ -287,3 +287,15 @@ The admin browser test verifies that sign-in-only accounts are absent from
 Participants and totals, appear after their first saved entry and disappear
 after their last entry is deleted and the console is refreshed. User management
 continues to provide account access controls for these accounts.
+
+`node tests/gallery-browser.mjs` checks a real touch swipe, gallery buttons,
+keyboard navigation, first/last boundaries, preserved image descriptions,
+position after resizing, reduced motion and both themes at five widths. It
+also verifies single-photo posts, feed/detail rendering and sign-out cleanup.
+Use PUPPETEER_MODULE and CHROME_PATH as for the social browser suite.
+
+Member profiles: `tests/profile.test.mjs` checks audience-filtered pagination,
+identity-only fields, disabled members and authenticated reads. Run
+`node tests/member-browser.mjs` for the sixth Profile tab, name links from
+posts/comments/friends/messages/conversations, self/other profiles, friendship
+revocation, own post deletion, missing profiles, mobile layouts and cleanup.

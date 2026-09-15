@@ -1,5 +1,5 @@
-const CACHE = `little-log-v88-chrysalis-copy-${self.registration.scope}`; // Install reactions, activity and notification settings together; private API responses are never cached.
-const SHELL = ['./lib/picture-upload.js', './lib/avatar.js', './lib/profile.js', './lib/social.js', './lib/friends.js', './lib/login-bonuses.js', './lib/login-bonuses.css', './lib/games.js', './lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/notification-icon.png', './icons/notification-badge.png', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
+const CACHE = `little-log-v92-messy-mode-${self.registration.scope}`; // Install reactions, activity and notification settings together; private API responses are never cached.
+const SHELL = ['./lib/post-gallery.js', './lib/picture-upload.js', './lib/avatar.js', './lib/profile.js', './lib/social.js', './lib/friends.js', './lib/login-bonuses.js', './lib/login-bonuses.css', './lib/games.js', './lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/notification-icon.png', './icons/notification-badge.png', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 SHELL.push(...['embedded.css', 'app.js', 'merge.js', 'account.js'].map(name => `./potty_chart/${name}`)); // Keep the complete chart available inside the installed PWA.
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
@@ -29,6 +29,11 @@ self.addEventListener('fetch', event => { // Serves the versioned public app she
 
 self.addEventListener('push',event=>{ // Community payloads may include a display name; record details stay private.
  let data;try{data=event.data?.json();}catch{return;}
+ const petMessages={wet:'Your Littlepottchi has a wet diaper.',mess:'Your Littlepottchi has a messy diaper and needs a fresh change.',leak:'Your Littlepottchi is leaking and needs a fresh diaper.',feed:'Your Littlepottchi is ready for food.',water:'Your Littlepottchi is ready for water.',play:'Your Littlepottchi would like some playtime.',rest:'Your Littlepottchi is ready for a rest.',complete:'Your Littlepottchi finished a timed activity.'};
+ if(data?.kind==='littlepottchi') {
+  if(!Object.prototype.hasOwnProperty.call(petMessages,data.need))return;
+  event.waitUntil(self.registration.showNotification('Littlepottchi',{body:petMessages[data.need],icon:new URL('./icons/notification-icon.png',self.registration.scope).href,badge:new URL('./icons/notification-badge.png',self.registration.scope).href,data:{pet:true},tag:typeof data.tag==='string'?data.tag.slice(0,80):'littlepottchi'}));return;
+ } // Only fixed pet messages are displayed; no supplied URL or personal record is rendered.
  const adminMessage=data?.kind==='admin-message',communityMessage=data?.kind==='community-checkin',socialMessage=data?.kind==='social-activity';
  if((adminMessage||socialMessage)&&(typeof data.title!=='string'||!data.title.trim()||data.title.length>80||typeof data.body!=='string'||!data.body.trim()||data.body.length>500))return;
  const displayName=communityMessage&&typeof data.displayName==='string'&&data.displayName.length<=80?data.displayName.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'').trim():''; // Render only the optional display name in fixed community copy, with legacy anonymous fallback.
@@ -36,6 +41,6 @@ self.addEventListener('push',event=>{ // Community payloads may include a displa
  event.waitUntil(self.registration.showNotification(adminMessage||socialMessage?data.title:communityMessage?'Community check-in':'Potty check-in',{body:adminMessage||socialMessage?data.body:communityMessage?(displayName||'Someone in the Little Log community')+' checked in today. A little reminder to record your day, too.':'Pee NOW! Time for a potty check-in.',icon:new URL('./icons/notification-icon.png',self.registration.scope).href,badge:new URL('./icons/notification-badge.png',self.registration.scope).href,data:{activity:socialMessage},tag:typeof data.tag==='string'?data.tag.slice(0,80):'potty-reminder'}));
 });
 self.addEventListener('notificationclick',event=>{
- event.notification.close();const target=new URL(event.notification.data?.activity?'./#activity':'./#overview',self.registration.scope).href;
+ event.notification.close();const target=new URL(event.notification.data?.pet?'./#games':event.notification.data?.activity?'./#activity':'./#overview',self.registration.scope).href;
  event.waitUntil((async()=>{const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});const existing=windows.find(client=>client.url.startsWith(self.registration.scope));if(existing){await existing.navigate(target);await existing.focus();}else await self.clients.openWindow(target);})());
 });
