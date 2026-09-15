@@ -121,7 +121,7 @@ The first change after a date rollover starts the next diaper at #1, while the c
 
 ## Games page
 
-[Games guide](GAMES_GUIDE.md) covers the three MommyBot web games. `lib/games.js` handles connectivity, `server/games.mjs` provides fixed redirects using `LIDOLLBOT_PUBLIC_ORIGIN`, and `#games` shares existing navigation and themes. Keep game databases, wallet grants and payment logic in MommyBot; never forward PWA credentials or cache game redirects/API responses.
+[Games guide](GAMES_GUIDE.md) covers the four MommyBot web games, including Prism Drop (`balldrop`). `lib/games.js` handles connectivity, `server/games.mjs` provides fixed redirects using `LIDOLLBOT_PUBLIC_ORIGIN`, and `#games` shares existing navigation and themes. Keep game databases, wallet grants and payment logic in MommyBot; never forward PWA credentials or cache game redirects/API responses.
 
 
 ## Additional event choices

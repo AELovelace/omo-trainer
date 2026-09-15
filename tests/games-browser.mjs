@@ -14,14 +14,14 @@ try{
   await page.$eval('#liquids',el=>{el.value='321';el.dispatchEvent(new Event('input',{bubbles:true}));});
   for(const theme of ['little-tracker','caregiver-tracker']){
     await navigateMenu(page,'[data-page="settings"]');await page.select('#theme-selector',theme);await navigateMenu(page,'[data-page="games"]');
-    assert.equal(await page.$eval('#page-games',el=>el.hidden),false);assert.equal(await page.$$eval('[data-game-link]',els=>els.length),3);
+    assert.equal(await page.$eval('#page-games',el=>el.hidden),false);assert.equal(await page.$$eval('[data-game-link]',els=>els.length),4);
     assert.equal(await page.$eval('#liquids',el=>el.value),'321');
     for(const width of [320,390,680,1024,1440]){await page.setViewport({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${theme} overflow at ${width}`);}
     await page.screenshot({path:resolve(directory,`${theme}-desktop.png`),fullPage:true});
     await page.setViewport({width:390,height:844});await navigateMenu(page,'[data-page="overview"]');await navigateMenu(page,'[data-page="games"]');
     await page.screenshot({path:resolve(directory,`${theme}-mobile.png`),fullPage:true});
   }
-  const response=await fetch(origin+'games/touhou?returnTo=https://evil.example',{redirect:'manual'});assert.equal(response.headers.get('location'),'https://bot.example/touhou/login');
+  const response=await fetch(origin+'games/balldrop?returnTo=https://evil.example',{redirect:'manual'});assert.equal(response.headers.get('location'),'https://bot.example/balldrop/login');
   await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
   await page.evaluateOnNewDocument(()=>{window.fixtureOnline=false;Object.defineProperty(navigator,'onLine',{get:()=>window.fixtureOnline});});
   await page.setOfflineMode(true);await page.reload({waitUntil:'networkidle0'}); // Chrome's network emulation resets navigator.onLine on reload; provide that signal separately while requests remain offline.

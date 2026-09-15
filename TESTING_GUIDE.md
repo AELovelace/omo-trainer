@@ -183,7 +183,7 @@ The overnight regression also checks that the first morning change starts diaper
 
 ## Games navigation
 
-`npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all three cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` now expects seven destinations and checks the Games route. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.
+`npm test` includes `tests/games.test.mjs` for safe configured origins, fixed redirects, methods and shell integration. With `PUPPETEER_MODULE` and `CHROME_PATH` set, run `node tests/games-browser.mjs` for all four cards, both themes, five widths, mobile navigation, preserved drafts and offline/reconnect behavior. The fixture blocks network requests and separately supplies the browser connectivity signal across reloads. `tests/theme-browser.mjs` now expects seven destinations and checks the Games route. See [GAMES_GUIDE.md](GAMES_GUIDE.md) for the live deployment check.
 
 
 ## Additional event choices

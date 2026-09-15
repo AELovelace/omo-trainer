@@ -3,7 +3,7 @@ export function createGamesRoute(base, env = process.env) {
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
   if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== '/' ||
       (origin.protocol !== 'https:' && !(env.NODE_ENV !== 'production' && local && origin.protocol === 'http:'))) throw new Error('LIDOLLBOT_PUBLIC_ORIGIN must be the bot HTTPS origin without a path.');
-  const paths = new Map(['diapers','hangman','touhou'].map(game => [`${base}games/${game}`, `/${game}/login`]));
+  const paths = new Map(['diapers','hangman','touhou','balldrop'].map(game => [`${base}games/${game}`, `/${game}/login`]));
   return (request, response, pathname) => {
     if (!pathname.startsWith(`${base}games/`)) return false;
     response.setHeader('Cache-Control','no-store');
