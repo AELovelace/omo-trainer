@@ -592,7 +592,7 @@ $('.roll-button').addEventListener('click', () => { // Draws independently, leav
     const savedEntries = result === 'hold'
       ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt, lastFailureDesperationMode:candidate.desperationMode===true } : entry) : entries;
     commit({ ...state, entries: [...savedEntries, candidate] });
-    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. ${candidate.desperationMode?'Desperation mode. ':''}Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
+    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. ${candidate.desperationMode?'Desperation mode. ':''}Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use your diaper.`;
     $('#roll-result').hidden = false;
   } catch (error) { notify(error.message); }
 });

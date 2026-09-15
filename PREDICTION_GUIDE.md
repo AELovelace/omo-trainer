@@ -8,7 +8,7 @@ The target is the next **recorded wetting**, including every classification. It 
 
 - Only the current profile's records are used. Existing participant-scoped scientific storage and sync remain the source of truth. No data go to external model services or the market database.
 - Models are derived locally, including offline. Coefficients are kept in memory rather than duplicated in the database. Reopening the app rebuilds them from the user's records; corrections and deletions cannot leave an old persisted model behind.
-- Use the last 90 days, at most 360 completed intervals. Absolute timestamps respect saved offsets. Ignore future records until their time arrives; deduplicate IDs. Exclude intervals under 5 minutes or over 8 hours as ambiguous/unsupported. These thresholds are engineering limits, not definitions of healthy bathroom frequency.
+- Use the last 90 days, at most 360 completed intervals. Absolute timestamps respect saved offsets. Ignore future records until their time arrives; deduplicate IDs. Exclude intervals under 5 minutes or over 8 hours as ambiguous/unsupported. These thresholds are engineering limits, not definitions of how often you should use your diaper.
 - Modern check-ins contain **mL since the previous check-in**, not exact drink times. Assume a uniform spread over that interval only when its start is known and it is no longer than six hours. The first positive check-in, long/zero-duration reporting gaps, and old cumulative snapshots do not become timed fluid inputs. These exclusions are shown in the card. Total recent logged intake is still displayed, with clear wording that it is logged intake.
 
 ## Model
@@ -23,7 +23,7 @@ From the current elapsed time, calculate a conditional event distribution over t
 
 ## Limits and use
 
-Users should use the bathroom whenever they need and should not delay toileting or adjust drinking to satisfy the estimate. Logging gaps, sleep, activity, medicines, unrecorded toilet visits and differences between leakage and complete voiding are not measured. The model cannot infer their effects from drink amounts alone. There are no reminders to hold, drink more, or drink less, and the random-roll protocol is unchanged.
+Use your diaper whenever you need; do not wait for the estimate or adjust drinking to satisfy it. Logging gaps, sleep, activity, medicines, unrecorded toilet visits and differences between leakage and complete voiding are not measured. The model cannot infer their effects from drink amounts alone. There are no reminders to hold, drink more, or drink less, and the random-roll protocol is unchanged.
 
 NIDDK recommends recording what, when and how much a person drinks alongside urination in a bladder diary: https://www.niddk.nih.gov/health-information/urologic-diseases/bladder-control-problems/diagnosis . Urine production and frequency also depend on fluid loss and bladder capacity: https://www.niddk.nih.gov/health-information/urologic-diseases/urinary-tract-how-it-works . Those sources support the input choices and limitations; they do not validate this algorithm or its half-life candidates.
 

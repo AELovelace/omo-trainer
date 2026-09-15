@@ -21,7 +21,7 @@ New wetting events no longer store a per-diaper total. Historical totals remain
 editable, and changes sync and export as separate `diaper-change` records.
 Admin analytics includes change counts and mean wettings per completed diaper.
 
-The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts bathroom access or increments wettings automatically.
+The dashboard includes 7/30/90-day charts, history filters, editing/deletion, CSV exports, and JSON backup/import. A random prompt never restricts when you can use your diaper and never increments wettings automatically.
 
 New participants can choose **Settings & data → Create account**, or register from the shared sign-in page. Registration uses a username and password, then returns through app consent. The account works across registered lidoll.dev apps. Email is not collected; password resets are handled by the administrator. [AUTH_GUIDE.md](AUTH_GUIDE.md) describes registration and its request limits.
 
