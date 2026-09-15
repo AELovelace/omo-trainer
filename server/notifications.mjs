@@ -1,4 +1,5 @@
 ﻿import webpush from 'web-push';
+import {createCommunitySupport} from './community-support.mjs';
 import {createNotificationMessages} from './notification-messages.mjs';
 import {randomInt} from 'node:crypto';
 import {preparePredictionData} from '../lib/prediction.js';
@@ -27,14 +28,24 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
  CREATE INDEX IF NOT EXISTS push_owner ON push_subscriptions(owner);
  CREATE TABLE IF NOT EXISTS notification_blocks(owner TEXT NOT NULL REFERENCES participants(id),block TEXT NOT NULL,selected INTEGER NOT NULL,sent INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,PRIMARY KEY(owner,block));`);
  if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(column=>column.name==='admin_messages'))db.exec('ALTER TABLE notification_preferences ADD COLUMN admin_messages INTEGER NOT NULL DEFAULT 0'); // Existing reminder-only subscriptions do not silently opt into announcements.
+ if(!db.prepare('PRAGMA table_info(notification_preferences)').all().some(column=>column.name==='community_support'))db.exec('ALTER TABLE notification_preferences ADD COLUMN community_support INTEGER NOT NULL DEFAULT 0');
+ db.exec('CREATE TABLE IF NOT EXISTS notification_migrations(name TEXT PRIMARY KEY)');
+ db.exec('BEGIN IMMEDIATE');try {
+  if(db.prepare("INSERT OR IGNORE INTO notification_migrations VALUES ('community-support-existing-subscribers-v1')").run().changes) {
+   db.exec(`UPDATE notification_preferences SET community_support=1
+    WHERE EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_preferences.owner)`);
+  }
+  db.exec('COMMIT');
+ }catch(error){db.exec('ROLLBACK');throw error;} // Apply enrollment once, atomically with its marker; later restarts must preserve saved opt-outs.
  const publicKey=options.publicKey??process.env.PUSH_VAPID_PUBLIC_KEY??'';
  const vapidDetails={subject:process.env.PUSH_VAPID_SUBJECT,publicKey,privateKey:process.env.PUSH_VAPID_PRIVATE_KEY};
  const configured=Boolean(options.send||(publicKey&&vapidDetails.privateKey&&vapidDetails.subject));
  const send=options.send??((sub,payload)=>webpush.sendNotification(sub,JSON.stringify(payload),{vapidDetails,TTL:60,urgency:'normal',timeout:5000}));
  const messages=createNotificationMessages(db,{configured,send,localBlock});
+ const community=createCommunitySupport(db,{configured,send,localBlock});
  const random=options.random??(()=>randomInt(100));let running=false;
  function status(owner) {
-  const pref=db.prepare('SELECT time_zone AS timeZone,quiet_start AS quietStart,quiet_end AS quietEnd,admin_messages AS adminMessages FROM notification_preferences WHERE owner=?').get(owner);
+  const pref=db.prepare('SELECT time_zone AS timeZone,quiet_start AS quietStart,quiet_end AS quietEnd,admin_messages AS adminMessages,community_support AS communitySupport FROM notification_preferences WHERE owner=?').get(owner);
   return {configured,publicKey:configured?publicKey:'',preferences:pref??null,subscriptions:db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE owner=?').get(owner).n};
  }
  function save(owner,input) { // Authenticated opt-in registers only this user's endpoint and local-time preferences.
@@ -44,11 +55,15 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
   const {quietStart,quietEnd}=input;for(const value of [quietStart,quietEnd])if(!Number.isInteger(value)||value<0||value>23)fail('Quiet hours must be whole hours from 0 to 23.');
   const adminMessages=input.adminMessages??Boolean(db.prepare('SELECT admin_messages FROM notification_preferences WHERE owner=?').get(owner)?.admin_messages);
   if(typeof adminMessages!=='boolean')fail('Choose whether to receive messages from admins.');
+  const savedPreferences=db.prepare('SELECT community_support FROM notification_preferences WHERE owner=?').get(owner);
+  const communitySupport=input.communitySupport===undefined?(savedPreferences?Boolean(savedPreferences.community_support):true):input.communitySupport;
+  if(typeof communitySupport!=='boolean')fail('Choose whether to participate in community support.');
   const previous=db.prepare('SELECT owner FROM push_subscriptions WHERE endpoint=?').get(sub.endpoint);
   if(previous&&previous.owner!==owner)throw Object.assign(Error('This browser is subscribed to another account. Turn off its notifications before switching accounts.'),{status:409});
   db.exec('BEGIN IMMEDIATE');try {
    if(!previous&&db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE owner=?').get(owner).n>=10)fail('At most 10 devices can receive notifications.');
-   db.prepare('INSERT INTO notification_preferences(owner,time_zone,quiet_start,quiet_end,admin_messages) VALUES (?,?,?,?,?) ON CONFLICT(owner) DO UPDATE SET time_zone=excluded.time_zone,quiet_start=excluded.quiet_start,quiet_end=excluded.quiet_end,admin_messages=excluded.admin_messages').run(owner,timeZone,quietStart,quietEnd,Number(adminMessages));
+   db.prepare('INSERT INTO notification_preferences(owner,time_zone,quiet_start,quiet_end,admin_messages,community_support) VALUES (?,?,?,?,?,?) ON CONFLICT(owner) DO UPDATE SET time_zone=excluded.time_zone,quiet_start=excluded.quiet_start,quiet_end=excluded.quiet_end,admin_messages=excluded.admin_messages,community_support=excluded.community_support').run(owner,timeZone,quietStart,quietEnd,Number(adminMessages),Number(communitySupport));
+   if(!communitySupport)community.cancel(owner);
    db.prepare('INSERT INTO push_subscriptions VALUES (?,?,?) ON CONFLICT(endpoint) DO UPDATE SET payload=excluded.payload').run(sub.endpoint,owner,JSON.stringify(sub));if(!adminMessages)db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued'").run(owner);db.exec('COMMIT');
   }catch(error){db.exec('ROLLBACK');throw error;}
   return status(owner);
@@ -57,7 +72,7 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
   if(input.all===true){db.prepare('DELETE FROM push_subscriptions WHERE owner=?').run(owner);db.prepare('UPDATE notification_blocks SET sent=1 WHERE owner=?').run(owner);}
   else if(typeof input.endpoint==='string')db.prepare('DELETE FROM push_subscriptions WHERE owner=? AND endpoint=?').run(owner,input.endpoint);
   else fail('Choose a device to disable.');
-  db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued' AND NOT EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_deliveries.owner AND s.endpoint=notification_deliveries.endpoint)").run(owner);return status(owner);
+  db.prepare("UPDATE notification_deliveries SET state='skipped' WHERE owner=? AND state='queued' AND NOT EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.owner=notification_deliveries.owner AND s.endpoint=notification_deliveries.endpoint)").run(owner);community.remove(owner);return status(owner);
  }
  async function tick(now=Date.now()) { // Persist one 1% draw per user/block, surviving restarts; stale windows never produce catch-up notifications.
   if(!configured||running)return;running=true;const started=Date.now();
@@ -79,8 +94,9 @@ export function createNotifications(db,records,options={}) { // Subscriptions an
     }
    }
    await messages.tick(now+Date.now()-started);
+   await community.tick(now+Date.now()-started);
    db.prepare('DELETE FROM notification_blocks WHERE created_at<?').run(now-90*86400000);
   }finally{running=false;}
  }
- return {status,save,remove,tick,messages};
+ return {status,save,remove,tick,messages,community};
 }

@@ -24,6 +24,7 @@ export function createLoginBonuses(db,now=()=>Date.now()) { // Keep attendance a
     const streak=(previous?.streak??0)+1,{asset,amount}=dailyPayout(streak);
     db.prepare('INSERT INTO login_checkins VALUES (?,?,?,?,?,?,?)').run(owner,day,streak,asset,amount,recordId,new Date(instant).toISOString());
     db.prepare('INSERT INTO reward_outbox(owner,asset,source_id,amount) VALUES (?,?,?,?)').run(owner,'login-'+asset,day,amount); // A durable daily receipt survives lost responses and an unavailable market.
+    return {day,instant}; // Only a newly created daily check-in may queue a community broadcast.
   }
   function view(owner,{from,to}={}) { // Return only the signed-in account's requested calendar window and live statistics.
     const zone=timeZone(owner),today=protocolDay(now(),zone);

@@ -266,14 +266,14 @@ test('rolls credit integer coins once per owner and record, without stickers or 
   assert.equal(save(db,a,roll('hold'),0).conflicts.length,1);
   db.sync(a.id,[{id:'pee',mutationId:'delete-roll',baseVersion:1,entry:null}]);save(db,a,roll('pee','pee'),2);
   const snap=db.economy.snapshot(a.id);
-  assert.equal(snap.wallet.coins,65);assert.equal(snap.wallet.stars,0);
+  assert.equal(snap.wallet.coins,75);assert.equal(snap.wallet.stars,0);
   assert.equal(snap.types.reduce((sum,t)=>sum+t.quantity,0),0);
   assert.deepEqual(snap.history.filter(row=>row.reason.startsWith('Performance bonus: ')).map(row=>row.delta).sort((a,b)=>a-b),[5,10]);
-  assert.ok(snap.history.every(row=>row.asset==='coins'&&(row.reason.startsWith('Performance bonus: ')||row.reason==='Welcome bonus: 50 lid0llcoins')));
+  assert.ok(snap.history.every(row=>row.asset==='coins'&&(row.reason.startsWith('Performance bonus: ')||row.reason==='Welcome bonus: 50 lid0llcoins'||row.reason==='Daily check-in bonus')));
   assert.equal(db.economy.snapshot(b.id).wallet.coins,50);
-  save(db,b,roll('hold'));assert.equal(db.economy.snapshot(b.id).wallet.coins,55);
+  save(db,b,roll('hold'));assert.equal(db.economy.snapshot(b.id).wallet.coins,65);
   assert.throws(()=>db.sync(a.id,[{id:'rolled-back',mutationId:'new-roll',baseVersion:0,entry:roll('rolled-back')},{...changes[0],entry:roll('hold','pee')}]),e=>e.status===400);
-  assert.equal(db.economy.snapshot(a.id).wallet.coins,65,'A failed scientific transaction cannot issue coins');
+  assert.equal(db.economy.snapshot(a.id).wallet.coins,75,'A failed scientific transaction cannot issue coins');
   assert.equal(db.records(a.id).some(e=>e.id==='rolled-back'),false);
  }finally{db.close();}
 });

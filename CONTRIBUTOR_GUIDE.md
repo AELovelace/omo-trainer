@@ -136,7 +136,7 @@ All three new-record save handlers call showRecordReward(entry) after a successf
 
 ## Login bonuses and diamonds
 
-Daily attendance is inserted only after a successful batch accepts a new observation, wetting or diaper change. Keep the scientific receipt and outbox atomic, market delivery idempotent, and diamond API permissions explicit. See LOGIN_BONUSES_GUIDE.md for boundaries and migration details.
+Daily attendance is inserted only after a successful batch accepts a new observation, wetting, diaper change or roll. Keep the scientific receipt and outbox atomic, market delivery idempotent, and diamond API permissions explicit. See LOGIN_BONUSES_GUIDE.md for boundaries and migration details.
 
 ## Admin AI analysis
 
@@ -149,3 +149,6 @@ New participant creation atomically stages a one-time 50-coin welcome entitlemen
 ## Report API integrations
 
 MommyBot can read completed nightly and explicitly shared analysis documents using a dedicated admin-issued `reports:read` token. Feed and document reads must require either a scheduled daily job or a manual job with `share_with_bot=1`. Only an authenticated admin queue action can opt in a manual run; private runs must never leak through direct IDs or query filters. Keep credentials separate from wallet grants and recheck the issuing admin's live role. Commit `ai_report_feed` cursors with completed documents, using completion order rather than job creation order. See [AI_REPORT_API.md](AI_REPORT_API.md).
+
+
+Community support uses server/community-support.mjs and the daily check-in receipt returned by server/login-bonuses.mjs. Queue creation belongs inside the sync transaction; never send push requests in that transaction or broadcast from browser events. Keep payloads anonymous, recheck both sides' preferences before delivery, and preserve opt-outs on subscription updates. The notification_migrations marker community-support-existing-subscribers-v1 atomically enrolls existing push subscribers once; never remove this marker or rerun enrollment on each startup.

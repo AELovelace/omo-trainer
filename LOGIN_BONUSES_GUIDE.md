@@ -1,6 +1,6 @@
 # Login bonuses and diamonds
 
-The first **new observation, wetting, or diaper change successfully synced** each account day earns one daily check-in bonus. Opening the app, random rolls, corrections, deletion/restoration, and replayed uploads do not qualify. Every wetting category qualifies, including Bedwetting and Used the potty. A dry diaper change qualifies too.
+The first **new observation, wetting, diaper change, or roll successfully synced** each account day earns one daily check-in bonus. Opening the app, corrections, deletion/restoration, and replayed uploads do not qualify. Every wetting category qualifies, including Bedwetting and Used the potty. A dry diaper change qualifies too.
 
 | Consecutive day | Bonus |
 | --- | --- |

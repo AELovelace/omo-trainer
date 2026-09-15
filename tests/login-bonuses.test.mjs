@@ -25,14 +25,13 @@ test('daily schedule grows through coins and diamonds, pays once per account day
  }finally{f.db.close();}
 });
 
-test('edits, deletion, rolls, conflicts and failed batches cannot earn a new check-in; backdated saves count on sync day',()=>{
+test('edits, deletion, conflicts and failed batches cannot earn a new check-in; backdated saves count on sync day',()=>{
  const f=fixture();try {
   const original=entry('first');f.save(original);f.setTime('2026-09-02T12:00:00Z');
   f.db.sync(f.user.id,[{...change(original),mutationId:'edit',baseVersion:1,entry:{...original,liquidsMl:200}}]);
   f.save(original);assert.equal(f.view().totalDays,1);
   f.db.sync(f.user.id,[{...change(original),mutationId:'delete',baseVersion:2,entry:null}]);
   f.db.sync(f.user.id,[{...change(original),mutationId:'restore',baseVersion:3}]);
-  const occurredAt=original.occurredAt;f.save({id:'roll',kind:'roll',occurredAt,rolledAt:occurredAt,source:'random',result:'hold',rolledResult:'hold',probability:50});
   assert.equal(f.view().totalDays,1);
   assert.throws(()=>f.db.sync(f.user.id,[change(entry('rollback')),{...change(original),entry:{...original,liquidsMl:999}}]));
   assert.equal(f.view().totalDays,1);f.save(entry('backdated'));

@@ -104,7 +104,7 @@ After saving an observation, a wetting or a diaper change, dismiss the reward mo
 
 ## Login bonuses and diamonds
 
-Save and sync one observation, wetting or diaper change each day for a growing bonus. Visit Login bonuses in the menu for weekly/monthly calendars and daily statistics. Use Stickers & market to exchange diamonds for coins at 1:50. Offline saves qualify on their sync day; see LOGIN_BONUSES_GUIDE.md for streak rules.
+Save and sync one observation, wetting, diaper change or roll each day for a growing bonus. Visit Login bonuses in the menu for weekly/monthly calendars and daily statistics. Use Stickers & market to exchange diamonds for coins at 1:50. Offline saves qualify on their sync day; see LOGIN_BONUSES_GUIDE.md for streak rules.
 
 ## Administrator analysis checks
 
@@ -119,3 +119,5 @@ A new Little Log account receives 50 lid0llcoins. Check Stickers & market for th
 Admins can set a report output limit up to 50,000 tokens and create or revoke MommyBot report-read tokens from AI analysis. Ordinary wallet connections cannot read these reports. See [AI_REPORT_API.md](AI_REPORT_API.md) for setting up a consumer.
 
 Use **Run and share with MommyBot** to request an on-demand report for the bot's polling feed. **Run now** keeps an ordinary manual report private. Nightly reports continue to enter the feed automatically after completion.
+
+- **Community support** in notification settings shares an anonymous daily check-in and receives other members' check-ins. It starts checked when first enabling notifications, and existing notification subscribers are enrolled once when this update is deployed. Uncheck and save to stop both directions on all devices; quiet hours still apply.

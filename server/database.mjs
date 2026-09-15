@@ -161,7 +161,7 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
       if (new Set(clean.map(change => change.mutationId)).size !== clean.length) throw new Error('Duplicate mutation IDs in a batch.');
     } catch (error) { throw new ApiError(400, error.message); }
     const ack = [], conflicts = new Map();
-    let checkinRecord=null; // Only a newly accepted observation, wetting or change can qualify for today's bonus.
+    let checkinRecord=null; // Only a newly accepted observation, wetting, change or roll can qualify for today's bonus.
     db.exec('BEGIN IMMEDIATE');
     try {
       for (const change of clean) {
@@ -192,11 +192,11 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
           entry ? JSON.stringify(entry) : null,
         );
         if (!row && entry) economy.awardRecord(participantId, entry); // Award only after the server accepts a new record.
-        if(!row&&['observation','wetting','diaper-change'].includes(entry?.kind))checkinRecord??=entry.id;
+        if(!row&&['observation','wetting','diaper-change','roll'].includes(entry?.kind))checkinRecord??=entry.id;
         db.prepare('INSERT INTO mutations (participant_id, id, request_hash, created_at) VALUES (?, ?, ?, ?)').run(participantId, change.mutationId, fingerprint, now);
         ack.push(change.mutationId);
       }
-      if(checkinRecord)economy.awardDailyCheckin(participantId,checkinRecord); // Enrollment from the complete batch is available before pinning its timezone.
+      if(checkinRecord)notifications.community.queue(participantId,economy.awardDailyCheckin(participantId,checkinRecord)); // Enrollment from the complete batch is available before pinning its timezone.
       const snapshot = records(participantId);
       db.exec('COMMIT');
       economy.tryFlush(); // Market failure leaves durable rewards pending without failing this saved sync.
