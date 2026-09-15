@@ -4,7 +4,7 @@ export function createSocialModeration({request,authorized}) {
  function button(text,fn){const n=node('button',text);n.className='button secondary small';n.type='button';n.addEventListener('click',fn);return n;}
  function controls(){for(const n of document.querySelectorAll('[data-panel="moderation"] button,[data-panel="moderation"] select'))n.disabled=busy||!authorized();$('older').hidden=next===null;$('newest').hidden=before===null&&!postId;}
  async function act(input){if(busy||!authorized())return;const reason=$('reason').value.trim();if(!reason){$('status').textContent='Enter a moderation reason first.';$('reason').focus();return;}
-  if(!confirm(input.action==='remove'?'Remove this content permanently?':input.action==='restrict'?'Pause this member’s social posting and messaging?':'Save this moderation decision?'))return;
+  if(!confirm(['remove','remove-profile'].includes(input.action)?'Remove this content permanently?':input.action==='restrict'?'Pause this member’s social posting and messaging?':'Save this moderation decision?'))return;
   busy=true;controls();const ticket=epoch;
   try{await request('social',{...input,reason});if(ticket!==epoch)return;$('status').textContent='Moderation decision saved and added to the activity log.';if(input.action==='remove'&&input.kind==='post')postId=null;}
   catch(error){$('status').textContent=error.message;return;}finally{busy=false;controls();}await load();
@@ -22,6 +22,7 @@ export function createSocialModeration({request,authorized}) {
    for(const item of value.items){let card;
     if(postId)card=contentCard('comment',item,item.id);
     else if($('view').value==='posts'){card=contentCard('post',item,item.id);card.prepend(node('p',item.audience==='public'?'Public post':'Friends post'));}
+    else if($('view').value==='profiles'){card=node('article');card.className='moderation-card';const img=node('img');img.src='../api/admin/social/avatar?'+new URLSearchParams({owner:item.id,version:item.avatarVersion});img.alt=item.label+' profile picture';img.width=128;img.height=128;img.loading='lazy';card.append(node('h3',item.label),img,button('Remove profile picture',()=>void act({action:'remove-profile',participantId:item.id,version:item.avatarVersion})));}
     else if($('view').value==='restrictions'){card=node('article');card.className='moderation-card';card.append(node('h3',item.label),node('p',item.reason),button('Restore social access',()=>void act({action:'restore',participantId:item.owner})));}
     else {card=node('article');card.className='moderation-card';card.append(node('h3','Reported '+item.kind),node('p','Reported by '+item.reporterLabel+' on '+new Date(item.created).toLocaleString()),node('p',item.reason));
      if(item.content){card.append(contentCard(item.kind,item.content,item.target));if(item.content.postId)card.append(button('Review post and pictures',()=>{postId=item.content.postId;before=null;void load();}));}

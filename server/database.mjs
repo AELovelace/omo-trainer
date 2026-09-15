@@ -227,7 +227,7 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
   const admin = createAdminStore(db, records, growthChart); // Add app access controls without migrating or rewriting observation payloads.
   const sessions=createSessions(db,admin,options.sessions); // Persistent device sessions retain live access checks and server-side revocation.
   const economy = createRewardBridge(db, filename, options); // Queue rewards here; all balances and market trades live in market.sqlite.
-  const friends=createFriends(db,recordFromRow,{onRemove:(a,b)=>{notifications.community.restrictPair(a,b);activity.prune(a);activity.prune(b);}});
+  const friends=createFriends(db,recordFromRow,{avatarInfo:id=>social.avatarInfo(id),onRemove:(a,b)=>{notifications.community.restrictPair(a,b);activity.prune(a);activity.prune(b);}});
   const activity=createActivity(db,{now:options.now,canSee:row=>social.activityVisible(row)});
   const social=createSocial(db,friends,{now:options.now,activity});
   const notifications=createNotifications(db,records,{...options.notifications,areFriends:friends.accepted,activity});

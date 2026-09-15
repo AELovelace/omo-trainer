@@ -1,6 +1,6 @@
 # Friends and shared records
 
-Open **Social** from the menu, then **Friends & search** at the top. Search by display name (2–80 characters), then
+Open **Social** from the menu, then **Friends & search** in the bottom bar. Search by display name (2–80 characters), then
 choose **Add friend**. Search shows up to 20 matching enabled members. The other
 person accepts or declines the request. You can cancel a sent request or remove
 an accepted friend. Each account can have up to 200 friends and pending requests
@@ -77,3 +77,7 @@ friends-only queues and HTTP authorization. Run `tests/friends-browser.mjs`,
 `tests/notifications-browser.mjs` and `tests/theme-browser.mjs` with
 `PUPPETEER_MODULE` and `CHROME_PATH` configured for browser acceptance checks.
 Browser fixtures use disposable accounts; push transport is mocked.
+
+Member pictures appear beside names in friend search, requests and shared records.
+Upload or remove your own picture in **Settings > Profile picture**. Pictures
+are visible to signed-in members; friendship is not required to see one.

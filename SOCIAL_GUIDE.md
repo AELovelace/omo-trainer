@@ -1,8 +1,8 @@
 # Status updates, pictures, activity and moderation
 
 Open **Social** in the main menu. Its bottom bar switches between **Post**, **Feed**,
-**Messaging**, and **Notifications** on phones and desktop. Use **Friends &
-search** at the top for friend requests and shared records. The recording action
+**Friends & search**, **Messaging**, and **Notifications** on phones and desktop.
+Friends & search manages friend requests and shared records. The recording action
 bar gives way to this social bar while browsing Social.
 
 Open **Post** to write text, add up to four pictures, or both. **Feed** is a
@@ -206,3 +206,32 @@ to open the matching section within Social. Browser Back/Forward and push/post
 links keep working. Admin moderation stays in the admin console.
 
 Social appears after Games and immediately before Login bonuses in the main menu.
+
+## Profile pictures
+
+Open **Settings > Profile picture** to choose a JPEG, PNG or WebP image, review
+the square preview and press **Save picture**. Use the same controls to replace
+it, or **Remove picture** to return to an initial. Pictures are visible to all
+signed-in members in posts, comments, friends/search and conversations; they
+are not part of anonymous community-support notices.
+
+Uploads are resized to 512 by 512 pixels and re-encoded as JPEG without original
+metadata. The browser accepts source files up to 100 MB; direct API images must
+be at most 2 MB and 24 million pixels. Only still images are stored; direct
+animated uploads, SVG and remote URLs are rejected. A current picture is stored
+once per member in SQLite. Removed and
+replaced picture versions stop loading; existing server backups may retain them.
+
+Admins can choose **Social moderation > Profile pictures** to review pictures
+and remove one with an audited reason. Paused social accounts cannot change
+pictures. Removal checks the reviewed version, so a newer picture is not removed
+by an older moderation screen.
+
+Large camera photos (including 50 MP images) are resized on your device before
+posting. The uploader accepts originals up to 100 MB each and reduces quality
+and dimensions as needed. If the proxy rejects a picture post for its size,
+it automatically retries with smaller pictures that fit the existing 256 KiB
+limit, sharing the available space between the selected photos. Larger proxy
+limits preserve more detail. The text, audience and descriptions stay intact.
+JPEG, PNG and WebP are supported; other camera formats depend on browser
+support. If HEIC cannot be opened, export the photo as JPEG or PNG.

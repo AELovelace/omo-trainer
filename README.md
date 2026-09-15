@@ -322,3 +322,18 @@ friends and shared records.
 
 Post is the first Social bottom-bar tab. Write updates there and browse them
 in Feed; unsent text, photos and audience choices survive switching tabs.
+
+Profile pictures are managed in **Settings > Profile picture** and appear in
+Social. **Friends & search** now has its own Social bottom-bar button. See
+[SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for visibility, upload limits and moderation.
+When deploying, apply the updated Nginx snippet on the proxy host: the exact
+`/tracker/api/social/profile` location allows 3 MB JSON bodies; the general API
+limit stays 256 KB. Both `deploy/nginx-proxy.conf` and `deploy/nginx-static.conf`
+include this location. Run `nginx -t` before reloading Nginx. Server startup
+creates the profile table automatically; existing members retain initials until
+they upload a picture.
+
+Camera-photo uploads now resize originals up to 100 MB on the device. A post
+rejected with HTTP 413 automatically retries with compressed pictures below
+the existing 256 KiB proxy limit. The larger Nginx allowance remains useful for
+preserving more picture detail, but the browser upload no longer depends on it.

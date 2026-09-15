@@ -261,10 +261,24 @@ its bottom bar across both themes and six widths, and hidden recording actions
 inside Social. Social/activity and friends browser suites enter through Social,
 use its bottom links, and exercise preserved post/message/friend routes.
 
-Post/Feed separation: theme checks cover all four bottom tabs and confirm that
+Post/Feed separation: theme checks cover all five bottom tabs and confirm that
 the composer is visible only on Post. The social browser flow switches tabs with
 a prepared photo/text draft, publishes from Post and opens View your post in
 Feed. Social API tests check the private, minimal composer session response.
 
 The theme browser suite also checks the exact main-menu order: Games, Social,
 then Login bonuses, followed by History, Settings and About.
+
+Profile pictures: `tests/profile.test.mjs` covers sanitized 512px JPEGs, identity
+metadata, validation, concurrent saves, retry/removal tombstones, persistence,
+CSRF/session ownership, direct image privacy and admin removal/audit. Run
+`node tests/profile-browser.mjs` with PUPPETEER_MODULE and CHROME_PATH for Settings
+upload/preview/replace/remove/reload, avatars throughout Social, the Friends
+bottom tab, both themes at phone/desktop widths, admin removal, sign-out cleanup
+and exclusion of private API images from service-worker caches.
+
+`node tests/photo-upload-browser.mjs` generates a real 50 MP JPEG above 20 MB,
+uploads it through an emulated 256 KiB proxy, and drops a successful response
+to verify retry safety. It also checks four detailed photos with maximum
+Unicode text/descriptions, compact avatars and image files without MIME metadata.
+Use the same PUPPETEER_MODULE and CHROME_PATH variables as the social browser tests.

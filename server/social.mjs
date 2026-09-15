@@ -18,7 +18,8 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  CREATE TABLE IF NOT EXISTS social_comments(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,post_id TEXT NOT NULL REFERENCES social_posts(id),owner TEXT NOT NULL REFERENCES participants(id),request_id TEXT NOT NULL,request_hash TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL,deleted INTEGER,UNIQUE(owner,request_id));
  CREATE INDEX IF NOT EXISTS social_comment_post ON social_comments(post_id,seq);
  CREATE TABLE IF NOT EXISTS social_reports(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,reporter TEXT NOT NULL REFERENCES participants(id),kind TEXT NOT NULL,target TEXT NOT NULL,reason TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL DEFAULT 'open',resolution TEXT,UNIQUE(reporter,kind,target));
- CREATE TABLE IF NOT EXISTS social_restrictions(owner TEXT PRIMARY KEY REFERENCES participants(id),reason TEXT NOT NULL,actor TEXT NOT NULL,created INTEGER NOT NULL);`);
+ CREATE TABLE IF NOT EXISTS social_restrictions(owner TEXT PRIMARY KEY REFERENCES participants(id),reason TEXT NOT NULL,actor TEXT NOT NULL,created INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS social_profiles(seq INTEGER PRIMARY KEY AUTOINCREMENT,owner TEXT NOT NULL UNIQUE REFERENCES participants(id),version TEXT NOT NULL,request_hash TEXT NOT NULL,data BLOB,updated INTEGER NOT NULL);`);
  const active=owner=>Boolean(db.prepare('SELECT 1 FROM participants p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=p.id AND a.disabled=1)').get(owner));
  const requireUser=owner=>{if(!active(owner))fail(403,'This account is not available.');};
  const requireContributor=owner=>{requireUser(owner);if(db.prepare('SELECT 1 FROM social_restrictions WHERE owner=?').get(owner))fail(403,'Social posting and messaging are paused for this account. Contact an administrator.');};
@@ -28,7 +29,7 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   requireUser(owner);const post=db.prepare('SELECT p.*,u.label FROM social_posts p JOIN participants u ON u.id=p.owner WHERE p.id=? AND p.deleted IS NULL').get(key(id));
   if(!post||!active(post.owner)||(post.owner!==owner&&post.audience!=='public'&&!friends.accepted(owner,post.owner)))fail(404,'Post not found.');return post;
  } // Public means signed-in members; friends-only posts and all picture reads recheck current access.
- async function picture(value) {
+ async function picture(value,avatar=false) {
   if(!value||typeof value!=='object')fail(400,'Choose a JPEG, PNG or WebP picture.');
   const alt=text(value.alt??'',200,true),encoded=value.data;
   if(typeof encoded!=='string'||encoded.length>3*1024*1024||! /^[A-Za-z0-9+/]*={0,2}$/.test(encoded)||encoded.length%4!==0)fail(400,'Each picture must be at most 2 MB.');
@@ -38,11 +39,23 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   try {
    const input=sharp(bytes,{limitInputPixels:24*1000*1000,failOn:'warning'}),metadata=await input.metadata();
    if(!['jpeg','png','webp'].includes(metadata.format)||(metadata.pages??1)>1)fail(400,'Choose a still JPEG, PNG or WebP picture.');
-   const result=await input.rotate().resize({width:1600,height:1600,fit:'inside',withoutEnlargement:true}).flatten({background:'#ffffff'}).jpeg({quality:82}).toBuffer({resolveWithObject:true});
+   const result=await input.rotate().resize(avatar?{width:512,height:512,fit:'cover'}:{width:1600,height:1600,fit:'inside',withoutEnlargement:true}).flatten({background:'#ffffff'}).jpeg({quality:82}).toBuffer({resolveWithObject:true});
    if(result.data.length>2*1024*1024)fail(400,'This picture is too large. Choose a smaller picture.');
    return {id:randomUUID(),alt,width:result.info.width,height:result.info.height,data:result.data};
   }catch(error){if(error.status)throw error;fail(400,'This picture could not be read. Choose a still JPEG, PNG or WebP picture.');}
  } // Decode and re-encode every image: no original metadata, filenames, SVG, animation or remote URLs are stored.
+ function avatarInfo(owner){const row=db.prepare('SELECT version FROM social_profiles WHERE owner=? AND data IS NOT NULL').get(owner);return row?{avatarVersion:row.version}:{};}
+ function profile(owner){requireUser(owner);const row=db.prepare('SELECT version,data IS NOT NULL AS has_picture FROM social_profiles WHERE owner=?').get(owner);return {version:row?.version??null,avatarVersion:row?.has_picture?row.version:null};}
+ function avatar(owner,participantId,version,moderator=false){if(moderator)requireAdmin(owner);else requireUser(owner);key(participantId);if(!moderator&&!active(participantId))fail(404,'Profile picture not found.');const row=db.prepare('SELECT data,version FROM social_profiles WHERE owner=? AND data IS NOT NULL').get(participantId);if(!row||(version&&row.version!==version))fail(404,'Profile picture not found.');return row.data;}
+ async function saveProfile(owner,input) {
+  requireContributor(owner);const requestId=key(input?.requestId),version=input.version??null;if(version!==null)key(version);
+  if(input.picture!==null&&(!input.picture||typeof input.picture!=='object'))fail(400,'Choose a profile picture or remove the current one.');
+  const fingerprint=hash({version,picture:input.picture});
+  function check(){const current=db.prepare('SELECT version,request_hash FROM social_profiles WHERE owner=?').get(owner);if(current?.version===requestId){if(current.request_hash!==fingerprint)fail(409,'This request belongs to a different profile picture.');return true;}if((current?.version??null)!==version)fail(409,'Your profile picture changed. Refresh before saving again.');return false;}
+  if(check())return {...profile(owner),repeated:true};
+  const image=input.picture===null?null:await picture(input.picture,true);
+  return transaction(()=>{requireContributor(owner);if(check())return {...profile(owner),repeated:true};db.prepare('INSERT INTO social_profiles(owner,version,request_hash,data,updated) VALUES (?,?,?,?,?) ON CONFLICT(owner) DO UPDATE SET version=excluded.version,request_hash=excluded.request_hash,data=excluded.data,updated=excluded.updated').run(owner,requestId,fingerprint,image?.data??null,now());return {...profile(owner),repeated:false};});
+ } // Compare the loaded version after decoding; retries, other devices and moderation cannot overwrite a newer picture.
  function existingPost(owner,requestId,fingerprint){const row=db.prepare('SELECT id,request_hash,deleted FROM social_posts WHERE owner=? AND request_id=?').get(owner,requestId);if(row&&row.request_hash!==fingerprint)fail(409,'This request already belongs to a different post.');return row?{id:row.id,deleted:Boolean(row.deleted),repeated:true}:null;}
  async function publish(owner,input) {
   requireContributor(owner);if(!input||typeof input!=='object'||Array.isArray(input))fail(400,'Write a status update.');
@@ -77,7 +90,7 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   requireUser(owner);return friends.list(owner).filter(f=>f.state==='accepted').map(f=>{
    const latest=db.prepare('SELECT seq,sender,body,created,deleted FROM friend_messages WHERE friendship_id=? ORDER BY seq DESC LIMIT 1').get(f.id);
    const unread=db.prepare('SELECT COUNT(*) AS n FROM friend_messages WHERE friendship_id=? AND sender<>? AND deleted IS NULL AND seq>COALESCE((SELECT seq FROM friend_message_reads WHERE friendship_id=? AND owner=?),0)').get(f.id,owner,f.id,owner).n;
-   return {friend:{id:f.participantId,label:f.label},latest:latest??null,unread};
+   return {friend:{id:f.participantId,label:f.label,...avatarInfo(f.participantId)},latest:latest??null,unread};
   }).sort((a,b)=>(b.latest?.seq??0)-(a.latest?.seq??0));
  }
  function messages(owner,peer,{before}={}) {
@@ -98,7 +111,7 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  function deleteMessage(owner,id){requireUser(owner);const row=db.prepare('SELECT friendship_id FROM friend_messages WHERE id=? AND sender=?').get(key(id),owner);if(!row)fail(404,'Message not found.');db.prepare("UPDATE friend_messages SET body='',deleted=COALESCE(deleted,?) WHERE id=? AND sender=?").run(now(),id,owner);return {removed:true};}
  function serializePost(viewer,{owner,label,...post}) {
   const {request_id,request_hash,deleted,...safe}=post;
-  return {...safe,author:{id:owner,label},pictures:db.prepare('SELECT id,alt,width,height FROM social_pictures WHERE post_id=? ORDER BY position').all(post.id),...counts(viewer,post.id)};
+  return {...safe,author:{id:owner,label,...avatarInfo(owner)},pictures:db.prepare('SELECT id,alt,width,height FROM social_pictures WHERE post_id=? ORDER BY position').all(post.id),...counts(viewer,post.id)};
  } // Never expose write receipts; ordinary reads and moderation share the same safe post representation.
  function counts(owner,id){return {likes:db.prepare('SELECT COUNT(*) AS n FROM social_likes l WHERE post_id=? AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=l.owner AND a.disabled=1)').get(id).n,liked:Boolean(db.prepare('SELECT 1 FROM social_likes WHERE post_id=? AND owner=?').get(id,owner)),comments:db.prepare('SELECT COUNT(*) AS n FROM social_comments c WHERE post_id=? AND deleted IS NULL AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=c.owner AND a.disabled=1)').get(id).n};}
  function post(owner,id){return serializePost(owner,postAccess(owner,id));}
@@ -114,7 +127,7 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  function commentList(owner,postId,{before}={}) {postAccess(owner,postId);return commentRows(postId,before);}
  function commentRows(postId,before) {
   const rows=db.prepare('SELECT c.seq,c.id,c.post_id AS postId,c.owner,c.body,c.created,p.label FROM social_comments c JOIN participants p ON p.id=c.owner WHERE c.post_id=? AND c.deleted IS NULL AND c.seq<? AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=c.owner AND a.disabled=1) ORDER BY c.seq DESC LIMIT 31').all(postId,cursor(before));
-  return {items:rows.slice(0,30).reverse().map(({owner,label,...row})=>({...row,author:{id:owner,label}})),nextBefore:rows.length>30?rows[29].seq:null};
+  return {items:rows.slice(0,30).reverse().map(({owner,label,...row})=>({...row,author:{id:owner,label,...avatarInfo(owner)}})),nextBefore:rows.length>30?rows[29].seq:null};
  }
  function comment(owner,input) {
   requireContributor(owner);const requestId=key(input?.requestId),postId=key(input.postId),body=text(input.body,2000),fingerprint=hash({postId,body});
@@ -146,6 +159,7 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  } // A report grants moderators access to that reported message only, never its whole private conversation.
  function moderation(owner,{view='reports',before,postId}={}) {
   requireAdmin(owner);
+  if(view==='profiles'){const rows=db.prepare('SELECT s.seq,s.owner AS id,s.version AS avatarVersion,p.label FROM social_profiles s JOIN participants p ON p.id=s.owner WHERE s.data IS NOT NULL AND s.seq<? ORDER BY s.seq DESC LIMIT 31').all(cursor(before));return {items:rows.slice(0,30),nextBefore:rows.length>30?rows[29].seq:null};}
   if(postId){const p=target('post',postId);if(!p||p.deleted)fail(404,'Post not found.');return {post:serializePost(owner,{...p,label:db.prepare('SELECT label FROM participants WHERE id=?').get(p.owner).label}),...commentRows(postId,before)};}
   if(view==='restrictions')return {items:db.prepare('SELECT r.*,p.label FROM social_restrictions r JOIN participants p ON p.id=r.owner ORDER BY r.created DESC').all(),nextBefore:null};
   if(view==='posts'){const rows=db.prepare('SELECT p.*,u.label FROM social_posts p JOIN participants u ON u.id=p.owner WHERE p.deleted IS NULL AND p.seq<? ORDER BY p.seq DESC LIMIT 31').all(cursor(before));return {items:rows.slice(0,30).map(p=>serializePost(owner,p)),nextBefore:rows.length>30?rows[29].seq:null};}
@@ -158,7 +172,9 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   requireAdmin(owner);const reason=text(input?.reason,1000),action=input?.action;
   return transaction(()=>{
    requireAdmin(owner);let targetId;
-   if(action==='restrict'||action==='restore') {
+   if(action==='remove-profile') {
+    targetId=key(input.participantId);const current=db.prepare('SELECT version FROM social_profiles WHERE owner=? AND data IS NOT NULL').get(targetId);if(!current||current.version!==input.version)fail(409,'This profile picture changed. Refresh moderation before removing it.');db.prepare("UPDATE social_profiles SET data=NULL,version=?,request_hash='moderated',updated=? WHERE owner=?").run(randomUUID(),now(),targetId);
+   }else if(action==='restrict'||action==='restore') {
     targetId=key(input.participantId);if(!active(targetId))fail(404,'Member not found.');if(targetId===owner)fail(400,'Use another administrator to review your own account.');
     if(action==='restrict')db.prepare('INSERT INTO social_restrictions VALUES (?,?,?,?) ON CONFLICT(owner) DO UPDATE SET reason=excluded.reason,actor=excluded.actor,created=excluded.created').run(targetId,reason,owner,now());else db.prepare('DELETE FROM social_restrictions WHERE owner=?').run(targetId);
    }else if(action==='dismiss') {targetId=key(input.reportId);if(!db.prepare('SELECT 1 FROM social_reports WHERE id=?').get(targetId))fail(404,'Report not found.');db.prepare("UPDATE social_reports SET state='dismissed',resolution=? WHERE id=? AND state='open'").run(reason,targetId);}
@@ -171,5 +187,5 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
    db.prepare('INSERT INTO admin_audit VALUES (?,?,?,?,?,?)').run(randomUUID(),owner,'social-'+action,targetId,JSON.stringify({reason,kind:input.kind??null}),new Date(now()).toISOString());return {saved:true};
   });
  } // Require a reason and live admin role for every action; audit records contain decisions, not private content copies.
- return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible};
+ return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo};
 }

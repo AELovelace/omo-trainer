@@ -193,3 +193,27 @@ Main-menu icons use shared SVG symbols in index.html and inherit theme colors.
 Little Log/My Star Chart retain the overview/potty-chart routes. Keep new menu
 symbols distinct from the Social bottom-bar icons and bump the shell cache when
 changing the public markup.
+
+Profile pictures: `lib/profile.js` manages Settings uploads and `lib/avatar.js`
+renders versioned avatars with an initial fallback. `social_profiles` stores one
+sanitized JPEG per member, plus a version/request hash retained after removal.
+`GET/POST api/social/profile` is session-owned; POST requires CSRF, requestId,
+loaded version (initially null) and picture `{data: base64}` or null to remove.
+Compare versions again after decoding to prevent concurrent overwrites.
+`GET api/social/avatar?owner=ID&version=VERSION` requires an enabled session and
+enabled target. Return no-store JPEGs, never a public/static image URL. Friend,
+post and comment identities include avatarVersion when a picture exists.
+Admins review the profiles view and remove-profile action with a reason and
+reviewed version; the audit log records removal. Restrictions also block avatar
+writes. Keep avatar modules in the static allowlist and service-worker shell,
+while keeping every image API outside the cache. The Social bottom bar now
+contains Post, Feed, Friends & search, Messaging and Notifications.
+
+`lib/picture-upload.js` handles both post photos and avatars. Accept originals
+up to 100 MiB, decode locally, resize, and measure the encoded JPEG against its
+byte budget. Profiles use a 128 KiB JPEG budget. Posts normally keep up to
+1600px and 1400 KiB JPEGs; on an explicit HTTP 413 only, share 168 KiB of JPEG
+data between all images before one automatic retry (under 256 KiB with JSON).
+Retain the compact request body for uncertain-response retries, and check the
+original page/account generation before and after preparing the retry. Never
+compact and retry a timeout: the original body might already have committed.

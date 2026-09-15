@@ -147,9 +147,9 @@ Use **Run and share with MommyBot** to request an on-demand report for the bot's
   only while Community support is enabled in Settings; other push history remains
   visible when that option is off.
 
-Social now groups Post, Feed, Messaging and Notifications behind one main-menu tab.
-Use its bottom bar to switch sections, and Friends & search at the top to manage
-friends and shared records.
+Social groups Post, Feed, Friends & search, Messaging and Notifications behind
+one main-menu tab. Use Friends & search in the bottom bar to manage friends
+and shared records.
 
 Post is the first Social bottom-bar tab. Write updates there and browse them
 in Feed; unsent text, photos and audience choices survive switching tabs.
@@ -159,3 +159,12 @@ in Feed; unsent text, photos and audience choices survive switching tabs.
 Menu labels and icons: Little Log uses a drip; My Star Chart keeps four squares;
 Stickers uses a smiley in a circle; Games uses a controller; Social uses a person;
 Login bonuses uses a star. History, Settings and About retain their icons.
+
+- In Settings, choose a profile picture, review its square preview, then Save.
+  Check it beside your name in Social; replace it or use Remove picture.
+- Profile pictures are visible to signed-in members. Admins can remove them
+  through Social moderation > Profile pictures.
+
+- Post a full-resolution camera photo through Social > Post. Little Log resizes
+  it automatically; you can choose originals up to 100 MB each without manually
+  shrinking them. If the server needs smaller pictures, it retries automatically.

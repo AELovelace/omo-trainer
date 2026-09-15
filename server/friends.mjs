@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const key=value=>{if(typeof value!=='string'||! /^[A-Za-z0-9_-]{1,80}$/.test(value))fail(400,'Choose a valid friend or record.');return value;};
-export function createFriends(db,recordFromRow,{onRemove=()=>{}}={}) {
+export function createFriends(db,recordFromRow,{onRemove=()=>{},avatarInfo=()=>({})}={}) {
  db.exec(`CREATE TABLE IF NOT EXISTS friendships(id TEXT PRIMARY KEY,a TEXT NOT NULL REFERENCES participants(id),b TEXT NOT NULL REFERENCES participants(id),requester TEXT NOT NULL REFERENCES participants(id),state TEXT NOT NULL CHECK(state IN ('pending','accepted')),created INTEGER NOT NULL,UNIQUE(a,b),CHECK(a<b));
  CREATE INDEX IF NOT EXISTS friends_b ON friendships(b);
  CREATE TABLE IF NOT EXISTS friend_record_shares(id TEXT PRIMARY KEY,friendship_id TEXT NOT NULL REFERENCES friendships(id) ON DELETE CASCADE,owner TEXT NOT NULL,recipient TEXT NOT NULL REFERENCES participants(id),record_id TEXT NOT NULL,created INTEGER NOT NULL,UNIQUE(owner,recipient,record_id),FOREIGN KEY(owner,record_id) REFERENCES entries(participant_id,id));
@@ -18,14 +18,14 @@ export function createFriends(db,recordFromRow,{onRemove=()=>{}}={}) {
   requireUser(owner);
   return db.prepare(`SELECT f.id,f.state,f.requester,p.id AS participantId,p.label FROM friendships f JOIN participants p ON p.id=CASE WHEN f.a=? THEN f.b ELSE f.a END
    WHERE (f.a=? OR f.b=?) AND NOT EXISTS(SELECT 1 FROM participant_access x WHERE x.participant_id=p.id AND x.disabled=1) ORDER BY f.state,f.created DESC,f.id`).all(owner,owner,owner)
-   .map(({requester,...row})=>({...row,direction:requester===owner?'outgoing':'incoming'}));
+   .map(({requester,...row})=>({...row,...avatarInfo(row.participantId),direction:requester===owner?'outgoing':'incoming'}));
  } // The private list contains only this account's requests and accepted friends.
  function search(owner,query) {
   requireUser(owner);if(typeof query!=='string'||query.trim().length<2||query.trim().length>80)fail(400,'Enter 2 to 80 characters of a display name.');
   const term=query.trim().replace(/[\\%_]/g,'\\$&');
   return db.prepare(`SELECT p.id AS participantId,p.label FROM participants p WHERE p.id<>? AND p.label LIKE ? ESCAPE '\\'
    AND NOT EXISTS(SELECT 1 FROM participant_access x WHERE x.participant_id=p.id AND x.disabled=1) ORDER BY p.label,p.id LIMIT 20`).all(owner,'%'+term+'%').map(row=>{
-    const link=pair(owner,row.participantId);return {...row,state:link?.state??'none',direction:link?.requester===owner?'outgoing':'incoming'};
+    const link=pair(owner,row.participantId);return {...row,...avatarInfo(row.participantId),state:link?.state??'none',direction:link?.requester===owner?'outgoing':'incoming'};
    });
  } // Signed-in name search is bounded and never returns account credentials, contact details or records.
  function act(owner,input) {
@@ -74,7 +74,7 @@ export function createFriends(db,recordFromRow,{onRemove=()=>{}}={}) {
    JOIN entries e ON e.participant_id=s.owner AND e.id=s.record_id AND e.deleted_at IS NULL
    WHERE s.${column}=? AND NOT EXISTS(SELECT 1 FROM participant_access x WHERE x.participant_id=p.id AND x.disabled=1)
    ORDER BY s.created DESC,s.id LIMIT 51 OFFSET ?`).all(owner,offset);
-  return {items:rows.slice(0,50).map(row=>({id:row.share_id,created:row.created,friend:{id:row.peer_id,label:row.label},record:recordFromRow(row)})),nextOffset:rows.length>50?offset+50:null};
+  return {items:rows.slice(0,50).map(row=>({id:row.share_id,created:row.created,friend:{id:row.peer_id,label:row.label,...avatarInfo(row.peer_id)},record:recordFromRow(row)})),nextOffset:rows.length>50?offset+50:null};
  } // Recheck the friendship, both accounts and source deletion on each uncached read; recipients cannot edit shared records.
  function revokeRecord(owner,id){db.prepare('DELETE FROM friend_record_shares WHERE owner=? AND record_id=?').run(owner,id);} // Called in record deletion transactions so restoring a record cannot restore sharing.
  return {list,search,act,accepted,record,share,unshare,shared,revokeRecord};
