@@ -125,7 +125,7 @@ Use **Run and share with MommyBot** to request an on-demand report for the bot's
 - Open Friends to search for members and accept requests. In History, preview a synced record with Share with friend before granting access. Manage Shared by me to stop sharing. Enable Friends only in notification settings to exchange community check-ins only with accepted friends.
 
 
-- Open **Social > Feed** to post text and up to four pictures. Choose Friends or Public
+- Open **Social > Post** to post text and up to four pictures. Choose Friends or Public
   before posting; Public reaches all signed-in members. Switch the feed selector
   to browse public posts. Delete your own posts from their cards.
 - Open **Social > Messaging**, select an accepted friend and send a private text message.
@@ -147,6 +147,15 @@ Use **Run and share with MommyBot** to request an on-demand report for the bot's
   only while Community support is enabled in Settings; other push history remains
   visible when that option is off.
 
-Social now groups Feed, Messaging and Notifications behind one main-menu tab.
+Social now groups Post, Feed, Messaging and Notifications behind one main-menu tab.
 Use its bottom bar to switch sections, and Friends & search at the top to manage
 friends and shared records.
+
+Post is the first Social bottom-bar tab. Write updates there and browse them
+in Feed; unsent text, photos and audience choices survive switching tabs.
+
+- In the main menu, Social comes immediately before Login bonuses.
+
+Menu labels and icons: Little Log uses a drip; My Star Chart keeps four squares;
+Stickers uses a smiley in a circle; Games uses a controller; Social uses a person;
+Login bonuses uses a star. History, Settings and About retain their icons.

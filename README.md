@@ -302,7 +302,7 @@ The Friends menu offers display-name search, accepted friend requests and shared
 
 ### Updates and messages
 
-Post status updates with up to four pictures from **Social > Feed**, choosing Friends
+Post status updates with up to four pictures from **Social > Post**, choosing Friends
 (default) or Public per post. Public posts are visible to all signed-in members.
 **Social > Messaging** provides private conversations between accepted friends, with unread
 counts and message history. See [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for access
@@ -316,6 +316,9 @@ independent opt-outs in Settings. Admin console > Social moderation supports
 reported-content review, removal and social access restrictions. See
 [SOCIAL_GUIDE.md](SOCIAL_GUIDE.md) for migration, privacy and deployment details.
 
-Social now groups Feed, Messaging and Notifications behind one main-menu tab.
+Social now groups Post, Feed, Messaging and Notifications behind one main-menu tab.
 Use its bottom bar to switch sections, and Friends & search at the top to manage
 friends and shared records.
+
+Post is the first Social bottom-bar tab. Write updates there and browse them
+in Feed; unsent text, photos and audience choices survive switching tabs.

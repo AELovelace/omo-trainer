@@ -260,3 +260,11 @@ Social navigation: the theme browser suite checks the single Social menu entry,
 its bottom bar across both themes and six widths, and hidden recording actions
 inside Social. Social/activity and friends browser suites enter through Social,
 use its bottom links, and exercise preserved post/message/friend routes.
+
+Post/Feed separation: theme checks cover all four bottom tabs and confirm that
+the composer is visible only on Post. The social browser flow switches tabs with
+a prepared photo/text draft, publishes from Post and opens View your post in
+Feed. Social API tests check the private, minimal composer session response.
+
+The theme browser suite also checks the exact main-menu order: Games, Social,
+then Login bonuses, followed by History, Settings and About.

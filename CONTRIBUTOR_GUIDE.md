@@ -184,3 +184,12 @@ and #social-navigation bottom links. Existing page IDs and feed/message/activity
 friends hashes remain compatible. app.js maps #social to Feed and aligns the
 bottom bar to main content on resize; lib/social.js recognizes the alias when
 loading data. Keep the recording bar hidden only while Social is active.
+
+The Post composer is #page-post, separate from #page-feed. Its #post route loads
+only api/social/session for identity and CSRF. Keep draft state in memory across
+tab switches and retain the existing request ID on uncertain publishing retries.
+
+Main-menu icons use shared SVG symbols in index.html and inherit theme colors.
+Little Log/My Star Chart retain the overview/potty-chart routes. Keep new menu
+symbols distinct from the Social bottom-bar icons and bump the shell cache when
+changing the public markup.

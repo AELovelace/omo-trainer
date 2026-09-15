@@ -1,11 +1,13 @@
 # Status updates, pictures, activity and moderation
 
-Open **Social** in the main menu. Its bottom bar switches between **Feed**,
+Open **Social** in the main menu. Its bottom bar switches between **Post**, **Feed**,
 **Messaging**, and **Notifications** on phones and desktop. Use **Friends &
 search** at the top for friend requests and shared records. The recording action
 bar gives way to this social bar while browsing Social.
 
-Open **Feed** to post text, up to four pictures, or both. Each post has a
+Open **Post** to write text, add up to four pictures, or both. **Feed** is a
+separate browsing view. Switching tabs keeps the unsent text, pictures and
+audience in memory; after publishing, choose **View your post** to open it. Each post has a
 **Friends** or **Public** audience. Friends is the default. Public means all
 signed-in, enabled Little Log members; signed-out visitors cannot read the feed
 or its pictures. Use Show updates to switch between Friends & me and Public.
@@ -124,6 +126,7 @@ token. Responses, including picture bytes, use `Cache-Control: no-store`.
 
 | Endpoint under `api/social/` | Method | Input / result |
 | --- | --- | --- |
+| `session` | GET | Participant and CSRF for the Post composer; no feed or records |
 | `feed` | GET | `audience=friends/public`, optional `before`; `items`, `nextBefore`, participant and CSRF |
 | `posts` | POST | `requestId`, `body`, `audience`, `pictures: [{data: base64, alt}]`; post ID |
 | `posts/delete` | POST | Owner-only post `id`; deletes pictures and clears text |
@@ -198,6 +201,8 @@ test also checks all three default-on settings and persistent opt-outs. Push
 transport is mocked; verify real device delivery after deployment.
 
 The main menu has one Social destination (`#social`, which opens Feed). Existing
-`#feed`, `#feed?post=...`, `#messages`, `#activity` and `#friends` links continue
+`#post`, `#feed`, `#feed?post=...`, `#messages`, `#activity` and `#friends` links continue
 to open the matching section within Social. Browser Back/Forward and push/post
 links keep working. Admin moderation stays in the admin console.
+
+Social appears after Games and immediately before Login bonuses in the main menu.

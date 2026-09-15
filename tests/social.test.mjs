@@ -76,6 +76,7 @@ test('social HTTP endpoints require sessions, CSRF and live audiences, including
  const post=(user,path,input,headers={})=>fetch(login.origin+'/'+path,{method:'POST',headers:{Cookie:tokens.get(user.id),Origin:login.origin,'Content-Type':'application/json','X-CSRF-Token':db.session(tokens.get(user.id)).csrf,...headers},body:JSON.stringify(input)});
  try {
   assert.equal((await get(null,'social/feed?audience=public')).status,401);
+  assert.equal((await get(null,'social/session')).status,401);const composer=await get(a,'social/session');assert.equal(composer.headers.get('cache-control'),'no-store');assert.deepEqual(Object.keys(await composer.json()).sort(),['csrf','participant']);
   assert.equal((await post(a,'social/posts',input('csrf'),{'X-CSRF-Token':'wrong'})).status,403);
   assert.equal((await post(a,'social/posts',input('picture',{pictures:[{data:photo.toString('base64')}]}))).status,200);
   const id=db.social.feed(b.id).items[0].pictures[0].id;assert.equal((await get(null,'social/picture?id='+id)).status,401);assert.equal((await get(c,'social/picture?id='+id)).status,404);

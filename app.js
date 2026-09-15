@@ -512,8 +512,8 @@ function positionSocialNavigation(){const bounds=$('#main-content').getBoundingC
 window.addEventListener('resize',()=>requestAnimationFrame(positionSocialNavigation));
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1).split('?')[0];
-  const page = requested==='social'?'feed':['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends', 'feed', 'messages', 'activity'].includes(requested) ? requested : 'overview';
-  const social=['feed','messages','activity','friends'].includes(page);
+  const page = requested==='social'?'feed':['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends', 'post', 'feed', 'messages', 'activity'].includes(requested) ? requested : 'overview';
+  const social=['post','feed','messages','activity','friends'].includes(page);
   $('#page-social').hidden=!social;document.documentElement.classList.toggle('social-active',social);
   document.querySelectorAll('[data-social-page]').forEach(link=>{if(link.dataset.socialPage===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   if(page==='friends')$('#social-friends').setAttribute('aria-current','page');else $('#social-friends').removeAttribute('aria-current');
@@ -548,10 +548,10 @@ function navigate() { // Implements accessible, bookmarkable pages without requi
     requestAnimationFrame(()=>$('#potty-page-title').focus({preventScroll:true}));
   }
   if(page==='login-bonuses')requestAnimationFrame(()=>$('#login-bonuses-title').focus({preventScroll:true}));
-  if(page==='feed'||page==='messages'||page==='activity')requestAnimationFrame(()=>$('#'+page+'-title').focus({preventScroll:true}));
+  if(page==='post'||page==='feed'||page==='messages'||page==='activity')requestAnimationFrame(()=>$('#'+page+'-title').focus({preventScroll:true}));
   if(page==='friends')requestAnimationFrame(()=>$('#friends-title').focus({preventScroll:true}));
   if(page==='games') requestAnimationFrame(()=>$('#games-title').focus({preventScroll:true})); // Announce Games without losing any unsaved tracker or chart inputs.
-  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'activity' ? 'Notifications ? Social' : page === 'feed' ? 'Feed ? Social' : page === 'messages' ? 'Messaging ? Social' : page === 'friends' ? 'Friends ? Social' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
+  document.title = `${page === 'overview' ? 'Little Log' : page === 'history' ? 'Record archive · Little Log' : page === 'potty-chart' ? 'Potty chart · Little Log' : page === 'login-bonuses' ? 'Login bonuses' : page === 'post' ? 'Post ? Social' : page === 'activity' ? 'Notifications ? Social' : page === 'feed' ? 'Feed ? Social' : page === 'messages' ? 'Messaging ? Social' : page === 'friends' ? 'Friends ? Social' : page === 'games' ? 'Games · Little Log' : page === 'stickers' ? 'Stickers & market' : page === 'about' ? 'About · Little Log' : 'Settings · Little Log'} · lidoll.dev`;
 }
 
 function download(filename, data, type) { // Generates an on-device download; no records are sent to a remote endpoint.
