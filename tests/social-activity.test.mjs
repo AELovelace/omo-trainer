@@ -85,9 +85,31 @@ test('private message moderation requires a report from a conversation participa
 test('existing notification subscribers get social defaults once, with persistent opt-outs and no backfill',()=>{
  const raw=new DatabaseSync(':memory:');try{
   raw.exec("CREATE TABLE participants(id TEXT PRIMARY KEY);CREATE TABLE participant_access(participant_id TEXT PRIMARY KEY,disabled INTEGER);CREATE TABLE notification_preferences(owner TEXT PRIMARY KEY,time_zone TEXT,quiet_start INTEGER,quiet_end INTEGER,admin_messages INTEGER);CREATE TABLE push_subscriptions(endpoint TEXT PRIMARY KEY,owner TEXT,payload TEXT);INSERT INTO participants VALUES ('old');INSERT INTO notification_preferences VALUES ('old','UTC',0,0,0)");const p=pref('old');raw.prepare('INSERT INTO push_subscriptions VALUES (?,?,?)').run(p.subscription.endpoint,'old',JSON.stringify(p.subscription));
-  const options={send:async()=>{throw Error('No backfill');}};let service=createNotifications(raw,()=>[],options);assert.equal(service.status('old').preferences.socialLikes,1);assert.equal(service.status('old').preferences.socialComments,1);assert.equal(service.status('old').preferences.friendPosts,1);
-  service.save('old',pref('old',{socialLikes:false,socialComments:false,friendPosts:false}));service=createNotifications(raw,()=>[],options);service.save('old',pref('new-device'));assert.equal(service.status('old').preferences.socialLikes,0);assert.equal(service.status('old').preferences.socialComments,0);assert.equal(service.status('old').preferences.friendPosts,0);assert.throws(()=>service.save('old',pref('old',{socialLikes:null})),e=>e.status===400);
+  const options={send:async()=>{throw Error('No backfill');}};let service=createNotifications(raw,()=>[],options);assert.equal(service.status('old').preferences.socialLikes,1);assert.equal(service.status('old').preferences.socialComments,1);assert.equal(service.status('old').preferences.friendPosts,1);for(const field of ['friendWettings','friendChanges','friendLiquids'])assert.equal(service.status('old').preferences[field],1);
+  service.save('old',pref('old',{socialLikes:false,socialComments:false,friendPosts:false,friendWettings:false,friendChanges:false,friendLiquids:false}));service=createNotifications(raw,()=>[],options);service.save('old',pref('new-device'));assert.equal(service.status('old').preferences.socialLikes,0);assert.equal(service.status('old').preferences.socialComments,0);assert.equal(service.status('old').preferences.friendPosts,0);for(const field of ['friendWettings','friendChanges','friendLiquids']){assert.equal(service.status('old').preferences[field],0);assert.throws(()=>service.save('old',pref('old',{[field]:null})),e=>e.status===400);}assert.throws(()=>service.save('old',pref('old',{socialLikes:null})),e=>e.status===400);
  }finally{raw.close();}
+});
+
+test('record-post notification filters are independent and preserve manual posts and stored activity',async()=>{
+ for(const [field,kind] of [['friendWettings','wetting'],['friendChanges','diaper-change'],['friendLiquids','observation']]){
+  const {db,a,b,sent}=fixture();try{
+   db.social.saveRecordPreferences(a.id,{enabled:true,audience:'friends',version:0});db.notifications.save(b.id,pref('b',{[field]:false,communitySupport:false}));
+   const entries=[{id:'wet',kind:'wetting',category:'involuntary',position:'sitting',diaperNumber:1},{id:'change',kind:'diaper-change',wettingsCount:2,diaperNumber:1},{id:'water',kind:'observation',liquidsMl:250,liquidsMode:'interval',diaperNumber:1}].map(e=>({...e,occurredAt:'2026-09-15T14:00:00+00:00'}));
+   db.sync(a.id,entries.map(entry=>({id:entry.id,mutationId:entry.id,baseVersion:0,entry})));await db.social.publish(a.id,post('manual'));
+   const activity=db.activity.list(b.id);assert.equal(activity.items.length,4);assert.equal(db.social.feed(b.id).items.length,4);await db.notifications.tick(instant);assert.equal(sent.length,3,field+' only mutes its own type');
+   const excluded=kind==='wetting'?'Involuntary accident':kind==='diaper-change'?'Diaper change':'Liquids logged';const blocked=activity.items.find(n=>db.social.post(b.id,n.postId).body.startsWith(excluded));assert.ok(blocked);assert.ok(!sent.some(s=>s.p.tag==='activity-'+blocked.id));
+   assert.equal(db.social.recordPreferences(a.id).enabled,true);assert.equal(db.notifications.status(b.id).preferences.friendPosts,1);
+  }finally{db.close();}
+ }
+});
+
+test('record opt-outs cancel queued pushes permanently and the friend-post master switch still applies',async()=>{
+ const {db,a,b,sent}=fixture();try{
+  db.social.saveRecordPreferences(a.id,{enabled:true,audience:'public',version:0});db.notifications.save(b.id,pref('b',{communitySupport:false}));
+  const entry={id:'queued-water',kind:'observation',liquidsMl:250,liquidsMode:'interval',diaperNumber:1,occurredAt:'2026-09-15T14:00:00+00:00'};db.sync(a.id,[{id:entry.id,mutationId:entry.id,baseVersion:0,entry}]);
+  db.notifications.save(b.id,pref('b',{friendLiquids:false}));db.notifications.save(b.id,pref('b',{friendLiquids:true}));await db.notifications.tick(instant);assert.equal(sent.length,0);assert.equal(db.activity.list(b.id).items.length,1);
+  db.notifications.save(b.id,pref('b',{friendPosts:false}));const next={...entry,id:'master-off'};db.sync(a.id,[{id:next.id,mutationId:next.id,baseVersion:0,entry:next}]);await db.social.publish(a.id,post('master-manual'));await db.notifications.tick(instant);assert.equal(sent.length,0);assert.equal(db.activity.list(b.id).items.length,3);
+ }finally{db.close();}
 });
 
 test('stored activity, read state and pending delivery persist; failed transport never duplicates and cleans expired endpoints',async()=>{

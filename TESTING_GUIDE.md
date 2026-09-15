@@ -315,7 +315,14 @@ insets. Emulated viewport resizing does not reproduce every mobile keyboard.
 
 Timeline record sharing: `tests/record-sharing.test.mjs` covers default opt-out,
 eligible types, audiences, retry/conflict/rollback behavior, source corrections
+including water-log amounts and diaper-change counts,
 and deletions, moderation, imports, cross-device versions, persistence and API
 authorization. Run `node tests/record-sharing-browser.mjs` with PUPPETEER_MODULE
 and CHROME_PATH to verify Settings controls, saved opt-in, real sync requests,
 feed posts, stale-device conflicts, both mobile themes and private-data cleanup.
+
+Record notification opt-outs: `tests/social-activity.test.mjs` checks each type
+independently, manual posts, the master switch, queued-push cancellation, stored
+activity, migration defaults and old-client preference preservation.
+`tests/notifications-browser.mjs` verifies the three checkboxes through the real
+settings API, saving, reload, device re-enrollment and mobile layouts.

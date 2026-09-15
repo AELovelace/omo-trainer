@@ -66,11 +66,11 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   return transaction(()=>{const current=recordPreferences(owner);if(current.version!==input.version)fail(409,'These settings changed on another device. Refresh before saving.');db.prepare('INSERT INTO social_record_preferences VALUES (?,?,?,?) ON CONFLICT(owner) DO UPDATE SET enabled=excluded.enabled,audience=excluded.audience,version=excluded.version').run(owner,Number(input.enabled),input.audience,current.version+1);return recordPreferences(owner);});
  } // Version checks prevent a stale device from silently re-enabling sharing or broadening the audience.
  function recordSummary(entry){
-  if(!['wetting','diaper-change'].includes(entry?.kind))return null;
+  if(!['wetting','diaper-change','observation'].includes(entry?.kind))return null;
   const labels={forced:'Forced wetting','semi-forced':'Semi-forced wetting',voluntary:'Voluntary wetting','semi-involuntary':'Semi-involuntary accident',involuntary:'Involuntary accident',bedwetting:'Bedwetting','used-the-potty':'Used the potty'};
-  const summary=entry.kind==='diaper-change'?`Diaper change · ${entry.wettingsCount} wetting${entry.wettingsCount===1?'':'s'}`:labels[entry.category];
+  const summary=entry.kind==='observation'?`Liquids logged · ${entry.liquidsMl} mL`:entry.kind==='diaper-change'?`Diaper change · ${entry.wettingsCount} wetting${entry.wettingsCount===1?'':'s'}`:labels[entry.category];
   return summary+'\nRecorded: '+entry.occurredAt.replace('T',' ');
- } // Share only event classification, recorded time and a change's final count, never the full private record.
+ } // Share event type, recorded time and intake/change amounts, never the full private record or cumulative legacy snapshots.
  function syncRecordPost(owner,entryId,entry,isNew=false){
   const linked=db.prepare('SELECT post_id FROM social_record_posts WHERE owner=? AND entry_id=?').get(owner,entryId),body=recordSummary(entry);
   if(linked){if(!body)removePost(linked.post_id);else db.prepare('UPDATE social_posts SET body=? WHERE id=? AND deleted IS NULL').run(body,linked.post_id);return;}

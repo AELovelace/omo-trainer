@@ -44,8 +44,8 @@ try {
  await clickSetting(page,'#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
  assert.equal(await page.$eval('#notification-title',node=>node.textContent),'Receive notifications');
  assert.equal(db.notifications.status(user.id).preferences.adminMessages,1);
- for(const field of ['socialLikes','socialComments','friendPosts'])assert.equal(db.notifications.status(user.id).preferences[field],1);
- for(const id of ['social-likes','social-comments','friend-posts']){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),true);await clickSetting(page,'#notification-'+id);}
+ for(const field of ['socialLikes','socialComments','friendPosts','friendWettings','friendChanges','friendLiquids'])assert.equal(db.notifications.status(user.id).preferences[field],1);
+ for(const id of ['social-likes','social-comments','friend-posts','friend-wettings','friend-changes','friend-liquids']){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),true);await clickSetting(page,'#notification-'+id);}
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,1);
  assert.equal(await page.$eval('#notification-community-support',node=>node.checked),true);
  assert.equal(await page.$eval('#notification-community-anonymous',node=>node.checked),false);
@@ -63,7 +63,7 @@ try {
  assert.equal(await page.$eval('#notification-community-anonymous',node=>node.checked),true);
  await clickSetting(page,'#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,0,'Enabling another device preserves opt-out');
- for(const [id,field] of [['social-likes','socialLikes'],['social-comments','socialComments'],['friend-posts','friendPosts']]){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),false);assert.equal(db.notifications.status(user.id).preferences[field],0);}
+ for(const [id,field] of [['social-likes','socialLikes'],['social-comments','socialComments'],['friend-posts','friendPosts'],['friend-wettings','friendWettings'],['friend-changes','friendChanges'],['friend-liquids','friendLiquids']]){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),false);assert.equal(db.notifications.status(user.id).preferences[field],0);}
  assert.equal(db.notifications.status(user.id).preferences.communityAnonymous,1,'Enabling another device preserves anonymity');
  assert.equal(db.notifications.status(user.id).preferences.communityFriendsOnly,1,'Enabling another device preserves friends-only mode');
  assert.equal(await page.$eval('#notification-community-friends-only',node=>node.checked),true);

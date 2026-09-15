@@ -259,10 +259,19 @@ integer version; stale devices must refresh before changing consent or audience.
 This preference is independent of notification subscriptions.
 
 `social.syncRecordPost` runs synchronously inside the accepted record transaction.
-Only new wettings and diaper changes can create posts. The `(owner,entry_id)` link
+Only new wettings, diaper changes and interval liquid observations can create posts.
+Liquid summaries use the canonical `liquidsMl` amount; untyped legacy cumulative
+records and rolls stay excluded. The `(owner,entry_id)` link
 in `social_record_posts` is retained after post deletion to prevent resurrection.
 Corrections retain the original audience; deletion or conversion to a nonshared
 record kind withdraws the post and activity. Admin imports call the same hook
 only to correct existing posts. Never call asynchronous `publish()` from the sync
 transaction or expose raw record payloads through Social. Posting restrictions
 suppress new automatic posts while allowing the underlying tracker save.
+
+Notification preferences `friendWettings`, `friendChanges` and `friendLiquids`
+filter automatic record-post pushes beneath the existing `friendPosts` master
+switch. `activity.pushEnabled` resolves the linked entry kind at queue, cancel
+and delivery time, so pending posts from before the update respect opt-outs too.
+Defaults are on; omitted fields preserve saved choices for older clients and
+new devices. Keep stored activity and the author's sharing preferences separate.

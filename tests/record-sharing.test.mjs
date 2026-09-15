@@ -18,8 +18,8 @@ test('record sharing starts off, publishes only new eligible records, and retrie
   assert.deepEqual(db.social.recordPreferences(a.id),{enabled:false,audience:'friends',version:0});db.sync(a.id,[change(wet('before'))]);assert.equal(db.social.feed(a.id).items.length,0);
   prefs(true);assert.equal(db.social.feed(a.id).items.length,0);db.sync(a.id,[change(wet('before','used-the-potty'),1)]);assert.equal(db.social.feed(a.id).items.length,0);
   const batch=[change(wet('accident')),change(wet('potty','used-the-potty')),change(wet('bed','bedwetting')),change({id:'change',kind:'diaper-change',occurredAt:'2026-09-15T12:10:00-07:00',diaperNumber:7,wettingsCount:3}),change({id:'liquids',kind:'observation',occurredAt:'2026-09-15T12:00:00-07:00',liquidsMl:200,liquidsMode:'interval',diaperNumber:7}),change({id:'roll',kind:'roll',occurredAt:'2026-09-15T12:00:00-07:00',rolledAt:'2026-09-15T12:00:00-07:00',rolledResult:'pee',result:'pee',source:'random',probability:50})];
-  db.sync(a.id,batch);db.sync(a.id,batch);const posts=db.social.feed(b.id).items;assert.equal(posts.length,4);assert.equal(db.social.feed(c.id,{audience:'public'}).items.length,0);assert.match(posts.map(p=>p.body).join('\n'),/Involuntary accident/);assert.match(posts.map(p=>p.body).join('\n'),/Used the potty/);assert.match(posts.map(p=>p.body).join('\n'),/3 wettings/);assert.ok(posts.every(p=>!p.body.includes('sitting')&&!p.body.includes('diaperNumber')&&p.audience==='friends'));
-  for(const p of posts)assert.throws(()=>db.social.post(c.id,p.id),e=>e.status===404);assert.equal(db.activity.list(b.id).items.filter(i=>i.kind==='friend-post').length,4);
+  db.sync(a.id,batch);db.sync(a.id,batch);const posts=db.social.feed(b.id).items;assert.equal(posts.length,5);assert.equal(db.social.feed(c.id,{audience:'public'}).items.length,0);assert.match(posts.map(p=>p.body).join('\n'),/Involuntary accident/);assert.match(posts.map(p=>p.body).join('\n'),/Used the potty/);assert.match(posts.map(p=>p.body).join('\n'),/3 wettings/);assert.match(posts.map(p=>p.body).join('\n'),/Liquids logged.*200 mL/);assert.ok(posts.every(p=>!p.body.includes('sitting')&&!p.body.includes('diaperNumber')&&p.audience==='friends'));
+  for(const p of posts)assert.throws(()=>db.social.post(c.id,p.id),e=>e.status===404);assert.equal(db.activity.list(b.id).items.filter(i=>i.kind==='friend-post').length,5);
  }finally{db.close();}
 });
 test('audience and opt-out affect future posts; edits preserve audience, deletes withdraw and cannot resurrect',()=>{
@@ -29,6 +29,18 @@ test('audience and opt-out affect future posts; edits preserve audience, deletes
   db.social.comment(b.id,{requestId:'comment',postId:first.id,body:'Support'});db.sync(a.id,[{id:'private',mutationId:'delete',baseVersion:2,entry:null}]);assert.throws(()=>db.social.post(b.id,first.id),e=>e.status===404);assert.ok(!db.activity.list(b.id).items.some(n=>n.postId===first.id));
   prefs(true);db.sync(a.id,[change(wet('private'),3)]);assert.throws(()=>db.social.post(a.id,first.id),e=>e.status===404);
   db.social.deletePost(a.id,second.id);db.sync(a.id,[change(wet('public','voluntary'),1)]);assert.equal(db.social.feed(a.id).items.length,0);
+ }finally{db.close();}
+});
+test('water logs and changes share the opt-in audience, update amounts and disappear when deleted',()=>{
+ const {db,a,b,c,prefs}=fixture();try{
+  const liquid=id=>({id,kind:'observation',occurredAt:'2026-09-15T12:00:00-07:00',liquidsMl:250,liquidsMode:'interval',diaperNumber:7});
+  const diaper=id=>({id,kind:'diaper-change',occurredAt:'2026-09-15T12:10:00-07:00',diaperNumber:7,wettingsCount:0});
+  db.sync(a.id,[change(liquid('off-water')),change(diaper('off-change'))]);assert.equal(db.social.feed(a.id).items.length,0);
+  prefs(true);db.sync(a.id,[change(liquid('water')),change(diaper('diaper'))]);const posts=db.social.feed(b.id).items;assert.equal(posts.length,2);assert.ok(posts.every(p=>p.audience==='friends'));assert.equal(db.social.feed(c.id,{audience:'public'}).items.length,0);
+  prefs(true,'public');db.sync(a.id,[change(liquid('public-water')),change(diaper('public-change'))]);assert.equal(db.social.feed(c.id,{audience:'public'}).items.length,2);
+  db.sync(a.id,[change({...liquid('water'),liquidsMl:350},1),change({...diaper('diaper'),wettingsCount:2},1)]);const updated=db.social.feed(b.id).items;assert.ok(updated.some(p=>/350 mL/.test(p.body)));assert.ok(updated.some(p=>/2 wettings/.test(p.body)));assert.equal(updated.length,4);
+  db.sync(a.id,[{id:'water',mutationId:'delete-water',baseVersion:2,entry:null},{id:'diaper',mutationId:'delete-change',baseVersion:2,entry:null}]);assert.equal(db.social.feed(b.id).items.length,2);
+  prefs(false);db.sync(a.id,[change(liquid('off-again'))]);assert.equal(db.social.feed(a.id).items.length,2);
  }finally{db.close();}
 });
 test('conflicts and failed batches never publish; social restrictions do not block recording',()=>{
