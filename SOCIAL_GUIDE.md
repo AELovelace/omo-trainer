@@ -5,6 +5,11 @@ Open **Social** in the main menu. Its bottom bar switches between **Post**, **Fe
 Friends & search manages friend requests and shared records. The recording action
 bar gives way to this social bar while browsing Social.
 
+On phones (up to 680px wide), the header and bottom tabs stay in place while
+the middle content scrolls. Cards and controls are compact; extra instructions
+are under expandable help. Long posts have More/Less controls. Desktop keeps
+its existing layout.
+
 Open **Post** to write text, add up to four pictures, or both. **Feed** is a
 separate browsing view. Switching tabs keeps the unsent text, pictures and
 audience in memory; after publishing, choose **View your post** to open it. Each post has a
@@ -36,6 +41,18 @@ You can remove your own messages, leaving a Message removed placeholder.
 Removing a friend deletes the conversation for both accounts; becoming friends
 again starts a fresh conversation. Messages are stored on the server and are
 not end-to-end encrypted.
+
+On mobile, Messaging opens a compact inbox with previews and unread counts.
+Search conversations or choose Inbox, Unread, All mail or Archived. **New**
+opens the friend picker. Open a conversation to read it and reply; **Inbox**
+returns to the list. Replies stay below the scrolling history, and unsent drafts
+are kept per friend in memory until sign-out, disconnect or reload. Opening the
+inbox alone does not mark messages read. Ctrl+Enter sends a reply on mobile.
+
+**Archive** hides a conversation from your inbox only; it neither deletes mail
+nor changes your friend's inbox. Open Archived or All mail to read or restore
+it. A new message brings it back to the inbox automatically. Archive choices
+persist across devices and server restarts.
 
 Posting and messaging require a connection. Social data is fetched live and is
 not stored in the offline shell or local storage. Signing out clears the social

@@ -62,10 +62,26 @@ test('removing and re-adding friends cannot restore a conversation or replay an 
  }finally{db.close();}
 });
 
+test('mail archives belong to one viewer, preserve unread messages and resurface after new mail',()=>{
+ const {db,a,b,c,tick}=fixture();try {
+  const link=connect(db,a,b);db.social.sendMessage(a.id,{requestId:'archive-first',participantId:b.id,body:'Keep this'});
+  const archive={participantId:a.id,archived:true};db.social.archiveMessages(b.id,archive);db.social.archiveMessages(b.id,archive);
+  assert.equal(db.social.conversations(b.id)[0].archived,true);assert.equal(db.social.conversations(b.id)[0].unread,1);assert.equal(db.social.conversations(a.id)[0].archived,false);
+  assert.equal(db.social.messages(b.id,a.id).items[0].body,'Keep this');
+  assert.throws(()=>db.social.archiveMessages(c.id,archive),e=>e.status===403);
+  assert.throws(()=>db.social.archiveMessages(b.id,{...archive,archived:'true'}),e=>e.status===400);
+  db.social.archiveMessages(b.id,{...archive,archived:false});assert.equal(db.social.conversations(b.id)[0].archived,false);
+  db.social.archiveMessages(b.id,archive);tick();db.social.sendMessage(a.id,{requestId:'archive-new',participantId:b.id,body:'New mail'});assert.equal(db.social.conversations(b.id)[0].archived,false);
+  db.social.archiveMessages(b.id,archive);db.friends.act(b.id,{action:'remove',id:link});assert.throws(()=>db.social.archiveMessages(b.id,archive),e=>e.status===403);
+  connect(db,a,b);assert.equal(db.social.conversations(b.id)[0].archived,false);disable(db,a,b);assert.throws(()=>db.social.archiveMessages(b.id,archive),e=>e.status===403);
+ }finally{db.close();}
+});
+
 test('pictures, posts, messages and read markers persist across server restarts',async()=>{
  const dir=mkdtempSync(resolve('artifacts/social-persist-')),file=resolve(dir,'science.sqlite');let db=openDatabase(file,{stickerCatalog:[]});try {
   const a=db.ensureParticipant('test','a','Alice'),b=db.ensureParticipant('test','b','Bob');connect(db,a,b);await db.social.publish(a.id,input('persist',{pictures:[{data:photo.toString('base64')}]}));db.social.sendMessage(a.id,{requestId:'persist',participantId:b.id,body:'Saved hello'});db.close();db=openDatabase(file,{stickerCatalog:[]});
   const post=db.social.feed(b.id).items[0];assert.ok(db.social.photo(b.id,post.pictures[0].id).length);assert.equal(db.social.messages(b.id,a.id).items[0].body,'Saved hello');assert.equal(db.social.conversations(b.id)[0].unread,1);
+  db.social.archiveMessages(b.id,{participantId:a.id,archived:true});db.close();db=openDatabase(file,{stickerCatalog:[]});assert.equal(db.social.conversations(b.id)[0].archived,true);assert.equal(db.social.conversations(a.id)[0].archived,false);
  }finally{db.close();}
 });
 
@@ -82,6 +98,10 @@ test('social HTTP endpoints require sessions, CSRF and live audiences, including
   const id=db.social.feed(b.id).items[0].pictures[0].id;assert.equal((await get(null,'social/picture?id='+id)).status,401);assert.equal((await get(c,'social/picture?id='+id)).status,404);
   const image=await get(b,'social/picture?id='+id);assert.equal(image.headers.get('content-type'),'image/jpeg');assert.equal(image.headers.get('cache-control'),'no-store');assert.equal(image.headers.get('x-content-type-options'),'nosniff');
   assert.equal((await post(c,'social/messages',{participantId:b.id,requestId:'forged',sender:a.id,body:'No'})).status,403);
+  assert.equal((await post(b,'social/messages/archive',{participantId:a.id,archived:true},{'X-CSRF-Token':'wrong'})).status,403);
+  assert.equal((await post(c,'social/messages/archive',{participantId:a.id,archived:true})).status,403);
+  assert.equal((await fetch(login.origin+'/social/messages/archive',{method:'POST',headers:{Origin:login.origin,'Content-Type':'application/json'},body:JSON.stringify({participantId:a.id,archived:true})})).status,401);
+  assert.equal((await post(b,'social/messages/archive',{participantId:a.id,archived:true,owner:a.id})).status,200);assert.equal(db.social.conversations(a.id)[0].archived,false);
   const shared=await get(b,'social/feed');assert.equal(shared.headers.get('cache-control'),'no-store');assert.equal((await shared.json()).items.length,1);
  }finally{await new Promise(r=>server.close(r));db.close();}
 });

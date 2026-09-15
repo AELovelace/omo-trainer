@@ -299,3 +299,16 @@ identity-only fields, disabled members and authenticated reads. Run
 `node tests/member-browser.mjs` for the sixth Profile tab, name links from
 posts/comments/friends/messages/conversations, self/other profiles, friendship
 revocation, own post deletion, missing profiles, mobile layouts and cleanup.
+
+Compact mobile Social: run `node tests/social-mobile-browser.mjs` with the same
+PUPPETEER_MODULE and CHROME_PATH variables. It checks actual center scrolling and
+stationary header/tabs at 320, 390 and 680px in both themes, long-post expansion,
+inbox search/folders, hidden-thread unread isolation, 50-message pagination,
+per-friend drafts, archive/restore, a 460px-high viewport with focused reply,
+desktop layout restoration and sign-out cleanup. Screenshots go under artifacts.
+`tests/social.test.mjs` covers archive ownership, CSRF, sessions, persistence,
+new-message resurfacing, friendship removal and disabled accounts.
+
+On a real phone, also check the installed app with the software keyboard open,
+browser bars expanded/collapsed, portrait/landscape rotation and safe-area
+insets. Emulated viewport resizing does not reproduce every mobile keyboard.

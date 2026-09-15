@@ -237,3 +237,18 @@ posts. Keep owner/audience filtering before pagination and recheck enabled
 accounts and accepted friendship on every request. `createIdentity` renders
 profile anchors using text nodes. Feed and profile share post cards and gallery
 cleanup; conversation names and Message buttons are separate controls.
+
+Social's compact shell applies only at `max-width:680px`. `#social-content`
+scrolls between the topbar and social navigation; Messages instead scrolls its
+inbox or message history and keeps the reply composer visible. Desktop wrappers
+use `display:contents` to preserve the existing document flow. The visual
+viewport height handles reduced space above a mobile keyboard; clipping the body
+prevents focus from scrolling a second container behind the shell.
+
+`lib/social.js` filters mobile Inbox/Unread/All mail/Archived views locally and
+keeps unsent replies only in memory. Do not mark a hidden mobile thread read.
+`POST api/social/messages/archive` accepts `{participantId, archived}` and uses
+the authenticated session's owner plus CSRF protection. `friend_message_archives`
+stores each viewer's latest archived sequence; newer messages resurface the
+thread. Deleting the friendship cascades archive state. Keep server permissions,
+read markers and offline cleanup independent of the layout.

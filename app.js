@@ -509,13 +509,15 @@ function render() { // Refreshes derived views without erasing unsaved form inpu
   seedDiaperChange();
 }
 
+function syncSocialViewport(){document.documentElement.style.setProperty('--social-viewport-height',(window.visualViewport?.height??innerHeight)+'px');} // Keep the reply composer above the mobile keyboard.
+window.visualViewport?.addEventListener('resize',syncSocialViewport);window.addEventListener('resize',syncSocialViewport);
 function positionSocialNavigation(){const bounds=$('#main-content').getBoundingClientRect();$('#social-navigation').style.left=Math.max(0,bounds.left)+'px';$('#social-navigation').style.right=Math.max(0,innerWidth-bounds.right)+'px';} // Align the fixed social bar with the main content on desktop and the full screen on phones.
 window.addEventListener('resize',()=>requestAnimationFrame(positionSocialNavigation));
 function navigate() { // Implements accessible, bookmarkable pages without requiring server-side route rewrites.
   const requested = location.hash.slice(1).split('?')[0];
   const page = requested==='social'?'feed':['overview', 'history', 'settings', 'about', 'potty-chart', 'stickers', 'games', 'login-bonuses', 'friends', 'post', 'feed', 'messages', 'activity', 'profile'].includes(requested) ? requested : 'overview';
   const social=['post','feed','messages','activity','friends','profile'].includes(page);
-  $('#page-social').hidden=!social;document.documentElement.classList.toggle('social-active',social);
+  $('#page-social').hidden=!social;$('#page-social').dataset.section=page;document.documentElement.classList.toggle('social-active',social);if(social&&matchMedia('(max-width:680px)').matches)window.scrollTo(0,0);syncSocialViewport();
   document.querySelectorAll('[data-social-page]').forEach(link=>{if(link.dataset.socialPage===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   if(page==='friends')$('#social-friends').setAttribute('aria-current','page');else $('#social-friends').removeAttribute('aria-current');
   positionSocialNavigation();

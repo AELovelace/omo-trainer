@@ -19,7 +19,8 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
  CREATE INDEX IF NOT EXISTS social_comment_post ON social_comments(post_id,seq);
  CREATE TABLE IF NOT EXISTS social_reports(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,reporter TEXT NOT NULL REFERENCES participants(id),kind TEXT NOT NULL,target TEXT NOT NULL,reason TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL DEFAULT 'open',resolution TEXT,UNIQUE(reporter,kind,target));
  CREATE TABLE IF NOT EXISTS social_restrictions(owner TEXT PRIMARY KEY REFERENCES participants(id),reason TEXT NOT NULL,actor TEXT NOT NULL,created INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS social_profiles(seq INTEGER PRIMARY KEY AUTOINCREMENT,owner TEXT NOT NULL UNIQUE REFERENCES participants(id),version TEXT NOT NULL,request_hash TEXT NOT NULL,data BLOB,updated INTEGER NOT NULL);`);
+ CREATE TABLE IF NOT EXISTS social_profiles(seq INTEGER PRIMARY KEY AUTOINCREMENT,owner TEXT NOT NULL UNIQUE REFERENCES participants(id),version TEXT NOT NULL,request_hash TEXT NOT NULL,data BLOB,updated INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS friend_message_archives(friendship_id TEXT NOT NULL REFERENCES friendships(id) ON DELETE CASCADE,owner TEXT NOT NULL REFERENCES participants(id),through_seq INTEGER NOT NULL,PRIMARY KEY(friendship_id,owner));`);
  const active=owner=>Boolean(db.prepare('SELECT 1 FROM participants p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM participant_access a WHERE a.participant_id=p.id AND a.disabled=1)').get(owner));
  const requireUser=owner=>{if(!active(owner))fail(403,'This account is not available.');};
  const requireContributor=owner=>{requireUser(owner);if(db.prepare('SELECT 1 FROM social_restrictions WHERE owner=?').get(owner))fail(403,'Social posting and messaging are paused for this account. Contact an administrator.');};
@@ -96,9 +97,11 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
   requireUser(owner);return friends.list(owner).filter(f=>f.state==='accepted').map(f=>{
    const latest=db.prepare('SELECT seq,sender,body,created,deleted FROM friend_messages WHERE friendship_id=? ORDER BY seq DESC LIMIT 1').get(f.id);
    const unread=db.prepare('SELECT COUNT(*) AS n FROM friend_messages WHERE friendship_id=? AND sender<>? AND deleted IS NULL AND seq>COALESCE((SELECT seq FROM friend_message_reads WHERE friendship_id=? AND owner=?),0)').get(f.id,owner,f.id,owner).n;
-   return {friend:{id:f.participantId,label:f.label,...avatarInfo(f.participantId)},latest:latest??null,unread};
+   const archived=db.prepare('SELECT through_seq FROM friend_message_archives WHERE friendship_id=? AND owner=?').get(f.id,owner);
+   return {friend:{id:f.participantId,label:f.label,...avatarInfo(f.participantId)},latest:latest??null,unread,archived:Boolean(archived&&archived.through_seq>=(latest?.seq??0))};
   }).sort((a,b)=>(b.latest?.seq??0)-(a.latest?.seq??0));
  }
+ function archiveMessages(owner,input){const id=thread(owner,input?.participantId);if(typeof input.archived!=='boolean')fail(400,'Choose archive or restore.');return transaction(()=>{thread(owner,input.participantId);if(input.archived){const seq=db.prepare('SELECT COALESCE(MAX(seq),0) AS seq FROM friend_messages WHERE friendship_id=?').get(id).seq;db.prepare('INSERT INTO friend_message_archives VALUES (?,?,?) ON CONFLICT(friendship_id,owner) DO UPDATE SET through_seq=excluded.through_seq').run(id,owner,seq);}else db.prepare('DELETE FROM friend_message_archives WHERE friendship_id=? AND owner=?').run(id,owner);return {archived:input.archived};});} // Archive only this member's inbox; new messages automatically bring the conversation back.
  function messages(owner,peer,{before}={}) {
   const id=thread(owner,peer),rows=db.prepare('SELECT seq,id,sender,body,created,deleted FROM friend_messages WHERE friendship_id=? AND seq<? ORDER BY seq DESC LIMIT 51').all(id,cursor(before));
   return {items:rows.slice(0,50).reverse(),nextBefore:rows.length>50?rows[49].seq:null};
@@ -193,5 +196,5 @@ export function createSocial(db,friends,{now=Date.now,activity}={}) {
    db.prepare('INSERT INTO admin_audit VALUES (?,?,?,?,?,?)').run(randomUUID(),owner,'social-'+action,targetId,JSON.stringify({reason,kind:input.kind??null}),new Date(now()).toISOString());return {saved:true};
   });
  } // Require a reason and live admin role for every action; audit records contain decisions, not private content copies.
- return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo,memberProfile};
+ return {publish,feed,post,photo,deletePost,conversations,messages,sendMessage,readMessages,deleteMessage,archiveMessages,like,comment,commentList,deleteComment,report,moderation,moderationPhoto,moderate,activityVisible,profile,saveProfile,avatar,avatarInfo,memberProfile};
 }

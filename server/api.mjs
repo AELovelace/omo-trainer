@@ -65,6 +65,7 @@ export function createApi(database, login) { // Resolves each app session to an 
       if(route==='social/posts/delete'&&request.method==='POST')return send(response,200,database.social.deletePost(participant.id,(await body(request,4096))?.id));
       if(route==='social/messages'&&request.method==='POST')return send(response,200,database.social.sendMessage(participant.id,await body(request,24000)));
       if(route==='social/messages/read'&&request.method==='POST')return send(response,200,database.social.readMessages(participant.id,await body(request,4096)));
+      if(route==='social/messages/archive'&&request.method==='POST')return send(response,200,database.social.archiveMessages(participant.id,await body(request,4096)));
       if(route==='social/messages/delete'&&request.method==='POST')return send(response,200,database.social.deleteMessage(participant.id,(await body(request,4096))?.id));
       if(route.startsWith('friends')&&request.method==='GET') {
         const query=new URL(request.url,login.origin).searchParams;
