@@ -120,4 +120,4 @@ Admins can set a report output limit up to 50,000 tokens and create or revoke Mo
 
 Use **Run and share with MommyBot** to request an on-demand report for the bot's polling feed. **Run now** keeps an ordinary manual report private. Nightly reports continue to enter the feed automatically after completion.
 
-- **Community support** in notification settings shares an anonymous daily check-in and receives other members' check-ins. It starts checked when first enabling notifications, and existing notification subscribers are enrolled once when this update is deployed. Uncheck and save to stop both directions on all devices; quiet hours still apply.
+- **Community support** in notification settings shares your display name with your daily check-in and receives other members' check-ins. Select **Share anonymously** and save to hide your name. It starts checked when first enabling notifications, and existing notification subscribers are enrolled once when this update is deployed. Uncheck and save to stop both directions on all devices; quiet hours still apply.

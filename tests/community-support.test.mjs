@@ -15,9 +15,12 @@ function fixture(){let time=now;const delivered=[];const db=openDatabase(':memor
 test('new enables default on, unsubscribed accounts stay off, invalid values fail and saved opt-outs persist',()=>{
  const f=fixture();try {
   f.db.notifications.save(f.a.id,pref('a'));assert.equal(f.db.notifications.status(f.a.id).preferences.communitySupport,1);
+  assert.equal(f.db.notifications.status(f.a.id).preferences.communityAnonymous,0);
+  for(const communityAnonymous of [null,1,'true',{}])assert.throws(()=>f.db.notifications.save(f.a.id,pref('a',{communityAnonymous})),e=>e.status===400);
+  f.db.notifications.save(f.a.id,pref('a',{communityAnonymous:true}));
   for(const value of [null,1,'true',{}])assert.throws(()=>f.db.notifications.save(f.a.id,pref('a',{communitySupport:value})),e=>e.status===400);
   f.db.notifications.save(f.a.id,pref('a',{communitySupport:false}));f.db.notifications.remove(f.a.id,{all:true});f.db.notifications.save(f.a.id,pref('new-device'));
-  assert.equal(f.db.notifications.status(f.a.id).preferences.communitySupport,0);
+  assert.equal(f.db.notifications.status(f.a.id).preferences.communitySupport,0);assert.equal(f.db.notifications.status(f.a.id).preferences.communityAnonymous,1);
  }finally{f.db.close();}
  const raw=new DatabaseSync(':memory:');try {
   raw.exec("CREATE TABLE participants(id TEXT PRIMARY KEY);CREATE TABLE participant_access(participant_id TEXT PRIMARY KEY,disabled INTEGER);CREATE TABLE notification_preferences(owner TEXT PRIMARY KEY,time_zone TEXT,quiet_start INTEGER,quiet_end INTEGER,admin_messages INTEGER);INSERT INTO participants VALUES ('old');INSERT INTO notification_preferences VALUES ('old','UTC',0,0,1)");
@@ -43,9 +46,10 @@ test('existing subscribers enroll once on either schema version; opt-outs and di
    assert.equal(service.status('off').preferences.communitySupport,0);
    assert.equal(service.status('off').subscriptions,0);
    assert.equal(raw.prepare('SELECT COUNT(*) AS n FROM community_checkins').get().n,0,'Enrollment does not backfill events');
-   service.save('subscribed',{...input,communitySupport:false});raw.close();raw=new DatabaseSync(file);
+   service.save('subscribed',{...input,communitySupport:false,communityAnonymous:true});raw.close();raw=new DatabaseSync(file);
    service=createNotifications(raw,()=>[],{send:async()=>{}});
    assert.equal(service.status('subscribed').preferences.communitySupport,0,'Restart preserves a later opt-out');
+   assert.equal(service.status('subscribed').preferences.communityAnonymous,1,'Restart preserves anonymous sharing');
    assert.equal(raw.prepare('SELECT COUNT(*) AS n FROM notification_migrations').get().n,1);
   }finally{raw.close();}
  }
@@ -66,7 +70,7 @@ test('failed enrollment rolls back its marker so the next startup can retry',()=
  }finally{raw.close();}
 });
 
-test('record sync broadcasts each new daily check-in once, to participating peers only, without personal data',async()=>{
+test('record sync broadcasts each new daily check-in once, to participating peers with the sender display name and no record details',async()=>{
  const f=fixture();try {
   f.db.notifications.save(f.a.id,pref('a'));f.db.notifications.save(f.b.id,pref('b'));f.db.notifications.save(f.b.id,pref('b2'));
   const outsider=f.db.ensureParticipant('test','out','Out');f.db.notifications.save(outsider.id,pref('out',{communitySupport:false}));
@@ -74,7 +78,7 @@ test('record sync broadcasts each new daily check-in once, to participating peer
   const late=f.db.ensureParticipant('test','late','Late');f.db.notifications.save(late.id,pref('late'));
   await Promise.all([f.db.notifications.tick(now),f.db.notifications.tick(now)]);await f.db.notifications.tick(now);
   assert.equal(f.delivered.length,2);assert.ok(f.delivered.every(({s})=>s.endpoint.endsWith('/b')||s.endpoint.endsWith('/b2')));
-  const payload=f.delivered[0].p;assert.equal(payload.kind,'community-checkin');assert.ok(!JSON.stringify(payload).includes(f.a.id));assert.ok(!JSON.stringify(payload).includes('Private'));assert.ok(!JSON.stringify(payload).includes('observation'));
+  const payload=f.delivered[0].p;assert.equal(payload.kind,'community-checkin');assert.ok(!JSON.stringify(payload).includes(f.a.id));assert.equal(payload.displayName,'Private Alice');assert.match(payload.body,/^Private Alice checked in today/);assert.ok(!JSON.stringify(payload).includes('observation'));
   for(const [day,kind]of [[1,'wetting'],[2,'diaper-change']]){f.setTime(now+day*86400000);f.save('day'+day,kind);await f.db.notifications.tick(now+day*86400000);}
   assert.equal(f.delivered.length,8);
  }finally{f.db.close();}
@@ -141,9 +145,29 @@ test('durable pending check-ins survive restart; failed delivery removes expired
  }finally{db?.close();}
 });
 
-test('community push displays fixed anonymous text and ignores supplied identity and content',async()=>{
+test('sender anonymity overrides recipient preferences and protects queued notices when toggled',async()=>{
+ const f=fixture();try {
+  f.db.notifications.save(f.a.id,pref('a'));f.db.notifications.save(f.b.id,pref('b',{communityAnonymous:true,quietStart:13,quietEnd:16}));
+  f.save('named');await f.db.notifications.tick(now+7200000);assert.equal(f.delivered[0].p.displayName,'Private Alice','Recipient anonymity does not hide other senders');
+  f.setTime(now+86400000);f.save('pending-named');
+  f.db.notifications.save(f.a.id,pref('a',{communityAnonymous:true}));
+  f.db.notifications.save(f.a.id,pref('a',{communityAnonymous:false}));
+  await f.db.notifications.tick(now+86400000+7200000);
+  assert.equal(f.delivered[1].p.displayName,undefined);assert.ok(!JSON.stringify(f.delivered[1].p).includes('Private Alice'));
+  f.setTime(now+2*86400000);f.db.notifications.save(f.a.id,pref('a',{communityAnonymous:true}));f.save('anonymous');
+  f.db.notifications.save(f.a.id,pref('a',{communityAnonymous:false}));await f.db.notifications.tick(now+2*86400000+7200000);
+  assert.equal(f.delivered[2].p.displayName,undefined,'A check-in created anonymously cannot be unmasked');
+  f.setTime(now+3*86400000);f.save('named-again');await f.db.notifications.tick(now+3*86400000+7200000);assert.equal(f.delivered[3].p.displayName,'Private Alice');
+ }finally{f.db.close();}
+});
+
+test('community push uses only a bounded display name in fixed copy, with anonymous fallback',async()=>{
  const handlers={},shown=[];const self={registration:{scope:'https://lidoll.dev/tracker/',showNotification:async(...args)=>shown.push(args)},addEventListener:(name,fn)=>handlers[name]=fn};
  vm.runInNewContext(readFileSync(new URL('../sw.js',import.meta.url),'utf8'),{self,URL,Set});let work;
  handlers.push({data:{json:()=>({kind:'community-checkin',title:'Private Alice',body:'Private record'})},waitUntil:p=>work=p});await work;
  assert.equal(shown[0][0],'Community check-in');assert.match(shown[0][1].body,/Someone in the Little Log community/);assert.ok(!shown[0][1].body.includes('Private'));
+ for(const [displayName,expected]of [['Alice','Alice'],['<b>Alice</b>','<b>Alice</b>'],['Alice\n\u202e','Alice'],['x'.repeat(81),'Someone in the Little Log community'],[42,'Someone in the Little Log community']]) {
+  handlers.push({data:{json:()=>({kind:'community-checkin',displayName,body:'Private record',title:'Injected'})},waitUntil:p=>work=p});await work;
+  assert.equal(shown.at(-1)[0],'Community check-in');assert.equal(shown.at(-1)[1].body,expected+' checked in today. A little reminder to record your day, too.');
+ }
 });

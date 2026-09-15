@@ -46,15 +46,20 @@ try {
  assert.equal(db.notifications.status(user.id).preferences.adminMessages,1);
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,1);
  assert.equal(await page.$eval('#notification-community-support',node=>node.checked),true);
+ assert.equal(await page.$eval('#notification-community-anonymous',node=>node.checked),false);
+ assert.equal(db.notifications.status(user.id).preferences.communityAnonymous,0);
  assert.equal(db.notifications.status(user.id).subscriptions,1);assert.equal(await page.evaluate(()=>permissionRequests),1);
  await clickSetting(page,'#notification-admin-messages');
  await clickSetting(page,'#notification-community-support');
+ await clickSetting(page,'#notification-community-anonymous');
  await page.select('#notification-quiet-start','23');await page.select('#notification-quiet-end','7');await clickSetting(page,'#notification-save');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.includes('quiet hours saved'));
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,0);
  await page.reload({waitUntil:'networkidle0'});await page.waitForFunction(()=>!document.querySelector('#notification-enable').disabled);
  assert.equal(await page.$eval('#notification-community-support',node=>node.checked),false);
+ assert.equal(await page.$eval('#notification-community-anonymous',node=>node.checked),true);
  await clickSetting(page,'#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,0,'Enabling another device preserves opt-out');
+ assert.equal(db.notifications.status(user.id).preferences.communityAnonymous,1,'Enabling another device preserves anonymity');
  assert.equal(db.notifications.status(user.id).preferences.quietStart,23);assert.equal(db.notifications.status(user.id).preferences.adminMessages,0);
  for(const width of [320,390,1024]){await page.setViewport({width,height:900});const fits=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth);if(!fits){console.log('Overflow at',width,await page.$$eval('body *',nodes=>nodes.filter(node=>node.getBoundingClientRect().right>innerWidth+1&&!node.closest('[hidden]')).map(node=>[node.tagName,node.id,node.className,node.getBoundingClientRect().right]).slice(-20)));await page.screenshot({path:resolve(directory,'overflow.png'),fullPage:true});}assert.equal(fits,true);}
  await clickSetting(page,'#notification-disable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.includes('turned off'));
