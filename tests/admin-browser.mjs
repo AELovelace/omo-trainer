@@ -57,6 +57,9 @@ try {
   assert.equal(await page.$$eval('#potty-graphs .admin-graph',nodes=>nodes.length),4);
   assert.match(await page.$eval('#chart-lines',node=>node.textContent),/A custom line/);
   assert.equal(await page.evaluate(()=>localStorage.length),0,'The admin console must not cache everyone’s data in localStorage');
+  assert.deepEqual(await page.$$eval('#participant-filter option',nodes=>nodes.map(node=>node.value)),['',alice.id],'Only accounts with current tracking data are Participants');
+  assert.equal(await page.$eval('#admin-summary article strong',node=>node.textContent),'1');
+  assert.equal(await page.$eval('[data-inspect="'+firstAdmin.participantId+'"]',node=>node.disabled),true,'Empty accounts keep access controls but cannot open an unrelated cohort');
 
   // Change the actual participant chart after the admin's dataset has loaded, then verify fresh drilldown reads.
   const chartContext=await browser.createBrowserContext();
@@ -93,10 +96,17 @@ try {
   assert.match(await page.$eval('.potty-row-details',node=>node.textContent),new RegExp(day));
   await page.click('[data-chart-week="7"]');
   assert.equal(await page.$$eval('.potty-grid .potty-star',nodes=>nodes.length),2);
+  db.sync(firstAdmin.participantId,[{id:'first-admin-record',mutationId:'first-admin-record',baseVersion:0,entry:{...observation,id:'first-admin-record'}}]);
+  await page.click('#refresh');await page.waitForFunction(id=>[...document.querySelector('#participant-filter').options].some(option=>option.value===id),{},firstAdmin.participantId);
+  assert.equal(await page.$eval('#admin-summary article strong',node=>node.textContent),'2');
   await page.select('#participant-filter',firstAdmin.participantId);
   await page.waitForFunction(()=>document.querySelector('#potty-detail').getAttribute('aria-busy')!=='true');
   assert.match(await page.$eval('#potty-detail-content',node=>node.textContent),/no saved linked potty chart/);
   assert.doesNotMatch(await page.$eval('#potty-detail-content',node=>node.textContent),/A custom line/);
+  db.sync(firstAdmin.participantId,[{id:'first-admin-record',mutationId:'delete-admin-record',baseVersion:1,entry:null}]);
+  await page.click('#refresh');await page.waitForFunction(id=>![...document.querySelector('#participant-filter').options].some(option=>option.value===id),{},firstAdmin.participantId);
+  assert.equal(await page.$eval('#participant-filter',node=>node.value),'','A removed selection returns to Everyone');
+  assert.equal(await page.$eval('#admin-summary article strong',node=>node.textContent),'1');
   await page.select('#participant-filter',alice.id);
   await page.waitForFunction(()=>document.querySelector('#potty-detail').getAttribute('aria-busy')!=='true');
   assert.match(await page.$eval('#potty-detail-title',node=>node.textContent),/Alice/);
@@ -122,10 +132,11 @@ try {
   await page.select('#participant-filter','');
   await page.click('[data-tab="analytics"]');
   const downloadDirectory=resolve(directory,'downloads');await mkdir(downloadDirectory);
-  const cdp=await page.createCDPSession();await cdp.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:downloadDirectory});
+  const cdp=await page.createCDPSession();await cdp.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:downloadDirectory,browserContextId:context.id}); // Downloads belong to the isolated signed-in test context.
   await page.click('[data-tab="transfer"]');
   for(const format of ['json','csv']) {
     await page.click('#export-'+format);
+    await page.waitForFunction(()=>document.querySelector('#admin-status').textContent.startsWith('Exported '));
     const path=resolve(downloadDirectory,'little-log-everyone.'+format);
     for(let i=0;i<100;i++){try{await access(path);break;}catch{await new Promise(done=>setTimeout(done,50));}}
     const text=await readFile(path,'utf8');

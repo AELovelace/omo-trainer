@@ -23,7 +23,8 @@ const statisticsPanel=createStatisticsPanel({request,authorized:()=>Boolean(acto
 const socialModeration=createSocialModeration({request,authorized:()=>Boolean(actor)});
 const chartBuilder=createChartBuilder($('#chart-builder'));
 const selectedId=()=>$('#participant-filter').value;
-const cohort=()=>({...dataset,users:dataset.users.filter(user=>!selectedId() || user.id===selectedId())});
+const participants=()=>dataset.users.filter(user=>user.records.some(record=>record.entry)); // Account registration, social activity and empty charts do not count as tracking data.
+const cohort=()=>({...dataset,users:participants().filter(user=>!selectedId() || user.id===selectedId())});
 
 function clearPrivateView() { // Drop all in-memory cohort data and rendered records when authorization ends; never persist administrator datasets in browser storage.
   resetPrediction();
@@ -213,7 +214,7 @@ function renderRecords() {
 function renderUsers() { // User controls refer only to immutable participant IDs, including when usernames collide across issuers.
   const search=$('#user-search').value.trim().toLowerCase();
   const selected=users.filter(user=>(user.label+' '+user.id).toLowerCase().includes(search));
-  $('#user-table').innerHTML='<table><thead><tr><th>User</th><th>Records / chart</th><th>Role</th><th>Access</th><th>Actions</th></tr></thead><tbody>'+selected.map(user=>'<tr data-user="'+escape(user.id)+'"><td>'+escape(user.label)+(user.id===actor?.id?' (you)':'')+'<br><small>'+escape(user.id)+'</small><details><summary>Verified identity</summary><p>'+escape(user.issuer)+'<br>'+escape(user.subject)+'</p></details></td><td>'+user.recordCount+' records<br>'+(user.hasChart?'Chart linked':'No chart')+'</td><td><select data-role aria-label="Role for '+escape(user.label)+'"><option value="participant"'+(user.role==='participant'?' selected':'')+'>Participant</option><option value="admin"'+(user.role==='admin'?' selected':'')+'>Admin</option></select></td><td><select data-disabled aria-label="Access for '+escape(user.label)+'"><option value="false"'+(!user.disabled?' selected':'')+'>Enabled</option><option value="true"'+(user.disabled?' selected':'')+'>Disabled</option></select></td><td><div class="admin-buttons"><button class="button primary small" data-save-user="'+escape(user.id)+'">Save access</button><button class="button secondary small" data-revoke="'+escape(user.id)+'">Revoke sessions</button><button class="button secondary small" data-inspect="'+escape(user.id)+'">View data</button><button class="button secondary small" data-prediction="'+escape(user.id)+'">Prediction</button></div></td></tr>').join('')+'</tbody></table>';
+  $('#user-table').innerHTML='<table><thead><tr><th>User</th><th>Records / chart</th><th>Role</th><th>Access</th><th>Actions</th></tr></thead><tbody>'+selected.map(user=>'<tr data-user="'+escape(user.id)+'"><td>'+escape(user.label)+(user.id===actor?.id?' (you)':'')+'<br><small>'+escape(user.id)+'</small><details><summary>Verified identity</summary><p>'+escape(user.issuer)+'<br>'+escape(user.subject)+'</p></details></td><td>'+user.recordCount+' records<br>'+(user.hasChart?'Chart linked':'No chart')+'</td><td><select data-role aria-label="Role for '+escape(user.label)+'"><option value="participant"'+(user.role==='participant'?' selected':'')+'>Participant</option><option value="admin"'+(user.role==='admin'?' selected':'')+'>Admin</option></select></td><td><select data-disabled aria-label="Access for '+escape(user.label)+'"><option value="false"'+(!user.disabled?' selected':'')+'>Enabled</option><option value="true"'+(user.disabled?' selected':'')+'>Disabled</option></select></td><td><div class="admin-buttons"><button class="button primary small" data-save-user="'+escape(user.id)+'">Save access</button><button class="button secondary small" data-revoke="'+escape(user.id)+'">Revoke sessions</button><button class="button secondary small" data-inspect="'+escape(user.id)+'"'+(user.recordCount?'':' disabled')+'>View data</button><button class="button secondary small" data-prediction="'+escape(user.id)+'"'+(user.recordCount?'':' disabled')+'>Prediction</button></div></td></tr>').join('')+'</tbody></table>';
 }
 async function renderAudit() {
   const result=await request('audit');
@@ -272,12 +273,12 @@ async function refresh() { // Fetch shared records only after a successful serve
     const session=await request('users'); csrf=session.csrf; actor=session.participant; users=session.users;
     const selected=selectedId();
     dataset=await request('data');
-    $('#participant-filter').innerHTML='<option value="">Everyone</option>'+users.map(user=>'<option value="'+escape(user.id)+'">'+escape(user.label+' / '+user.id.slice(0,8))+'</option>').join('');
-    if(users.some(user=>user.id===selected)) $('#participant-filter').value=selected;
+    $('#participant-filter').innerHTML='<option value="">Everyone</option>'+participants().map(user=>'<option value="'+escape(user.id)+'">'+escape(user.label+' / '+user.id.slice(0,8))+'</option>').join('');
+    if(participants().some(user=>user.id===selected)) $('#participant-filter').value=selected;
     $('#admin-identity').textContent='Administrator: '+actor.label;
     $('#admin-workspace').hidden=false; $('#admin-gate').hidden=true; $('#refresh').hidden=false;
     renderUsers(); renderAnalytics(); navigate();
-    status('Loaded '+users.length+' participants. Last refreshed '+new Date().toLocaleTimeString()+'.');
+    status('Loaded '+participants().length+' participants with saved records. Last refreshed '+new Date().toLocaleTimeString()+'.');
   } catch(error) { if(!actor) $('#admin-gate').hidden=false; status(error.message); }
   finally { loading=false; }
 }

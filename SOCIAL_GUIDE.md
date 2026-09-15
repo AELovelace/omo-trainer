@@ -235,3 +235,6 @@ limit, sharing the available space between the selected photos. Larger proxy
 limits preserve more detail. The text, audience and descriptions stay intact.
 JPEG, PNG and WebP are supported; other camera formats depend on browser
 support. If HEIC cannot be opened, export the photo as JPEG or PNG.
+
+The top-bar **Notifications** shortcut opens the same stored activity as
+Social > Notifications. **Join Discord** is in the side menu below About.

@@ -168,3 +168,6 @@ Login bonuses uses a star. History, Settings and About retain their icons.
 - Post a full-resolution camera photo through Social > Post. Little Log resizes
   it automatically; you can choose originals up to 100 MB each without manually
   shrinking them. If the server needs smaller pictures, it retries automatically.
+
+Use **Notifications** in the top bar to open your Social notification history.
+**Join Discord** is in the side menu, below About, and opens in a new tab.

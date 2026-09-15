@@ -217,3 +217,10 @@ data between all images before one automatic retry (under 256 KiB with JSON).
 Retain the compact request body for uncertain-response retries, and check the
 original page/account generation before and after preparing the retry. Never
 compact and retry a timeout: the original body might already have committed.
+
+Admin Participants uses current, non-deleted tracker entries from the loaded
+dataset for its selector, analytics totals and chart cohorts. Sign-in alone,
+wallet balances, social content and chart setup do not add a participant.
+User management still lists accounts for role/access administration; its data
+and prediction shortcuts are disabled for accounts without records. Full
+backup exports retain all accounts and chart definitions.

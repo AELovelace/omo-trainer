@@ -282,3 +282,8 @@ uploads it through an emulated 256 KiB proxy, and drops a successful response
 to verify retry safety. It also checks four detailed photos with maximum
 Unicode text/descriptions, compact avatars and image files without MIME metadata.
 Use the same PUPPETEER_MODULE and CHROME_PATH variables as the social browser tests.
+
+The admin browser test verifies that sign-in-only accounts are absent from
+Participants and totals, appear after their first saved entry and disappear
+after their last entry is deleted and the console is refreshed. User management
+continues to provide account access controls for these accounts.
