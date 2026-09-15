@@ -22,7 +22,7 @@ async function chance(page, expected) { // Waits for the real app's midnight ref
 try {
   const page = await browser.newPage();
   await page.emulateTimezone('UTC');
-  await page.evaluateOnNewDocument(() => { // A controlled browser clock tests exact deadlines without a ten-minute real-time wait.
+  await page.evaluateOnNewDocument(() => { // A controlled browser clock tests exact deadlines without a fifteen-minute real-time wait.
     const NativeDate = Date;
     const now = () => Number(sessionStorage.getItem('test-clock') ?? NativeDate.parse('2026-09-20T13:05:47Z'));
     window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [now()])); } static now() { return now(); } };
@@ -80,10 +80,13 @@ try {
   await page.setOfflineMode(true);
   await page.reload({ waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true, 'Offline reload retains the deadline');
-  await clock(page, '2026-09-20T13:15:46Z');
+  await clock(page, '2026-09-20T13:15:47Z');
+  await page.waitForFunction(() => document.querySelector('#cooldown-status').textContent.includes('5:00'));
+  assert.equal(await page.$eval('.roll-button', button => button.disabled), true, 'Ten minutes is still inside the new cooldown');
+  await clock(page, '2026-09-20T13:20:46Z');
   await page.waitForFunction(() => document.querySelector('#cooldown-status').textContent.includes('0:01'));
   assert.equal(await page.$eval('.roll-button', button => button.disabled), true);
-  await clock(page, '2026-09-20T13:15:47Z');
+  await clock(page, '2026-09-20T13:20:47Z');
   await page.waitForFunction(() => !document.querySelector('.roll-button').disabled);
   await clock(page, '2026-09-21T00:00:00Z');
   await chance(page, 45);

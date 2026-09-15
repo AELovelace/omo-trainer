@@ -22,7 +22,7 @@ try {
       await writeFile(destination, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), charts: database.exportCharts() }, null, 2), { flag: 'wx', mode: 0o600 }); // Keep chart exports private and never overwrite existing files.
     } else {
       const rows = database.exportRows();
-      const columns = ['participant_id', 'entry_id', 'occurred_at', 'local_date', 'liquids_ml', 'position', 'diaper_number', 'wettings_count', 'probability', 'result', 'source', 'edited', 'version', 'created_at', 'updated_at', 'kind', 'category', 'rolled_at', 'rolled_result', 'protocol_version', 'time_zone', 'last_failure_at', 'liquids_mode', 'desperation'];
+      const columns = ['participant_id', 'entry_id', 'occurred_at', 'local_date', 'liquids_ml', 'position', 'diaper_number', 'wettings_count', 'probability', 'result', 'source', 'edited', 'version', 'created_at', 'updated_at', 'kind', 'category', 'rolled_at', 'rolled_result', 'protocol_version', 'time_zone', 'last_failure_at', 'liquids_mode', 'desperation', 'base_probability', 'probability_modifier', 'roll_rule_version', 'desperation_mode', 'last_failure_desperation_mode'];
       const cell = value => `"${String(value ?? '').replaceAll('"', '""')}"`; // Exports only generated IDs and validated fields, never labels or secret codes.
       const output = command === 'export-json' ? JSON.stringify({ schemaVersion: 2, exportedAt: new Date().toISOString(), entries: rows }, null, 2)
         : '\uFEFF' + [columns, ...rows.map(row => columns.map(column => row[column]))].map(row => row.map(cell).join(',')).join('\r\n');

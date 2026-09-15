@@ -43,12 +43,13 @@ test('enrollment timezone handles midnight, DST and deterministic multi-device e
   assert.equal(protocolFor([protocol({ id: 'a' }), protocol({ id: 'z' })]).id, 'a');
 });
 
-test('cooldown lasts precisely ten minutes after failure, survives correction and ignores manual results', () => {
+test('cooldown lasts precisely fifteen minutes after failure, survives correction and ignores manual results', () => {
   const failure = roll({ rolledAt: '2026-09-01T13:00:47+00:00', rolledResult: 'hold', result: 'pee', occurredAt: '2026-08-01T00:00:00+00:00' });
-  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:00:47Z')), 600000);
-  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:10:46.999Z')), 1);
-  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:10:47Z')), 0);
-  assert.equal(cooldownRemaining([protocol({ lastFailureAt: failure.rolledAt })], Date.parse('2026-09-01T13:01:47Z')), 540000, 'Deleting the failed observation leaves the enrollment deadline');
+  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:00:47Z')), 900000);
+  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:10:47Z')), 300000, 'The old ten-minute deadline no longer unlocks rolling');
+  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:15:46.999Z')), 1);
+  assert.equal(cooldownRemaining([failure], Date.parse('2026-09-01T13:15:47Z')), 0);
+  assert.equal(cooldownRemaining([protocol({ lastFailureAt: failure.rolledAt })], Date.parse('2026-09-01T13:01:47Z')), 840000, 'Deleting the failed observation leaves the enrollment deadline');
   assert.equal(cooldownRemaining([roll({ source: 'manual' })], Date.parse('2026-09-01T12:01:00Z')), 0);
   assert.equal(cooldownRemaining([roll({ result: 'pee' })], Date.parse('2026-09-01T12:01:00Z')), 0);
   assert.equal(new Date(instantTimestamp(new Date('2026-09-01T13:00:47Z'))).toISOString(), '2026-09-01T13:00:47.000Z');

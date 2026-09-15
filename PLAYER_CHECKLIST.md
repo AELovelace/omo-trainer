@@ -1,5 +1,7 @@
 # Little Log user checklist
 
+On **Roll**, enable **Desperation mode** for half the final Pee chance and a 30-minute cooldown after Hold. For example, 50% becomes 25%. The choice is remembered on this device; turning it off restores normal odds and 15-minute Hold cooldowns for future rolls. It does not shorten an active timer. The Low/Med/High/Crisis slider remains a separate urgency rating.
+
 Your device now stays signed in for 30 days, renewed while the app is used, with a fresh sign-in after at most six months. Keep using the same browser or installed app. **Sign out & clear device** still ends this device's session; use it on shared devices. After deployment, an already expired sign-in needs one final login to start the longer session.
 
 ## Administrator CrowPanel setup
@@ -19,7 +21,7 @@ Little Log now appears as a recovered Chrysalis observation terminal. **Record a
 - Check the time and enter liquids consumed since your previous saved check-in in mL. Choose **Save liquids** to record it; the intake field then resets to zero.
 - Choose the check-in diaper number. Select **Your position** in the roll card before rolling. In **Record a wetting**, classify one actual event; its diaper number is assigned automatically from records at the event time.
 - Use **Record a diaper change** below the wetting form to save each change and the number of wettings that diaper received. Correct the suggestion for unlogged or overnight wettings; 0 records a dry change. The next diaper number is suggested after saving.
-- The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for ten minutes; **Save liquids** and wetting logging stay available.
+- The main protocol starts at 50% with your first saved record. Use **Roll** in its own card to draw using the daily chance. It saves the roll and its selected position, leaving your unfinished observation alone. A Hold pauses further rolls for fifteen minutes; **Save liquids** and wetting logging stay available.
 - In **Record a wetting**, classify each actual event once as Forced, Semi-Forced (SF), Voluntary, Semi-involuntary, Involuntary, Bedwetting, or Used the potty, including events without a roll. Each save adds one classified event. The per-diaper total is recorded separately when changing it.
 - Completed days with F + SF + V >= SI + I reduce the chance by 5 percentage points. Other days, including days with no F/SF/V/SI/I events recorded, increase it by 5 points. The chance stays between 20% and 80%. Open **About** in the navigation to read the protocol rules and review your daily adjustment history.
 - Today affects tomorrow. Correcting a past wetting recalculates later days; recorded roll probabilities stay unchanged. Day boundaries use the timezone saved at enrollment, even on another device.

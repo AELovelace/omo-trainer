@@ -1,5 +1,9 @@
 # Testing guide
 
+`tests/desperation-mode.test.mjs` verifies halving across all random modifiers and bounds, exact half-percent outcomes, mode validation, unchanged daily base behavior, 30-minute deadlines and backup/sync/export retention. `node tests/desperation-mode-browser.mjs` checks the actual selector and preview, remembered preference, saved mode/history, disabling mode during a cooldown, deletion plus offline reload, exact expiry, normal-mode restoration and the mobile roll page.
+
+The Hold-result roll cooldown is fifteen minutes. The protocol unit/browser tests check that ten minutes remains blocked, the last second stays blocked, and exactly fifteen minutes unlocks rolling, including after offline reload and deletion of the original roll.
+
 ## Persistent device sessions
 
 `npm test` covers 30-day inactivity, daily renewal, the 180-day cap, legacy migration, database restart, exact cookie lifetimes, CSRF, identity isolation and revocation in `tests/sessions.test.mjs`. `node tests/sessions-browser.mjs` closes/reopens a real persistent Chrome profile and checks continued sign-in, HttpOnly protection and durable logout. `node tests/connected-browser.mjs` additionally verifies that the real OIDC callback issues a persistent cookie. Browser tests use synthetic accounts and isolated artifact directories.

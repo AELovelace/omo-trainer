@@ -382,7 +382,7 @@ function renderCooldown() { // Uses wall-clock deadlines rather than decrementin
   const remaining = cooldownRemaining(state.entries);
   $('.roll-button').disabled = remaining > 0 || storageBlocked;
   const seconds = Math.ceil(remaining / 1000);
-  const message = remaining > 0 ? `Next roll in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}. Wetting and observation logging remain available.` : 'Ready to roll. A Hold result starts a 10-minute roll cooldown.';
+  const message = remaining > 0 ? `Next roll in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}. Wetting and observation logging remain available.` : `Ready to roll. A Hold result starts a ${state.settings.desperationMode?30:15}-minute roll cooldown.`;
   const status = $('#cooldown-status');
   if (status.textContent !== message) status.textContent = message;
 }
@@ -390,6 +390,8 @@ function renderCooldown() { // Uses wall-clock deadlines rather than decrementin
 function renderProtocol() { // Shows the current chance and an auditable daily breakdown, counting actual events only.
   protocolView = trainingState(state.entries);
   const view = protocolView, counts = view.counts;
+  $('#roll-desperation-mode').checked=state.settings.desperationMode===true;
+  $('#roll-mode-preview').textContent=state.settings.desperationMode?`Desperation mode: ${view.probability/2}% Pee chance before random adjustments. Hold cooldown: 30 minutes.`:'Normal mode: full Pee chance. Hold cooldown: 15 minutes.';
   $('#probability').value = view.probability;
   $('#protocol-probability').textContent = `${view.probability}%`;
   $('#protocol-summary').textContent = view.protocol ? `Enrolled ${view.start} · Days use ${view.timeZone}. Today's base chance comes from completed days. Random adjustments can change the base; a 100% roll is temporary.` : 'Starts at 50% with your first saved check-in, wetting, or roll. Earlier, unclassified snapshots are kept in your archive.';
@@ -463,7 +465,7 @@ function entryLabel(entry) { // Gives each persisted record kind a factual label
 function renderRecent() { // Includes standalone rolls without borrowing unsaved intake or position fields.
   const recent = sortedEntries(state.entries.filter(entry => entry.kind !== 'protocol')).slice(0, 4);
   $('#recent-list').innerHTML = recent.length ? recent.map(entry => {
-    const description = entry.kind === 'diaper-change' ? entry.wettingsCount + ' wettings before change' : entry.kind === 'roll' ? 'Roll at ' + entry.probability + '%' : entry.kind === 'wetting' ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL ' + (entry.kind === 'observation' ? 'since last check-in' : 'daily cumulative');
+    const description = entry.kind === 'diaper-change' ? entry.wettingsCount + ' wettings before change' : entry.kind === 'roll' ? 'Roll at ' + entry.probability + '%'+(entry.desperationMode?' &middot; Desperation mode':'') : entry.kind === 'wetting' ? 'Wetting event' : entry.liquidsMl.toLocaleString() + ' mL ' + (entry.kind === 'observation' ? 'since last check-in' : 'daily cumulative');
     const position = (entry.position ? ' &middot; ' + positions[entry.position] : '') + (entry.diaperNumber ? ' &middot; Diaper #' + entry.diaperNumber : '');
     return `<div class="recent-entry"><span class="entry-icon ${entry.result ?? 'pee'}"><svg class="icon"><use href="#i-${entry.result === 'hold' ? 'clock' : 'drop'}"/></svg></span><div class="entry-info"><strong>${dateLabel(entry.occurredAt)}</strong><p>${description}${position}${entry.desperation ? " &middot; Desperation: " + DESPERATION_LABELS[entry.desperation] : ""}</p></div><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span></div>`;
   }).join('') : '<div class="empty-state">NO OBSERVATIONS FILED<br>Your saved observations and rolls will appear here.</div>';
@@ -487,7 +489,7 @@ function renderHistory() { // Limits initial table size while keeping filters an
     const intake = isObservation(entry) ? entry.liquidsMl.toLocaleString() + ' mL<small>' + (entry.kind === 'observation' ? 'Since last check-in' : 'Daily cumulative') + '</small>' : '&mdash;';
     const wettings = entry.kind === 'diaper-change' ? entry.wettingsCount + '<small>Before change</small>' : entry.kind === 'wetting' ? '1 event' + (entry.wettingsCount === undefined ? '' : '<small>' + entry.wettingsCount + ' in diaper</small>') : entry.wettingsCount ?? '&mdash;';
     const probability = isRoll(entry) ? entry.probability + '%' : '&mdash;';
-    const provenance = entry.kind === 'diaper-change' ? 'Completed diaper' : entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled' : 'Manual (legacy)';
+    const provenance = entry.kind === 'diaper-change' ? 'Completed diaper' : entry.kind === 'observation' ? 'Observation' : entry.kind === 'wetting' ? 'Wetting' : entry.source === 'random' ? 'Rolled'+(entry.desperationMode?' &middot; Desperation mode':'') : 'Manual (legacy)';
     const edit = entry.kind === 'roll' ? '' : `<button class="text-button" data-edit="${entry.id}" aria-label="Edit record ${dateLabel(entry.occurredAt)}">Edit</button>`;
     return `<tr><td>${dateLabel(entry.occurredAt)}<small>${entry.occurredAt.slice(0, 10)} &middot; UTC${entry.occurredAt.slice(-6)}</small></td><td>${intake}</td><td>${positions[entry.position] ?? '&mdash;'}</td><td>${entry.diaperNumber ? '#' + entry.diaperNumber : '&mdash;'}</td><td>${wettings}</td><td>${probability}</td><td><span class="result-pill ${entry.result ?? 'pee'}">${entryLabel(entry)}</span><small>${provenance}${entry.desperation ? ' &middot; Desperation: ' + DESPERATION_LABELS[entry.desperation] : ''}${entry.edited ? ' &middot; edited' : ''}</small></td><td>${edit}<button class="text-button" data-delete="${entry.id}" aria-label="Delete record ${dateLabel(entry.occurredAt)}">Delete</button></td></tr>`;
   }).join('');
@@ -572,12 +574,15 @@ $('#roll-desperation').addEventListener('input',event=>{ // Present the four nam
   $('#roll-desperation-value').value=label;
   event.target.setAttribute('aria-valuetext',label);
 });
+$('#roll-desperation-mode').addEventListener('change',event=>{ // Remember the device preference; an existing cooldown still follows its saved roll mode.
+  try{commit({...state,settings:{...state.settings,desperationMode:event.target.checked}});}catch(error){notify(error.message);}
+});
 $('.roll-button').addEventListener('click', () => { // Draws independently, leaving every unsaved observation field untouched.
   try {
     refreshStoredState();
     const now = new Date();
-    if (cooldownRemaining(state.entries, now) > 0) throw new Error('The previous Hold result is still in its 10-minute cooldown.');
-    const entries = enroll(state.entries, now), variation=rollProbability(trainingState(entries, now).probability);
+    if (cooldownRemaining(state.entries, now) > 0) throw new Error('The previous Hold result is still in its roll cooldown.');
+    const entries = enroll(state.entries, now), variation=rollProbability(trainingState(entries, now).probability,undefined,state.settings.desperationMode===true);
     const {probability}=variation; // Sample only on a real roll, after the cooldown check; never on render or reload.
     const result = rollResult(probability), occurredAt = instantTimestamp(now);
     const candidate = validateEntry({ id: crypto.randomUUID(), kind: 'roll', occurredAt, ...variation, result,
@@ -585,9 +590,9 @@ $('.roll-button').addEventListener('click', () => { // Draws independently, leav
       desperation: DESPERATION_LEVELS[Number($('#roll-desperation').value)] });
     const enrollment = protocolFor(entries);
     const savedEntries = result === 'hold'
-      ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt } : entry) : entries;
+      ? entries.map(entry => entry.id === enrollment.id ? { ...entry, lastFailureAt: occurredAt, lastFailureDesperationMode:candidate.desperationMode===true } : entry) : entries;
     commit({ ...state, entries: [...savedEntries, candidate] });
-    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
+    $('#roll-result').textContent = `Rolled: ${result === 'pee' ? 'Pee' : 'Hold'} at ${probability}%. ${candidate.desperationMode?'Desperation mode. ':''}Desperation: ${DESPERATION_LABELS[candidate.desperation]}. Roll saved. You're always free to use the bathroom.`;
     $('#roll-result').hidden = false;
   } catch (error) { notify(error.message); }
 });
@@ -755,7 +760,7 @@ $('#edit-form').addEventListener('submit', event => { // Marks corrections expli
 $('#settings-form').addEventListener('submit', event => { // Persists preferences with the same validation and storage protections as entries.
   event.preventDefault();
   try {
-    commit({ ...state, settings: { probability: state.settings.probability, position: $('#default-position').value } });
+    commit({ ...state, settings: { ...state.settings, position: $('#default-position').value } });
     setDefaults();
     notify('Your defaults are saved.');
   } catch (error) { notify(error.message); }

@@ -1,5 +1,7 @@
 # Dialogue integration status
 
+The tracker roll card now names the optional **Desperation mode** separately from the reported urgency slider. Its preview and result text identify halved odds and a 30-minute Hold cooldown; this is tracker status copy, not a LiDollQuest dialogue change.
+
 CrowPanel status copy distinguishes loading, current values, stale data and access denied. Its everyone overview and individual drilldown show recorded statistics rather than NPC dialogue or inferred events. See [STATISTICS_API.md](STATISTICS_API.md).
 
 No NPC dialogue system or dialogue assets are present in this tracker. Current interface text lives in `index.html` and `app.js`; there are no character branches to synchronize with `game_editor_gui.py` yet.

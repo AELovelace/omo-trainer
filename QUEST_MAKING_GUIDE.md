@@ -1,5 +1,7 @@
 # Quest integration status
 
+Little Log's optional desperation roll mode changes tracker roll odds and cooldowns only. It introduces no LiDollQuest holding rules or quest/editor fields. Its rules are documented in [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md).
+
 The CrowPanel companion is an admin-only statistics viewer with everyone/individual drilldown. Its API cannot write quest events, grant rewards or alter game-editor definitions. See [STATISTICS_API.md](STATISTICS_API.md).
 
 This standalone tracker does not contain quests, a game runtime, or a quest editor. No quest assets were supplied. Its main daily probability protocol records check-ins and classified wetting events independently of any future game progression. GENERATION_TUNING_GUIDE.md documents the protocol; observation and wetting logging remain available during random-roll cooldowns. Rolling and saving observations are separate actions.

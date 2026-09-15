@@ -103,6 +103,9 @@
             <section class="card roll-card" data-mobile-panel="roll" aria-labelledby="roll-title"><div class="card-heading"><div><h2 id="roll-title" tabindex="-1">Roll for a result</h2><p>Uses your daily chance. Saves only the roll.</p></div><svg class="icon"><use href="#i-dice"/></svg></div>
               <fieldset class="position-field"><legend>Your position</legend><div class="segmented position-options"><label><input type="radio" name="position" value="standing"><span>Standing</span></label><label><input type="radio" name="position" value="sitting" checked><span>Sitting</span></label><label><input type="radio" name="position" value="laying-down"><span>Laying down</span></label></div></fieldset>
               <div class="desperation-control">
+                <label class="roll-mode-option"><input id="roll-desperation-mode" type="checkbox" aria-describedby="roll-mode-help"> Desperation mode</label>
+                <p id="roll-mode-help" class="field-help">Halves the final Pee chance and extends a Hold cooldown to 30 minutes. Your urgency level below is recorded separately.</p>
+                <p id="roll-mode-preview" class="field-help" aria-live="polite"></p>
                 <div class="desperation-heading"><label for="roll-desperation">Desperation</label><output id="roll-desperation-value" for="roll-desperation" aria-hidden="true">Low</output></div>
                 <input id="roll-desperation" name="desperation" type="range" min="0" max="3" step="1" value="0" aria-valuetext="Low">
                 <div class="desperation-labels" aria-hidden="true"><span>Low</span><span>Med</span><span>High</span><span>Crisis</span></div>

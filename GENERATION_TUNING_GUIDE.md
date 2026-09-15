@@ -1,5 +1,13 @@
 # Daily protocol and probability
 
+## Optional desperation roll mode
+
+The roll card's **Desperation mode** checkbox defaults off and is remembered on that device. When enabled, the final Pee probability is halved **after** the normal random adjustment: 50% becomes 25%, 45% becomes 22.5%, and the normally guaranteed 100% variation becomes 50%. The daily base and persistent ±10-point adjustments retain their existing rules. Half-percent probabilities use an unbiased 200-outcome draw; whole-percent draws retain 100 outcomes.
+
+A Hold in this mode starts a **30-minute** cooldown; normal Hold cooldowns are **15 minutes**. Switching the checkbox affects subsequent rolls, not existing deadlines. Each mode roll stores `desperationMode: true` and `rollRuleVersion: 3`; the protocol's `lastFailureDesperationMode` flag preserves its deadline if the roll is deleted. Normal version-2 and historical version-1 records retain their semantics. The Low/Med/High/Crisis slider still records reported urgency and its existing reward adjustment independently of this mode.
+
+Deploy backend validation and the updated PWA together. Reopen old tabs/installed apps before syncing version-3 records; older validators reject that rule version. The service-worker cache is bumped for the matching offline code. JSON, participant/admin CSV and operator exports retain mode flags and fractional probabilities.
+
 Administrator statistics displays use the same saved daily counting rules as AI report snapshots, including legacy cumulative intake. Display windows change which saved dates are included; they do not tune probabilities or generate records. See [STATISTICS_API.md](STATISTICS_API.md).
 
 The main mode starts at 50% on the first saved check-in, wetting, diaper change, or roll. A synced `kind: protocol` record fixes enrollment time, reporting timezone, and protocol version 1. Existing unclassified snapshots are preserved without inventing classifications or charging days before enrollment. Concurrent offline enrollments use the earliest timestamp, then ID as a tie-breaker.
@@ -19,7 +27,7 @@ For every completed calendar day in the enrollment timezone:
 
 lib/training.js derives the chance by replaying completed days. Empty days accrue while the app is closed. Today's events affect tomorrow; an earlier correction recalculates later days without rewriting saved roll probabilities. The About page explains the protocol and shows the latest 90 adjustment rows, but calculations include every day since enrollment. JSON and administrator exports include enrollment and all events for reproduction of this calculation. A missing day is missing data, not evidence that no wettings occurred.
 
-A random Hold starts a ten-minute cooldown for random rolls. rolledAt and rolledResult preserve the actual draw time and original result separately from editable observation metadata. Backdating a check-in cannot shorten the cooldown, and changing its displayed result does not remove the original failure. The enrollment record also retains lastFailureAt, so deleting an individual failed observation does not remove the deadline. Saving observations and recording wettings remain available. Legacy random Hold records use their observation timestamp until expired.
+A random Hold starts a fifteen-minute cooldown for random rolls. rolledAt and rolledResult preserve the actual draw time and original result separately from editable observation metadata. Backdating a check-in cannot shorten the cooldown, and changing its displayed result does not remove the original failure. The enrollment record also retains lastFailureAt, so deleting an individual failed observation does not remove the deadline. Saving observations and recording wettings remain available. Legacy random Hold records use their observation timestamp until expired.
 
 This is an offline-capable, client-enforced protocol, not an anti-cheat system. Each device uses its clock and most recently synced records. Disconnected or concurrently used devices can have different knowledge; sync before switching devices. Correcting/deleting data may change derived probability. Deleting the whole dataset resets enrollment and its deadline. No browser implementation can enforce a shared offline lock against another disconnected device. Central SQLite stores the self-reported observations and draw metadata for analysis.
 

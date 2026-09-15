@@ -1529,6 +1529,8 @@ dialog .primary {
 .roll-card { padding: 24px; }
 #save-observation { width: 100%; margin-top: 18px; }
 .intake-unit-toggle { width: 100%; margin-top: 8px; min-height: 44px; } /* Keep the unit switch easy to tap in narrow form columns. */
+.roll-mode-option { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.roll-mode-option input[type="checkbox"] { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; } /* Keep the optional mode touch target readable on narrow roll cards. */
 
 /* Quick actions share the existing page routes; only phones switch between individual dashboard cards. */
 .mobile-actions { display: none; }

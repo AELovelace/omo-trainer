@@ -1,5 +1,7 @@
 # Contributor guide
 
+Desperation roll mode uses version-3 roll metadata and a device preference independent of the urgency slider. Preserve exact half-percent chances and the protocol's `lastFailureDesperationMode` through validation, sync, deletion handling and all exports. Cooldowns depend on saved records, never the current checkbox. See [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md).
+
 ## Persistent device sign-in
 
 `server/sessions.mjs` owns the 30-day rolling / 180-day absolute app-session policy. Browser routes must pass their response to `login.session` so the HttpOnly cookie and SQLite expiry advance together; preserve that Set-Cookie header when also issuing wallet cookies. Never revive expired/revoked sessions, rotate credentials on ordinary polling, or trust localStorage account IDs as authentication. Live Little Log permissions remain authoritative. See [AUTH_GUIDE.md](AUTH_GUIDE.md) for deployment and the separate identity-service revocation boundary.

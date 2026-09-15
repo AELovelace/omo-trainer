@@ -25,8 +25,8 @@ test('rejection sampling discards biased tail values', () => {
   assert.equal(rollResult(99, () => draws.shift()), 'hold');
   assert.equal(draws.length, 0);
 });
-test('fractional, absent, nonfinite, and out-of-range probabilities are rejected', () => {
-  for (const probability of [-1, 101, .5, NaN, Infinity, '50', null]) assert.throws(() => rollResult(probability));
+test('unsupported fractional, absent, nonfinite, and out-of-range probabilities are rejected', () => {
+  for (const probability of [-1, 101, .25, NaN, Infinity, '50', null, undefined]) assert.throws(() => rollResult(probability));
 });
 test('cumulative liquids are a maximum, not a sum; latest counts come from the latest snapshot', () => {
   const entries = [entry(), entry({ id: 'test-2', occurredAt: '2026-09-11T17:00:00-07:00', liquidsMl: 500, diaperNumber: 2, wettingsCount: 3, result: 'hold' })];

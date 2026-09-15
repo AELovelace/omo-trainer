@@ -214,7 +214,9 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
       CASE WHEN json_extract(payload_json, '$.kind') IS NULL THEN 'cumulative'
         ELSE json_extract(payload_json, '$.liquidsMode') END AS liquids_mode, json_extract(payload_json, '$.desperation') AS desperation,
       json_extract(payload_json, '$.baseProbability') AS base_probability, json_extract(payload_json, '$.probabilityModifier') AS probability_modifier,
-      json_extract(payload_json, '$.rollRuleVersion') AS roll_rule_version
+      json_extract(payload_json, '$.rollRuleVersion') AS roll_rule_version,
+      json_extract(payload_json, '$.desperationMode') AS desperation_mode,
+      json_extract(payload_json, '$.lastFailureDesperationMode') AS last_failure_desperation_mode
       FROM entries WHERE deleted_at IS NULL ORDER BY participant_id, occurred_at, id`).all();
   }
 
