@@ -181,7 +181,7 @@ export function openDatabase(filename = databasePath(), options = {}) { // Opens
           conflicts.set(change.id, row ? recordFromRow(row) : { id: change.id, version: 0, entry: null });
           continue;
         }
-        if (!row && db.prepare('SELECT COUNT(*) AS total FROM entries WHERE participant_id = ?').get(participantId).total >= MAX_ENTRIES) throw new ApiError(400, 'This participant has reached the 50,000-record storage limit. Ask the organizer to archive the dataset.');
+        if (!row && db.prepare('SELECT COUNT(*) AS total FROM entries WHERE participant_id = ?').get(participantId).total >= MAX_ENTRIES) throw new ApiError(400, 'This participant has reached the 50,000-record storage limit. Ask Chrysalis to archive the dataset.');
         const entry = change.entry, now = new Date().toISOString();
         db.prepare(`INSERT INTO entries (participant_id, id, occurred_at, liquids_ml, position, diaper_number, wettings_count, probability, result, source, edited, version, created_at, updated_at, deleted_at, payload_json)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

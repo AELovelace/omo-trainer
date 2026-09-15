@@ -70,7 +70,7 @@ All asset paths are relative. /tracker redirects to /tracker/; the trailing slas
 
 ## Central data and offline sync
 
-**Connected entries are saved centrally** in DATA_DIR/little-log.sqlite. Each verified shared account maps to an app-specific participant ID. The API resolves ownership from the server session, so participants cannot select another person's records. The organizer can export synced entries for analysis; the interface tells participants this before connecting.
+**Connected entries are saved centrally** in DATA_DIR/little-log.sqlite. Each verified shared account maps to an app-specific participant ID. The API resolves ownership from the server session, so participants cannot select another person's records. Chrysalis can export synced entries for analysis; the interface tells participants this before connecting.
 
 Before connection, records stay on this device. Connecting uploads existing local entries and future changes. A cache and durable upload queue stay together under the browser key lidoll.little-log.v1. A lost response can be retried without duplicate records. Version checks detect conflicts between devices, and Settings offers an explicit choice of which version to keep.
 
@@ -95,7 +95,7 @@ node --env-file=/etc/lidoll/tracker.env scripts/admin.mjs export-json /private/e
 node --env-file=/etc/lidoll/tracker.env scripts/admin.mjs backup /private/backups/tracker.sqlite
 ~~~
 
-Exports contain all non-deleted synced entries with participant ID, entry ID, recorded timestamp/offset, local date, the seven tracking fields, source, edit flag, version, and server receipt/update timestamps. They omit usernames, OIDC subjects, and credentials. These are **pseudonymous**, not anonymous, records. The organizer's list command maps participant IDs to account labels when needed.
+Exports contain all non-deleted synced entries with participant ID, entry ID, recorded timestamp/offset, local date, the seven tracking fields, source, edit flag, version, and server receipt/update timestamps. They omit usernames, OIDC subjects, and credentials. These are **pseudonymous**, not anonymous, records. Chrysalis's list command maps participant IDs to account labels when needed.
 
 Output files must be new: commands refuse to overwrite existing exports or the live database. SQLite's online backup API includes committed WAL data consistently. Back up the identity service separately with auth-admin.mjs backup; account IDs, signing keys, and client registrations must be retained together. Keep backups off the service server and schedule them according to the experiment's needs.
 

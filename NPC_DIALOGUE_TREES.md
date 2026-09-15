@@ -12,7 +12,7 @@ Confirm observations, rolls and actual wettings separately. A saved observation 
 
 The daily protocol uses factual category labels and countdown/status messages in `index.html` and `app.js`. A classification records one actual event; a random result never creates one. Empty-day increases describe the absence of recorded events, not an inferred bodily outcome. Keep archive flavor separate from these distinctions.
 
-Account/sync text must distinguish saved-on-device from saved-to-server and disclose organizer access to uploaded records. Avoid describing connected records as browser-only or visible exclusively to the participant.
+Account/sync text must distinguish saved-on-device from saved-to-server and disclose Chrysalis access to uploaded records. Avoid describing connected records as browser-only or visible exclusively to the participant.
 
 
 ## Growth Chart integration (2026-09-12)
