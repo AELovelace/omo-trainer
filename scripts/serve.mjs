@@ -32,6 +32,7 @@ const files = new Map([
   ['lib/message-badge.js','text/javascript; charset=utf-8'],
   ['lib/post-gallery.js','text/javascript; charset=utf-8'],
   ['lib/social.js','text/javascript; charset=utf-8'],
+  ['lib/social-access.js','text/javascript; charset=utf-8'],
   ['lib/friends.js','text/javascript; charset=utf-8'],
   ['lib/games.js', 'text/javascript; charset=utf-8'],
   ...stickerAssets.map(item => [item.url, item.mime]),

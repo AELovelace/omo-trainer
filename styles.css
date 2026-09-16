@@ -1817,6 +1817,9 @@ html.photo-viewing { overflow:hidden; }
 /* Social's mobile shell scrolls between the header and tabs; desktop retains normal document flow. */
 .social-mobile-only { display:none; }
 .social-content,.message-inbox,.message-thread { display:contents; }
+#social-access-gate { max-width:540px;overflow:auto; }
+#social-access-gate h1 { font-size:24px; }
+#social-access-actions { display:flex;flex-wrap:wrap;gap:8px; }
 .social-sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0; }
 @media(max-width:680px) {
  html.social-active,html.social-active body { height:100%;overflow:hidden; }

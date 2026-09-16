@@ -1,5 +1,12 @@
 # Contributor guide
 
+`lib/social-access.js` gates the whole Social shell using the live
+`api/social/session` endpoint. Keep the content and navigation hidden in initial
+HTML, fail closed on failed checks, and clear private views on access loss.
+Every Social/Friends API route must continue enforcing server-side sessions;
+the UI gate is not authorization. Social login return destinations are explicitly
+allowlisted in `server/login.mjs` and do not imply tracker upload consent.
+
 Desperation roll mode uses version-3 roll metadata and a device preference independent of the urgency slider. Preserve exact half-percent chances and the protocol's `lastFailureDesperationMode` through validation, sync, deletion handling and all exports. Cooldowns depend on saved records, never the current checkbox. See [GENERATION_TUNING_GUIDE.md](GENERATION_TUNING_GUIDE.md).
 
 ## Persistent device sign-in

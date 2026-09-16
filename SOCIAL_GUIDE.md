@@ -1,5 +1,12 @@
 # Status updates, pictures, activity and moderation
 
+Social requires a live, enabled registered-account session. Signed-out visitors
+see **Sign in** and **Create account**, including when opening direct links to
+posts, profiles, messages or notifications. Sign-in returns to the selected Social
+tab. Cached account details cannot unlock Social; offline or expired sessions
+hide it and clear private views. Local tracker use remains available without an
+account, and Social sign-in does not connect or upload local tracker records.
+
 Open **Social** in the main menu. Its bottom bar switches between **Post**, **Feed**,
 **Friends & search**, **Messaging**, **Notifications**, and **Profile** on phones and desktop.
 Friends & search manages friend requests and shared records. The recording action

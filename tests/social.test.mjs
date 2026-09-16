@@ -92,6 +92,11 @@ test('social HTTP endpoints require sessions, CSRF and live audiences, including
  const post=(user,path,input,headers={})=>fetch(login.origin+'/'+path,{method:'POST',headers:{Cookie:tokens.get(user.id),Origin:login.origin,'Content-Type':'application/json','X-CSRF-Token':db.session(tokens.get(user.id)).csrf,...headers},body:JSON.stringify(input)});
  try {
   assert.equal((await get(null,'social/feed?audience=public')).status,401);
+  for(const path of ['social/post?id=missing','social/comments?postId=missing','social/profile','social/member','social/conversations','social/messages?participantId='+a.id,'social/messages/unread','social/activity','social/avatar?owner='+a.id,'friends','friends/search?q=Alice','friends/shared'])assert.equal((await get(null,path)).status,401,path);
+  for(const path of ['social/posts','social/posts/delete','social/like','social/comments','social/comments/delete','social/report','social/record-settings','social/messages','social/messages/delete','social/messages/read','social/messages/archive','social/profile','social/activity/read','friends','friends/share','friends/unshare']){
+   const response=await fetch(login.origin+'/'+path,{method:'POST',headers:{Origin:login.origin,'Content-Type':'application/json','X-CSRF-Token':db.session(tokens.get(a.id)).csrf},body:JSON.stringify({owner:a.id,participantId:a.id,body:'Forged guest',audience:'public'})});
+   assert.equal(response.status,401,path+' cannot trust supplied account IDs or CSRF tokens without a session');
+  }
   assert.equal((await get(null,'social/session')).status,401);const composer=await get(a,'social/session');assert.equal(composer.headers.get('cache-control'),'no-store');assert.deepEqual(Object.keys(await composer.json()).sort(),['csrf','participant']);
   assert.equal((await post(a,'social/posts',input('csrf'),{'X-CSRF-Token':'wrong'})).status,403);
   assert.equal((await post(a,'social/posts',input('picture',{pictures:[{data:photo.toString('base64')}]}))).status,200);

@@ -1,5 +1,12 @@
 # Testing guide
 
+`node tests/social-gate-browser.mjs` checks every guest Social deep link, forged
+local account state, hidden controls, authenticated access without tracker data,
+revoked sessions, offline cleanup and re-entry, plus both themes at mobile and
+desktop widths. `tests/social.test.mjs` checks direct guest API reads and writes,
+including images. The theme browser suite checks guest gate layouts; the Social
+browser suite covers the authenticated forms and navigation.
+
 `tests/desperation-mode.test.mjs` verifies halving across all random modifiers and bounds, exact half-percent outcomes, mode validation, unchanged daily base behavior, 30-minute deadlines and backup/sync/export retention. `node tests/desperation-mode-browser.mjs` checks the actual selector and preview, remembered preference, saved mode/history, disabling mode during a cooldown, deletion plus offline reload, exact expiry, normal-mode restoration and the mobile roll page.
 
 The Hold-result roll cooldown is fifteen minutes. The protocol unit/browser tests check that ten minutes remains blocked, the last second stays blocked, and exactly fifteen minutes unlocks rolling, including after offline reload and deletion of the original roll.

@@ -1,3 +1,4 @@
+import './lib/social-access.js';
 import './lib/notifications.js';
 import './lib/login-bonuses.js';
 import { createRewardCelebration } from './lib/reward-celebration.js';

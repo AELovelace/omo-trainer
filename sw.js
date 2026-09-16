@@ -1,7 +1,7 @@
-const CACHE = `little-log-v99-message-notifications-${self.registration.scope}`; // Install the fullscreen viewer with the app; private API responses are never cached.
+const CACHE = `little-log-v100-social-account-gate-${self.registration.scope}`; // Install the fullscreen viewer with the app; private API responses are never cached.
 const SHELL = ['./lib/post-gallery.js', './lib/picture-upload.js', './lib/avatar.js', './lib/profile.js', './lib/social.js', './lib/friends.js', './lib/login-bonuses.js', './lib/login-bonuses.css', './lib/games.js', './lib/notifications.js', './lib/reward-celebration.js', './', './index.html', './styles.css', './themes.css', './theme-init.js', './lib/theme.js', './lib/reminder.js', './app.js', './lib/model.js', './lib/prediction.js', './lib/prediction-view.js', './lib/sync.js', './lib/training.js', './lib/diapers.js', './lib/economy.js', './manifest.webmanifest', './icons/notification-icon.png', './icons/notification-badge.png', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 SHELL.push(...['embedded.css', 'app.js', 'merge.js', 'account.js'].map(name => `./potty_chart/${name}`)); // Keep the complete chart available inside the installed PWA.
-SHELL.push('./lib/record-sharing.js','./lib/message-badge.js'); // Opt-in controls remain in the shell while account preferences require a live connection.
+SHELL.push('./lib/record-sharing.js','./lib/message-badge.js','./lib/social-access.js'); // Opt-in controls remain in the shell while account preferences require a live connection.
 const ASSETS = new Set(SHELL.map(path => new URL(path, self.registration.scope).href));
 
 self.addEventListener('install', event => { // Installs an entire app version before it can become active.
