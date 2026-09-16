@@ -102,6 +102,14 @@ reopening, touch targets, bottom clearance and the unchanged desktop dashboard.
 On a real phone, also check the home-indicator safe area and form scrolling with
 the keyboard open. The bar switches panels without saving records or rolling.
 
+The sixth shortcut opens Messaging after Pattern analysis.
+`tests/message-badge-browser.mjs` checks the main and Social unread badges,
+15-second polling, read clearing, stored conversation links, both themes and
+sign-out cleanup. `tests/message-notifications.test.mjs` checks recipient-only
+counts and pushes, retries, safe payloads, read cancellation, opt-out, deletion,
+friendship revocation and disabled senders. The notifications browser suite also
+checks the saved New messages preference across reloads and re-enrollment.
+
 ## Linked Growth Chart (2026-09-12)
 
 `npm test` includes growth-chart.test.mjs: bounded validation, SQLite persistence,

@@ -44,8 +44,8 @@ try {
  await clickSetting(page,'#notification-enable');await page.waitForFunction(()=>document.querySelector('#notification-status').textContent.startsWith('Notifications enabled'));
  assert.equal(await page.$eval('#notification-title',node=>node.textContent),'Receive notifications');
  assert.equal(db.notifications.status(user.id).preferences.adminMessages,1);
- for(const field of ['socialLikes','socialComments','friendPosts','friendWettings','friendChanges','friendLiquids'])assert.equal(db.notifications.status(user.id).preferences[field],1);
- for(const id of ['social-likes','social-comments','friend-posts','friend-wettings','friend-changes','friend-liquids']){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),true);await clickSetting(page,'#notification-'+id);}
+ for(const field of ['socialLikes','socialComments','friendPosts','friendWettings','friendChanges','friendLiquids','directMessages'])assert.equal(db.notifications.status(user.id).preferences[field],1);
+ for(const id of ['social-likes','social-comments','friend-posts','friend-wettings','friend-changes','friend-liquids','direct-messages']){assert.equal(await page.$eval('#notification-'+id,n=>n.checked),true);await clickSetting(page,'#notification-'+id);}
  assert.equal(db.notifications.status(user.id).preferences.communitySupport,1);
  assert.equal(await page.$eval('#notification-community-support',node=>node.checked),true);
  assert.equal(await page.$eval('#notification-community-anonymous',node=>node.checked),false);

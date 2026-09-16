@@ -52,6 +52,7 @@ export function createApi(database, login) { // Resolves each app session to an 
         if(route==='social/post')return send(response,200,{participant,csrf,items:[database.social.post(participant.id,query.get('id'))],nextBefore:null});
         if(route==='social/comments')return send(response,200,{participant,...database.social.commentList(participant.id,query.get('postId'),{before:query.get('before')})});
         if(route==='social/feed')return send(response,200,{participant,csrf,...database.social.feed(participant.id,{audience:query.get('audience')??'friends',before:query.get('before')})});
+        if(route==='social/messages/unread')return send(response,200,{participant,...database.social.unreadMessages(participant.id)});
         if(route==='social/conversations')return send(response,200,{participant,csrf,conversations:database.social.conversations(participant.id)});
         if(route==='social/messages')return send(response,200,{participant,...database.social.messages(participant.id,query.get('participantId'),{before:query.get('before')})});
         if(route==='social/picture') {const picture=database.social.photo(participant.id,query.get('id'));response.writeHead(200,{'Content-Type':'image/jpeg','Content-Length':picture.length,'Cache-Control':'no-store',Vary:'Cookie','X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin'});response.end(picture);return;}

@@ -1534,6 +1534,8 @@ dialog .primary {
 
 /* Quick actions share the existing page routes; only phones switch between individual dashboard cards. */
 .mobile-actions { display: none; }
+[data-message-shortcut] { position:relative; }
+.message-badge { position:absolute;top:4px;right:4px;min-width:17px;min-height:17px;padding:1px 4px;border-radius:12px;background:var(--pink);color:var(--page);font:bold 10px/15px 'Segoe UI',sans-serif;box-shadow:0 0 0 2px var(--panel);text-align:center; }
 @media (max-width: 680px) {
   :root { --mobile-actions-height: 78px; }
   body { padding-bottom: calc(var(--mobile-actions-height) + env(safe-area-inset-bottom, 0px) + 16px); }
@@ -1543,7 +1545,7 @@ dialog .primary {
     inset: auto 0 0;
     z-index: 9;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     border-top: 1px solid var(--rail);
     background: var(--panel-deep);

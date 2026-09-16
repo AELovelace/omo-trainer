@@ -42,6 +42,18 @@ Removing a friend deletes the conversation for both accounts; becoming friends
 again starts a fresh conversation. Messages are stored on the server and are
 not end-to-end encrypted.
 
+Messaging is also the last shortcut in the main mobile bottom bar, after Pattern
+analysis. Both Messaging shortcuts show a numbered unread badge (99+ for larger
+counts). Counts refresh every 15 seconds while the app is visible and after a
+conversation is read. Opening the inbox alone does not clear the badge.
+
+New-message pushes are on by default for notification subscribers. Opt out with
+**Settings → Social notifications → New messages from friends**, then save.
+Pushes contain the sender's display name and a generic notice, not message text;
+tapping one opens Messaging. Stored notifications offer **Open conversation**.
+Reading a thread marks its message alerts read and cancels pending pushes.
+Disabling message pushes leaves the unread badge and stored activity available.
+
 On mobile, Messaging opens a compact inbox with previews and unread counts.
 Search conversations or choose Inbox, Unread, All mail or Archived. **New**
 opens the friend picker. Open a conversation to read it and reply; **Inbox**

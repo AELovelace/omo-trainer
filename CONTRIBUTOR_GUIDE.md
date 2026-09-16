@@ -63,8 +63,8 @@ Use `scripts/import-growth-chart.mjs <source-folder>` to refresh public assets.
 Both charts use the existing OIDC session and participant ID; keep the
 `growth-chart` API session-owned, CSRF-protected, versioned and uncached.
 The browser chart and its retry/ownership metadata share one atomic save.
-Mobile quick actions use `#observation`, `#wetting`, `#roll`, and `#analysis`
-inside Overview. Keep the existing forms mounted so switching preserves drafts;
+Mobile quick actions use `#observation`, `#wetting`, `#change`, `#roll`, and `#analysis`
+inside Overview, followed by `#messages` in Social. Keep the existing forms mounted so switching preserves drafts;
 CSS limits single-panel display to 680px and below. The fixed bar and toast spacing
 include the phone safe area. Desktop retains all dashboard cards.
 
@@ -283,3 +283,15 @@ switch. `activity.pushEnabled` resolves the linked entry kind at queue, cancel
 and delivery time, so pending posts from before the update respect opt-outs too.
 Defaults are on; omitted fields preserve saved choices for older clients and
 new devices. Keep stored activity and the author's sharing preferences separate.
+
+`lib/message-badge.js` polls `GET api/social/messages/unread` while visible and
+refreshes after `little-log-messages-updated`. The endpoint returns only a count
+and cursor alongside session identity; it never loads conversations or message
+bodies outside Messaging. Clear badges on sign-out, offline and hidden states.
+
+Message notifications commit with `sendMessage` and retain a `message_id` in
+stored activity. `directMessages` is a default-on, independent push preference.
+Before delivery, check the live friendship, enabled accounts, message existence
+and thread read cursor. Reading cancels queued pushes and marks message activity
+read. Push payloads never include message text, and the service worker uses only
+the fixed local `#messages` route for notification clicks.
